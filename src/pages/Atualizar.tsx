@@ -1390,8 +1390,8 @@ export default function Atualizar() {
               <tbody>
                 {filteredApostas.map((aposta) => (
                   <tr key={aposta.id}>
-                    <td>{aposta.casaDeAposta ?? '-'}</td>
-                    <td>{aposta.tipster ?? '-'}</td>
+                    <td>{aposta.casaDeAposta || '-'}</td>
+                    <td>{aposta.tipster || '-'}</td>
                     <td>{formatDate(aposta.dataJogo)}</td>
                     <td>{aposta.esporte}</td>
                     <td>{aposta.jogo}</td>

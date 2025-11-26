@@ -47,11 +47,12 @@ export default function Analise() {
   const evolucaoRoiMensal = useMemo(() => data.evolucaoRoiMensal, [data.evolucaoRoiMensal]);
   const distribuicaoOdds = useMemo(() => data.distribuicaoOdds, [data.distribuicaoOdds]);
   const heatmap = useMemo((): AnaliseHeatmapData => {
-    const hm: unknown = data.heatmap;
-    if (!hm || (typeof hm === 'object' && Object.keys(hm as Record<string, unknown>).length === 0)) {
+    // Safe parsing do heatmap vindo do hook
+    const hm = data.heatmap;
+    if (!hm || Object.keys(hm).length === 0) {
       return defaultHeatmap;
     }
-    return hm as AnaliseHeatmapData;
+    return hm;
   }, [data.heatmap]);
   const winRatePorEsporte = useMemo(() => data.winRatePorEsporte, [data.winRatePorEsporte]);
   const comparacaoBookmakers = useMemo(
@@ -233,8 +234,9 @@ export default function Analise() {
                   {row}
                 </span>
                 {heatmapCols.map((col) => {
-                  const rowData: unknown = heatmap[row];
-                  const cellData = (typeof rowData === 'object' && rowData) ? (rowData as Record<string, { roi: number; investido: number }>)[col] : undefined;
+                  // Safe access do heatmap data
+                  const rowData = heatmap[row];
+                  const cellData = rowData?.[col];
                   const roi = typeof cellData?.roi === 'number' ? cellData.roi : 0;
                   const investido = typeof cellData?.investido === 'number' ? cellData.investido : 0;
                   const color = getHeatmapColor(roi);
