@@ -14,6 +14,7 @@ import { ESPORTES } from '../constants/esportes';
 import { STATUS_SALVAMENTO } from '../constants/statusSalvamento';
 import { TIPOS_APOSTA } from '../constants/tiposAposta';
 import api from '../lib/api';
+import { formatCurrency as formatCurrencyUtil, formatDate as formatDateUtil } from '../utils/formatters';
 import { useTipsters } from '../hooks/useTipsters';
 import { useBancas } from '../hooks/useBancas';
 // Tesseract será carregado dinamicamente apenas quando necessário (biblioteca pesada ~2MB)
@@ -844,18 +845,14 @@ export default function Atualizar() {
     setUploading(false);
   };
 
-  // Formatar valores monetários
+  // Formatar valores monetários usando utilitário compartilhado
   const formatCurrency = useCallback((value: number): string => {
-    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+    return formatCurrencyUtil(value);
   }, []);
 
-  // Formatar data (apenas data, sem horário)
+  // Formatar data (apenas data, sem horário) usando utilitário compartilhado
   const formatDate = useCallback((dateString: string): string => {
-    return new Date(dateString).toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    });
+    return formatDateUtil(dateString);
   }, []);
 
   const getStatusIcon = (status: string) => {
