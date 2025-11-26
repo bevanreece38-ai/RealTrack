@@ -1,33 +1,25 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Area, AreaChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis, BarChart, Bar, Cell } from 'recharts';
-import { Filter } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid } from 'recharts';
 import PageHeader from '../components/PageHeader';
 import StatCard from '../components/StatCard';
-import EmptyState from '../components/EmptyState';
 import { GlassCard } from '../components/ui/GlassCard';
-import FilterPopover from '../components/FilterPopover';
-import DateInput from '../components/DateInput';
-import { CASAS_APOSTAS } from '../constants/casasApostas';
-import { STATUS_APOSTAS } from '../constants/statusApostas';
-import api from '../lib/api';
-import { useTipsters } from '../hooks/useTipsters';
 import { chartTheme } from '../utils/chartTheme';
 import { formatCurrency, formatPercent } from '../utils/formatters';
-import type {
-  AnaliseFilters,
-  AnalisePerformanceResponse,
-  AnaliseQueryParams,
-  AnaliseBookmakerComparison,
-  AnaliseOddDistribution,
-  AnaliseRoiEntry,
-  AnaliseWinRatePorEsporte,
-  HeatmapData,
-} from '../types/analise';
+import EmptyState from '../components/ui/EmptyState';
+import Skeleton from '../components/ui/Skeleton';
+import AnaliseFilters from '../components/analise/AnaliseFilters';
+import AnaliseRoiChart from '../components/analise/AnaliseRoiChart';
+import AnaliseOddsChart from '../components/analise/AnaliseOddsChart';
+import useAnaliseData from '../hooks/useAnaliseData';
+import type { AnaliseFilters } from '../types/AnaliseFilters';
+import type { AnaliseHeatmapData } from '../types/AnaliseData';
+import type { RoiChartPoint } from '../types/RoiChartPoint';
+import type { OddsChartPoint } from '../types/OddsChartPoint';
 
 const heatmapRows = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
 const heatmapCols = ['Manhã (06-12)', 'Tarde (12-18)', 'Noite (18-24)', 'Madrugada (00-06)'];
-const defaultHeatmap: HeatmapData = {};
-const defaultDistribuicaoOdds: AnaliseOddDistribution[] = [
+const defaultHeatmap: AnaliseHeatmapData = {};
+const defaultDistribuicaoOdds: OddsChartPoint[] = [
   { faixa: '1.00-1.50', quantidade: 0 },
   { faixa: '1.51-2.00', quantidade: 0 },
   { faixa: '2.01-3.00', quantidade: 0 },
@@ -47,102 +39,35 @@ const initialFilters: AnaliseFilters = {
 };
 
 export default function Analise() {
-  const [filtersOpen, setFiltersOpen] = useState(false);
-  const { tipsters } = useTipsters();
-  const [pendingFilters, setPendingFilters] = useState<AnaliseFilters>(initialFilters);
-  const [appliedFilters, setAppliedFilters] = useState<AnaliseFilters>(initialFilters);
-  const [evolucaoRoiMensal, setEvolucaoRoiMensal] = useState<AnaliseRoiEntry[]>([]);
-  const [distribuicaoOdds, setDistribuicaoOdds] = useState<AnaliseOddDistribution[]>([]);
-  const [heatmap, setHeatmap] = useState<HeatmapData>(defaultHeatmap);
-  const [comparacaoBookmakers, setComparacaoBookmakers] = useState<AnaliseBookmakerComparison[]>([]);
-  const [winRatePorEsporte, setWinRatePorEsporte] = useState<AnaliseWinRatePorEsporte[]>([]);
+  const [filters, setFilters] = useState<AnaliseFilters>(initialFilters);
+  const { data, isLoading } = useAnaliseData(filters);
   const [bookmakersExpanded, setBookmakersExpanded] = useState(false);
 
-  useEffect(() => {
-    let isCancelled = false;
-
-    const run = async () => {
-      try {
-        const params: AnaliseQueryParams = {};
-
-        if (appliedFilters.status && appliedFilters.status !== 'Tudo') {
-          params.status = appliedFilters.status;
-        }
-        if (appliedFilters.tipster) {
-          params.tipster = appliedFilters.tipster;
-        }
-        if (appliedFilters.casa) {
-          params.casa = appliedFilters.casa;
-        }
-        if (appliedFilters.esporte) {
-          params.esporte = appliedFilters.esporte;
-        }
-        if (appliedFilters.evento) {
-          params.evento = appliedFilters.evento;
-        }
-        if (appliedFilters.dataInicio) {
-          params.dataInicio = appliedFilters.dataInicio;
-        }
-        if (appliedFilters.dataFim) {
-          params.dataFim = appliedFilters.dataFim;
-        }
-        if (appliedFilters.oddMin) {
-          params.oddMin = appliedFilters.oddMin;
-        }
-        if (appliedFilters.oddMax) {
-          params.oddMax = appliedFilters.oddMax;
-        }
-
-        const { data } = await api.get<AnalisePerformanceResponse>('/analise/performance', { params });
-        if (isCancelled) return;
-
-        setEvolucaoRoiMensal(data.evolucaoRoiMensal ?? []);
-        setDistribuicaoOdds(data.distribuicaoOdds ?? []);
-        setHeatmap(data.heatmap ?? defaultHeatmap);
-        setComparacaoBookmakers(data.comparacaoBookmakers ?? []);
-        setWinRatePorEsporte(data.winRatePorEsporte ?? []);
-      } catch (error) {
-        if (!isCancelled) {
-          console.error('Erro ao carregar dados de performance:', error);
-        }
-      }
-    };
-
-    void run();
-
-    return () => {
-      isCancelled = true;
-    };
-  }, [appliedFilters]);
-
-  const handleFilterChange = useCallback(
-    <K extends keyof AnaliseFilters>(field: K, value: AnaliseFilters[K]) => {
-      setPendingFilters((prev) => ({ ...prev, [field]: value }));
-    },
-    []
+  // Sincronizar dados derivados com o hook de análise
+  const evolucaoRoiMensal = useMemo(() => data.evolucaoRoiMensal, [data.evolucaoRoiMensal]);
+  const distribuicaoOdds = useMemo(() => data.distribuicaoOdds, [data.distribuicaoOdds]);
+  const heatmap = useMemo(() => data.heatmap ?? defaultHeatmap, [data.heatmap]);
+  const winRatePorEsporte = useMemo(() => data.winRatePorEsporte, [data.winRatePorEsporte]);
+  const comparacaoBookmakers = useMemo(
+    () => data.comparacaoBookmakers ?? [],
+    [data.comparacaoBookmakers],
   );
 
-  const handleApplyFilters = useCallback(() => {
-    setAppliedFilters(pendingFilters);
-    setFiltersOpen(false);
-  }, [pendingFilters]);
-
-  const handleClearFilters = useCallback(() => {
-    setPendingFilters(initialFilters);
-    setAppliedFilters(initialFilters);
-    setFiltersOpen(false);
-  }, []);
-
-  const activeFiltersCount = Object.values(pendingFilters).filter((value) => value !== '').length;
-
   // Preparar dados para gráfico de ROI mensal
-  const roiMensalChart = evolucaoRoiMensal.map(item => ({
-    mes: new Date(item.mes + '-01').toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }),
-    roi: item.roi
-  }));
+  const roiMensalChart: RoiChartPoint[] = useMemo(
+    () =>
+      evolucaoRoiMensal.map((item) => ({
+        mes: new Date(`${item.mes}-01`).toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }),
+        roi: item.roi,
+      })),
+    [evolucaoRoiMensal],
+  );
 
   // Preparar dados para distribuição de odds
-  const oddsChart = (distribuicaoOdds.length > 0 ? distribuicaoOdds : defaultDistribuicaoOdds);
+  const oddsChart: OddsChartPoint[] = useMemo(
+    () => (distribuicaoOdds.length > 0 ? distribuicaoOdds : defaultDistribuicaoOdds),
+    [distribuicaoOdds],
+  );
 
   // Função para obter cor do heatmap baseado no ROI
   const getHeatmapColor = (roi: number): string => {
@@ -177,261 +102,40 @@ export default function Analise() {
         title="Gráficos"
         subtitle="Visualize suas métricas e acompanhe evolução"
         actions={
-          <div className="filter-trigger-wrapper">
-            <button className="filter-trigger" onClick={() => setFiltersOpen((prev) => !prev)}>
-              <Filter size={16} /> Filtros {activeFiltersCount > 0 && <span className="filter-count">{activeFiltersCount}</span>}
-            </button>
-            <FilterPopover
-              open={filtersOpen}
-              onClose={() => setFiltersOpen(false)}
-              onClear={handleClearFilters}
-              footer={
-                <button className="btn" onClick={handleApplyFilters}>
-                  Aplicar Filtros
-                </button>
-              }
-            >
-              <div className="filters-panel filters-panel--plain filters-panel--two">
-                <div className="field">
-                  <label>Status</label>
-                  <select 
-                    value={pendingFilters.status}
-                    onChange={(e) => handleFilterChange('status', e.target.value)}
-                    style={{ color: pendingFilters.status ? 'var(--text)' : 'var(--muted)' }}
-                  >
-                    <option value="" disabled hidden>Selecione um status</option>
-                    {STATUS_APOSTAS.map((status) => (
-                      <option key={status} value={status}>
-                        {status}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="field">
-                  <label>Tipsters</label>
-                  <select 
-                    value={pendingFilters.tipster}
-                    onChange={(e) => handleFilterChange('tipster', e.target.value)}
-                    style={{ color: pendingFilters.tipster ? 'var(--text)' : 'var(--muted)' }}
-                  >
-                    <option value="" disabled hidden>Selecione…</option>
-                    {tipsters.filter(t => t.ativo).map((tipster) => (
-                      <option key={tipster.id} value={tipster.nome}>
-                        {tipster.nome}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="field">
-                  <label>Casa de Apostas</label>
-                  <select 
-                    value={pendingFilters.casa}
-                    onChange={(e) => handleFilterChange('casa', e.target.value)}
-                    style={{ color: pendingFilters.casa ? 'var(--text)' : 'var(--muted)' }}
-                  >
-                    <option value="" disabled hidden>Selecione a casa</option>
-                    {CASAS_APOSTAS.map((casa) => (
-                      <option key={casa} value={casa}>
-                        {casa}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="field">
-                  <label>Evento, Mercado, Aposta, País ou Torneio</label>
-                  <input 
-                    type="text" 
-                    value={pendingFilters.evento}
-                    onChange={(e) => handleFilterChange('evento', e.target.value)}
-                    placeholder="Digite o nome do evento, mercado ou aposta" 
-                  />
-                </div>
-                <div className="field">
-                  <label>Data do Jogo (De)</label>
-                  <DateInput
-                    value={pendingFilters.dataInicio}
-                    onChange={(value) => handleFilterChange('dataInicio', value)}
-                    placeholder="dd/mm/aaaa"
-                    className="date-input-modern"
-                    style={{
-                      width: '100%',
-                      padding: '10px 14px',
-                      fontSize: '0.9rem',
-                      border: '1.5px solid var(--border)',
-                      borderRadius: '8px',
-                      background: 'var(--surface)',
-                      color: 'var(--text)',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s'
-                    }}
-                    onFocus={(e) => {
-                      const root = getComputedStyle(document.documentElement);
-                      const bankColor = root.getPropertyValue('--bank-color').trim() || getComputedStyle(document.documentElement).getPropertyValue('--color-chart-primary').trim();
-                      const bankColorLight = root.getPropertyValue('--bank-color-light').trim() || getComputedStyle(document.documentElement).getPropertyValue('--color-bg-hover').trim();
-                      e.target.style.borderColor = bankColor;
-                      e.target.style.boxShadow = `0 0 0 3px ${bankColorLight}`;
-                    }}
-                    onBlur={(e) => {
-                      e.target.style.borderColor = 'var(--border)';
-                      e.target.style.boxShadow = 'none';
-                    }}
-                  />
-                </div>
-                <div className="field">
-                  <label>Data do Jogo (Até)</label>
-                  <DateInput
-                    value={pendingFilters.dataFim}
-                    onChange={(value) => handleFilterChange('dataFim', value)}
-                    placeholder="dd/mm/aaaa"
-                    className="date-input-modern"
-                    style={{
-                      width: '100%',
-                      padding: '10px 14px',
-                      fontSize: '0.9rem',
-                      border: '1.5px solid var(--border)',
-                      borderRadius: '8px',
-                      background: 'var(--surface)',
-                      color: 'var(--text)',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s'
-                    }}
-                    onFocus={(e) => {
-                      const root = getComputedStyle(document.documentElement);
-                      const bankColor = root.getPropertyValue('--bank-color').trim() || getComputedStyle(document.documentElement).getPropertyValue('--color-chart-primary').trim();
-                      const bankColorLight = root.getPropertyValue('--bank-color-light').trim() || getComputedStyle(document.documentElement).getPropertyValue('--color-bg-hover').trim();
-                      e.target.style.borderColor = bankColor;
-                      e.target.style.boxShadow = `0 0 0 3px ${bankColorLight}`;
-                    }}
-                    onBlur={(e) => {
-                      e.target.style.borderColor = 'var(--border)';
-                      e.target.style.boxShadow = 'none';
-                    }}
-                  />
-                  <p style={{ 
-                    margin: '8px 0 0 0', 
-                    fontSize: '0.75rem', 
-                    color: 'var(--muted)',
-                    lineHeight: '1.4'
-                  }}>
-                    Se só preencher "De", será filtrado apenas nesta data. Se preencher "Até", será considerado como intervalo.
-                  </p>
-                </div>
-                <div className="field">
-                  <label>ODD</label>
-                  <div className="field-inline">
-                    <input 
-                      type="number" 
-                      value={pendingFilters.oddMin}
-                      onChange={(e) => handleFilterChange('oddMin', e.target.value)}
-                      placeholder="Mínimo" 
-                      step="0.01"
-                    />
-                    <input 
-                      type="number" 
-                      value={pendingFilters.oddMax}
-                      onChange={(e) => handleFilterChange('oddMax', e.target.value)}
-                      placeholder="Máximo" 
-                      step="0.01"
-                    />
-                  </div>
-                </div>
-              </div>
-            </FilterPopover>
-          </div>
+          <AnaliseFilters value={filters} onChange={setFilters} />
         }
       />
 
-      <div className="stat-grid">
-        {stats.map((stat) => (
-          <StatCard key={stat.title} title={stat.title} value={stat.value} helper={stat.helper} />
-        ))}
-      </div>
+      {isLoading ? (
+        <div className="stat-grid">
+          {stats.map((stat) => (
+            <Skeleton key={stat.title} className="card">
+              <div className="card-title">{stat.title}</div>
+              <div className="card-value">...</div>
+              <p className="card-desc">{stat.helper}</p>
+            </Skeleton>
+          ))}
+        </div>
+      ) : (
+        <div className="stat-grid">
+          {stats.map((stat) => (
+            <StatCard key={stat.title} title={stat.title} value={stat.value} helper={stat.helper} />
+          ))}
+        </div>
+      )}
 
-      <div className="grid-2" style={{ marginBottom: 24 }}>
-        <div className="chart-card">
-          <h3 style={{ marginTop: 0 }}>Evolução do ROI Mensal</h3>
-          <ResponsiveContainer width="100%" height={260}>
-            {roiMensalChart.length > 0 ? (
-              <LineChart data={roiMensalChart} margin={{ top: 5, right: 12, left: -6, bottom: 5 }}>
-                <defs>
-                  <linearGradient id="roiGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="var(--bank-color, var(--color-chart-primary))" stopOpacity={0.95} />
-                    <stop offset="100%" stopColor="var(--bank-color, var(--color-chart-primary))" stopOpacity={0.2} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.gridStroke} />
-                <XAxis 
-                  dataKey="mes" 
-                  stroke={chartTheme.axisStroke}
-                  tick={{ ...chartTheme.axisTick }}
-                  tickLine={false}
-                />
-                <YAxis 
-                  stroke={chartTheme.axisStroke}
-                  tick={{ ...chartTheme.axisTick }}
-                  tickLine={false}
-                  axisLine={false}
-                  label={{ value: 'ROI (%)', angle: -90, position: 'insideLeft', style: chartTheme.axisLabel }}
-                />
-                <Tooltip 
-                  contentStyle={chartTheme.tooltip}
-                  formatter={(value: number) => formatPercent(value)}
-                  labelStyle={chartTheme.tooltipLabel}
-                  itemStyle={chartTheme.tooltipItem}
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="roi" 
-                  stroke="url(#roiGradient)" 
-                  strokeWidth={3} 
-                  dot={chartTheme.lineDot}
-                  activeDot={chartTheme.lineActiveDot}
-                />
-              </LineChart>
-            ) : (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-              </div>
-            )}
-          </ResponsiveContainer>
-        </div>
-        <div className="chart-card">
-          <h3 style={{ marginTop: 0 }}>Distribuição de Odds</h3>
-          <ResponsiveContainer width="100%" height={260}>
-            {oddsChart.length > 0 && oddsChart.some(item => item.quantidade > 0) ? (
-              <AreaChart data={oddsChart} margin={{ top: 5, right: 12, left: -6, bottom: 5 }}>
-                <defs>
-                  <linearGradient id="oddsGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="var(--color-success)" stopOpacity={0.9} />
-                    <stop offset="100%" stopColor="var(--color-success)" stopOpacity={0.1} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.gridStroke} />
-                <XAxis 
-                  dataKey="faixa" 
-                  stroke={chartTheme.axisStroke}
-                  tick={{ ...chartTheme.axisTick }}
-                  tickLine={false}
-                />
-                <YAxis 
-                  stroke={chartTheme.axisStroke}
-                  tick={{ ...chartTheme.axisTick }}
-                  tickLine={false}
-                  axisLine={false}
-                  label={{ value: 'Qtd. Apostas', angle: -90, position: 'insideLeft', style: chartTheme.axisLabel }}
-                />
-                <Tooltip 
-                  contentStyle={chartTheme.tooltip}
-                  labelStyle={chartTheme.tooltipLabel}
-                  itemStyle={chartTheme.tooltipItem}
-                />
-                <Area type="monotone" dataKey="quantidade" stroke="var(--color-success)" strokeWidth={3} fill="url(#oddsGradient)" />
-              </AreaChart>
-            ) : (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-              </div>
-            )}
-          </ResponsiveContainer>
-        </div>
+      <div className="grid-2 mb-6">
+        {isLoading ? (
+          <>
+            <Skeleton className="chart-card" />
+            <Skeleton className="chart-card" />
+          </>
+        ) : (
+          <>
+            <AnaliseRoiChart data={roiMensalChart} />
+            <AnaliseOddsChart data={oddsChart} />
+          </>
+        )}
       </div>
 
       <div className="grid-2" style={{ marginBottom: 24 }}>

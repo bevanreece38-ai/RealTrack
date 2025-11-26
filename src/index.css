@@ -1549,6 +1549,45 @@ tr:hover td {
   padding: 40px 12px;
 }
 
+.empty-state-title {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.empty-state-description {
+  margin: 6px 0 0;
+}
+
+.chart-title {
+  margin-top: 0;
+}
+
+.chart-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+.date-input-analise {
+  width: 100%;
+  padding: 10px 14px;
+  font-size: 0.9rem;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.date-input-analise:focus-visible {
+  outline: none;
+  border-color: var(--bank-color, var(--color-chart-primary));
+  box-shadow: 0 0 0 3px var(--bank-color-light, var(--color-bg-hover));
+}
+
 .toggle {
   width: 42px;
   height: 24px;
