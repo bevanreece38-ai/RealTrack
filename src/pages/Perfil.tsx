@@ -25,6 +25,7 @@ import { GlassCard } from '../components/ui/GlassCard';
 import api from '../lib/api';
 import { type ApiProfileResponse, type ApiError } from '../types/api';
 import '../styles/animations.css';
+import { formatCurrency as formatCurrencyUtil, formatDate as formatDateUtil } from '../utils/formatters';
 
 interface ResetAccountResponse {
   deleted: {
