@@ -33,7 +33,9 @@ export const formatNumber = (value: number, maximumFractionDigits = 0): string =
 export const formatDate = (dateString: string | null | undefined): string => {
   if (!dateString) return '—';
   const date = new Date(dateString);
-  if (Number.isNaN(date.getTime())) return String(dateString);
+  if (Number.isNaN(date.getTime())) {
+    return typeof dateString === 'string' ? dateString : '—';
+  }
   return date.toLocaleDateString('pt-BR', {
     day: '2-digit',
     month: '2-digit',
@@ -47,7 +49,9 @@ export const formatDate = (dateString: string | null | undefined): string => {
 export const formatDateTime = (dateString: string | null | undefined): string => {
   if (!dateString) return '—';
   const date = new Date(dateString);
-  if (Number.isNaN(date.getTime())) return String(dateString);
+  if (Number.isNaN(date.getTime())) {
+    return typeof dateString === 'string' ? dateString : '—';
+  }
   return date.toLocaleString('pt-BR', {
     dateStyle: 'short',
     timeStyle: 'short'

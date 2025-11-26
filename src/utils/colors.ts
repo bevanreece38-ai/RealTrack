@@ -18,7 +18,7 @@ export const isValidColor = (color: string | null | undefined): boolean => {
 
 // Normaliza uma cor (retorna cor válida ou padrão)
 export const normalizeColor = (color: string | null | undefined, defaultColor: string = DEFAULT_BANK_COLOR): string => {
-  return isValidColor(color) ? (color as string).trim() : defaultColor;
+  return isValidColor(color) ? color!.trim() : defaultColor;
 };
 
 // Converte cor HEX para RGB

@@ -163,7 +163,7 @@ export default function Financeiro() {
         setError('Erro ao carregar estatísticas. Tente recarregar a página.');
       }
     }
-  }, []);
+  }, [appliedFilters]);
 
   useEffect(() => {
     void fetchTransacoes();

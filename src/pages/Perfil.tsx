@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { 
   Crown, 
   Zap, 
-  Infinity, 
+  Infinity as InfinityIcon, 
   ArrowRight, 
   User, 
   Mail, 
@@ -365,7 +365,7 @@ export default function Perfil() {
                 <p style={{ margin: '4px 0 0 0', fontSize: '1.25rem', fontWeight: 700, color: 'var(--text)' }}>
                   {profile.plano.limiteApostasDiarias === 0 ? (
                     <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
-                      <Infinity size={18} />
+                      <InfinityIcon size={18} />
                       Ilimitado
                     </span>
                   ) : (

@@ -1,4 +1,9 @@
-import axios, { AxiosHeaders, type AxiosInstance, type InternalAxiosRequestConfig } from 'axios';
+import axios, {
+  AxiosHeaders,
+  type AxiosError,
+  type AxiosInstance,
+  type InternalAxiosRequestConfig,
+} from 'axios';
 
 const DEFAULT_BASE_URL = 'http://localhost:3001/api';
 const envBaseUrl = typeof import.meta.env.VITE_API_URL === 'string' ? import.meta.env.VITE_API_URL : undefined;
@@ -18,7 +23,17 @@ const pendingRequests = new Map<string, Promise<unknown>>();
 
 // Função para gerar chave de cache baseada na URL e parâmetros
 const getCacheKey = (config: InternalAxiosRequestConfig): string => {
-  const params = config.params ? new URLSearchParams(config.params).toString() : '';
+  let params = '';
+  const rawParams = config.params;
+
+  if (rawParams instanceof URLSearchParams) {
+    params = rawParams.toString();
+  } else if (typeof rawParams === 'string') {
+    params = rawParams;
+  } else if (rawParams && typeof rawParams === 'object') {
+    params = new URLSearchParams(rawParams as Record<string, string>).toString();
+  }
+
   return `${config.method?.toUpperCase()}:${config.url}${params ? `?${params}` : ''}`;
 };
 
@@ -100,11 +115,17 @@ api.interceptors.response.use(
 
     return response;
   },
-  (error) => {
+  (error: AxiosError<{ retryAfter?: number; error?: string }>) => {
     const config = error.config as InternalAxiosRequestConfig | undefined;
 
     // Retry automático para erros 5xx (apenas uma vez)
-    if (error.response?.status >= 500 && error.response?.status < 600 && config && !(config as InternalAxiosRequestConfig & { __retryCount?: number }).__retryCount) {
+    if (
+      error.response?.status !== undefined &&
+      error.response.status >= 500 &&
+      error.response.status < 600 &&
+      config &&
+      !(config as InternalAxiosRequestConfig & { __retryCount?: number }).__retryCount
+    ) {
       (config as InternalAxiosRequestConfig & { __retryCount?: number }).__retryCount = 1;
       return new Promise((resolve, reject) => {
         setTimeout(() => {
@@ -117,8 +138,8 @@ api.interceptors.response.use(
 
     // Tratar rate limiting
     if (error.response?.status === 429) {
-      const retryAfter = error.response?.data?.retryAfter || 60;
-      const message = error.response?.data?.error || 'Muitas requisições. Aguarde alguns minutos.';
+      const retryAfter = error.response.data?.retryAfter ?? 60;
+      const message = error.response.data?.error ?? 'Muitas requisições. Aguarde alguns minutos.';
       
       console.warn(`Rate limit atingido. Aguarde ${retryAfter} segundos.`);
       

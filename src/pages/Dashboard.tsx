@@ -11,7 +11,7 @@ import { STATUS_APOSTAS } from '../constants/statusApostas';
 import api from '../lib/api';
 import { useTipsters } from '../hooks/useTipsters';
 import { chartTheme } from '../utils/chartTheme';
-import { formatCurrency, formatPercent, getFirstName } from '../utils/formatters';
+import { formatCurrency, formatPercent } from '../utils/formatters';
 import type { ApiProfileResponse } from '../types/api';
 
 

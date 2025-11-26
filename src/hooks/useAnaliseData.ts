@@ -92,7 +92,6 @@ export function useAnaliseData(filters: AnaliseFilters): UseAnaliseDataResult {
       const apiError = err as { response?: { status?: number } };
       // Mantém o mesmo comportamento de log de erro da página original
       if (apiError.response?.status !== 429) {
-        // eslint-disable-next-line no-console
         console.error('Erro ao carregar dados de performance:', err);
       }
       setError(err as Error);
@@ -127,7 +126,6 @@ export function useAnaliseData(filters: AnaliseFilters): UseAnaliseDataResult {
 
         const apiError = err as { response?: { status?: number } };
         if (apiError.response?.status !== 429) {
-          // eslint-disable-next-line no-console
           console.error('Erro ao carregar dados de performance:', err);
         }
         setError(err as Error);

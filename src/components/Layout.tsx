@@ -191,7 +191,7 @@ export default function Layout() {
       const detail = event.detail;
 
       if (detail?.id && typeof detail.cor === 'string' && selectedBanco?.id === detail.id) {
-        setSelectedBanco((prev) => (prev ? { ...prev, cor: detail.cor as string } : null));
+        setSelectedBanco((prev) => (prev ? { ...prev, cor: detail.cor! } : null));
       }
 
       void fetchBancas();
@@ -637,7 +637,9 @@ export default function Layout() {
                 textOverflow: 'ellipsis',
                 whiteSpace: 'nowrap'
               }}>
-                {profile?.email || (
+                {profile?.email ? (
+                  profile.email
+                ) : (
                   <Loader2 size={12} className="loading-spinner" style={{ display: 'inline-block' }} />
                 )}
               </p>

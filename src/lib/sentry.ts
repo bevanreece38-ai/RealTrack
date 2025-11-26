@@ -4,11 +4,11 @@ import * as Sentry from '@sentry/react';
  * Inicializa o Sentry para monitoramento de erros
  * Configurado para funcionar apenas em produção
  */
-export function initSentry() {
+export function initSentry(): void {
   // Obter DSN do Sentry das variáveis de ambiente
   // DSN padrão fornecido pelo usuário (pode ser sobrescrito por variável de ambiente)
   const defaultDsn = 'https://67e89bd0834d47319940c09f28acc80b@o4510418265964544.ingest.de.sentry.io/4510418271076432';
-  const sentryDsn = import.meta.env.VITE_SENTRY_DSN || defaultDsn;
+  const sentryDsn = import.meta.env.VITE_SENTRY_DSN ?? defaultDsn;
   
   // Inicializar se tiver DSN (funciona em dev e produção)
   if (!sentryDsn) {

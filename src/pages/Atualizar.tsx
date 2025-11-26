@@ -173,7 +173,7 @@ export default function Atualizar() {
     
     // Tentar encontrar correspondência parcial na lista (case-insensitive, sem emojis)
     const esporteEncontrado = ESPORTES.find(esp => {
-      const espNormalized = esp.toLowerCase().replace(/[🏀⚽🏈🎾⚾🏒🏇🥌🎮]/g, '').trim();
+      const espNormalized = esp.toLowerCase().replace(/[🏀⚽🏈🎾⚾🏒🏇🥌🎮]/gu, '').trim();
       return espNormalized === normalized || espNormalized.includes(normalized) || normalized.includes(espNormalized);
     });
     

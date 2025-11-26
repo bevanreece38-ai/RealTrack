@@ -27,7 +27,7 @@ const initialFilters: AnaliseFilters = {
 export function AnaliseFilters({ value, onChange }: AnaliseFiltersProps) {
   const { tipsters } = useTipsters();
   const [open, setOpen] = useState(false);
-  const [pendingFilters, setPendingFilters] = useState<AnaliseFilters>(value ?? initialFilters);
+  const [pendingFilters, setPendingFilters] = useState<AnaliseFilters>(value);
 
   const handleFilterChange = useCallback(
     <K extends keyof AnaliseFilters>(field: K, fieldValue: AnaliseFilters[K]) => {
@@ -58,7 +58,7 @@ export function AnaliseFilters({ value, onChange }: AnaliseFiltersProps) {
         type="button"
         className="filter-trigger"
         onClick={() => {
-          setPendingFilters(value ?? initialFilters);
+          setPendingFilters(value);
           setOpen((prev) => !prev);
         }}
       >

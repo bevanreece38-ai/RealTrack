@@ -82,7 +82,7 @@ const normalizeEsporte = (esporteFromDb: string): string => {
     return esporteMap[normalized];
   }
   const esporteEncontrado = ESPORTES.find(esp => {
-    const espNormalized = esp.toLowerCase().replace(/[🏀⚽🏈🎾⚾🏒🏇🥌🎮]/g, '').trim();
+    const espNormalized = esp.toLowerCase().replace(/[🏀⚽🏈🎾⚾🏒🏇🥌🎮]/gu, '').trim();
     return espNormalized === normalized || espNormalized.includes(normalized) || normalized.includes(espNormalized);
   });
   return esporteEncontrado || esporteFromDb;
