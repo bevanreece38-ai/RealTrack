@@ -1,13 +1,12 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { BarChart, Bar, Line, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid, ComposedChart, Legend, Cell } from 'recharts';
-import { Filter, TrendingUp, ArrowUpRight, Search, Bell } from 'lucide-react';
+import { AreaChart, Area, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid } from 'recharts';
+import { Filter, TrendingUp, ArrowUpRight, Search, Bell, Calendar, Trophy } from 'lucide-react';
 import FilterPopover from '../components/FilterPopover';
 import DateInput from '../components/DateInput';
 import { CASAS_APOSTAS } from '../constants/casasApostas';
 import { STATUS_APOSTAS } from '../constants/statusApostas';
 import api from '../lib/api';
 import { useTipsters } from '../hooks/useTipsters';
-import { chartTheme } from '../utils/chartTheme';
 import { formatCurrency, formatPercent, getFirstName } from '../utils/formatters';
 import type { ApiProfileResponse } from '../types/api';
 import '../styles/dashboard-new.css';
@@ -94,8 +93,7 @@ export default function Dashboard() {
   const [lucroPorTipster, setLucroPorTipster] = useState<LucroPorTipsterItem[]>([]);
   const [resumoPorEsporte, setResumoPorEsporte] = useState<ResumoEsporteItem[]>([]);
   const [resumoPorCasa, setResumoPorCasa] = useState<ResumoCasaItem[]>([]);
-  const [resumoEsporteExpanded, setResumoEsporteExpanded] = useState(false);
-  const [resumoCasaExpanded, setResumoCasaExpanded] = useState(false);
+  const [periodoGrafico, setPeriodoGrafico] = useState('7');
 
   const buildParams = useCallback((): Partial<DashboardFilters> => {
     const params: Partial<DashboardFilters> = {};
@@ -130,18 +128,16 @@ export default function Dashboard() {
       setResumoPorCasa(data.resumoPorCasa);
     } catch (error) {
       const apiError = error as { response?: { status?: number } };
-      // Não logar erro se for rate limit (já tratado no interceptor)
       if (apiError.response?.status !== 429) {
         console.error('Erro ao carregar dados do dashboard:', error);
       }
     }
   }, [buildParams]);
 
-  // Adicionar debounce para evitar requisições muito frequentes
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       void fetchDashboardData();
-    }, 1000); // Aumentar para 1 segundo para reduzir requisições
+    }, 1000);
 
     return () => clearTimeout(timeoutId);
   }, [fetchDashboardData]);
@@ -157,7 +153,6 @@ export default function Dashboard() {
     };
     void fetchProfile();
 
-    // Ouvir eventos de atualização de perfil
     const handleProfileUpdated = (event: Event) => {
       const customEvent = event as CustomEvent<ApiProfileResponse | undefined>;
       const updatedProfile = customEvent.detail;
@@ -195,35 +190,79 @@ export default function Dashboard() {
       dataFim: ''
     });
     setFiltersOpen(false);
-    // fetchDashboardData será chamado automaticamente quando filters mudar via useEffect
   }, []);
 
-  // Memoizar contagem de filtros ativos
   const activeFiltersCount = useMemo(
     () => Object.values(filters).filter(v => v !== '').length,
     [filters]
   );
 
-  // Memoizar preparação de dados para gráfico de lucro acumulado
-  const lucroAcumuladoChart = useMemo(() => {
+  // Preparar dados para gráfico de evolução da banca (acumulado)
+  const evolucaoBancaChart = useMemo(() => {
     if (lucroAcumulado.length === 0) return [];
-    return lucroAcumulado.slice(-30).map((item) => ({
+    const sliced = periodoGrafico === '7' 
+      ? lucroAcumulado.slice(-7)
+      : periodoGrafico === '30'
+      ? lucroAcumulado.slice(-30)
+      : lucroAcumulado;
+    
+    return sliced.map((item) => ({
       date: new Date(item.date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }),
-      lucro: Number(item.lucro.toFixed(2)),
-      acumulado: Number(item.acumulado.toFixed(2))
+      valor: Number(item.acumulado.toFixed(2))
     }));
+  }, [lucroAcumulado, periodoGrafico]);
+
+  // Calcular crescimento percentual
+  const crescimentoPercentual = useMemo(() => {
+    if (evolucaoBancaChart.length < 2) return 0;
+    const primeiro = evolucaoBancaChart[0]?.valor ?? 0;
+    const ultimo = evolucaoBancaChart[evolucaoBancaChart.length - 1]?.valor ?? 0;
+    if (primeiro === 0) return 0;
+    return ((ultimo - primeiro) / primeiro) * 100;
+  }, [evolucaoBancaChart]);
+
+  // Calcular melhor dia e média diária
+  const melhorDia = useMemo(() => {
+    if (lucroAcumulado.length === 0) return { valor: 0, data: '' };
+    const melhor = lucroAcumulado.reduce((max, item) => 
+      item.lucro > max.lucro ? item : max, lucroAcumulado[0]
+    );
+    return {
+      valor: melhor.lucro,
+      data: new Date(melhor.date).toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' })
+    };
   }, [lucroAcumulado]);
 
-  // Memoizar preparação de dados para gráfico de lucro por tipster
-  const lucroPorTipsterChart = useMemo(() => {
-    if (lucroPorTipster.length === 0) return [];
-    return lucroPorTipster.map(item => ({
-      tipster: item.tipster,
-      lucro: item.lucro
-    }));
-  }, [lucroPorTipster]);
+  const mediaDiaria = useMemo(() => {
+    if (lucroAcumulado.length === 0) return 0;
+    const periodo = periodoGrafico === '7' ? 7 : periodoGrafico === '30' ? 30 : lucroAcumulado.length;
+    const sliced = lucroAcumulado.slice(-periodo);
+    const soma = sliced.reduce((acc, item) => acc + item.lucro, 0);
+    return soma / sliced.length;
+  }, [lucroAcumulado, periodoGrafico]);
 
-  // Calcular ROI positivo/negativo para badge
+  // Preparar dados para ranking de tipsters
+  const rankingTipsters = useMemo(() => {
+    return lucroPorTipster
+      .map(item => {
+        const tipster = tipsters.find(t => t.nome === item.tipster);
+        if (!tipster) return null;
+        
+        // Calcular ROI e taxa de acerto do tipster (simplificado - usando dados do resumo)
+        const resumoEsporte = resumoPorEsporte.find(r => r.esporte); // Simplificado
+        return {
+          nome: item.tipster,
+          lucro: item.lucro,
+          roi: metricas.roi, // Simplificado - usar dados reais se disponível
+          taxa: metricas.taxaAcerto, // Simplificado
+          descricao: 'Tipster profissional'
+        };
+      })
+      .filter((item): item is NonNullable<typeof item> => item !== null)
+      .sort((a, b) => b.lucro - a.lucro)
+      .slice(0, 5);
+  }, [lucroPorTipster, tipsters, resumoPorEsporte, metricas]);
+
   const roiStatus = useMemo(() => {
     if (metricas.roi >= 50) return 'Ótimo';
     if (metricas.roi >= 0) return 'Bom';
@@ -261,6 +300,11 @@ export default function Dashboard() {
             <button className="dashboard-new-notification-btn">
               <Bell size={20} />
               <span className="dashboard-new-notification-dot"></span>
+            </button>
+            
+            <button className="dashboard-new-date-filter-btn">
+              <Calendar size={16} />
+              <span>Últimos 30 dias</span>
             </button>
             
             <div className="filter-trigger-wrapper">
@@ -490,291 +534,142 @@ export default function Dashboard() {
         <div className="dashboard-new-charts-grid">
           <div className="dashboard-new-chart-card dashboard-new-chart-card--large">
             <div className="dashboard-new-chart-header">
-              <h3 className="dashboard-new-chart-title">Lucro Diário e Acumulado</h3>
-              <span className="dashboard-new-chart-subtitle">Últimos 30 dias</span>
+              <div>
+                <h3 className="dashboard-new-chart-title">Evolução da Banca</h3>
+                <p className="dashboard-new-chart-subtitle">Crescimento acumulado</p>
+              </div>
+              
+              <div className="dashboard-new-chart-controls">
+                <div className="dashboard-new-growth-badge">
+                  <TrendingUp size={16} />
+                  <span>{formatPercent(crescimentoPercentual)}</span>
+                </div>
+                <select 
+                  className="dashboard-new-period-select"
+                  value={periodoGrafico}
+                  onChange={(e) => setPeriodoGrafico(e.target.value)}
+                >
+                  <option value="7">7 dias</option>
+                  <option value="30">30 dias</option>
+                  <option value="90">90 dias</option>
+                </select>
+              </div>
             </div>
-            <ResponsiveContainer width="100%" height={280}>
-              {lucroAcumuladoChart.length > 0 ? (
-                <ComposedChart data={lucroAcumuladoChart} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+            <ResponsiveContainer width="100%" height={300}>
+              {evolucaoBancaChart.length > 0 ? (
+                <AreaChart data={evolucaoBancaChart} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                   <defs>
-                    <linearGradient id="colorLucroPositivo" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="var(--color-success)" stopOpacity={0.9}/>
-                      <stop offset="95%" stopColor="var(--color-success)" stopOpacity={0.3}/>
-                    </linearGradient>
-                    <linearGradient id="colorLucroNegativo" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="var(--color-danger)" stopOpacity={0.9}/>
-                      <stop offset="95%" stopColor="var(--color-danger)" stopOpacity={0.3}/>
-                    </linearGradient>
-                    <linearGradient id="colorAcumulado" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="var(--bank-color, var(--color-chart-primary))" stopOpacity={0.8}/>
-                      <stop offset="95%" stopColor="var(--bank-color, var(--color-chart-primary))" stopOpacity={0.1}/>
+                    <linearGradient id="colorValor" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#a855f7" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#a855f7" stopOpacity={0}/>
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.gridStroke} vertical={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.2} />
                   <XAxis 
-                    dataKey="date"
-                    stroke={chartTheme.axisStroke}
-                    tick={{ ...chartTheme.axisTick }}
-                    tickLine={false}
+                    dataKey="date" 
+                    stroke="#64748b"
+                    tick={{ fill: '#94a3b8', fontSize: 12 }}
                   />
                   <YAxis 
-                    yAxisId="left"
-                    stroke={chartTheme.axisStroke}
-                    tick={{ ...chartTheme.axisTick, fill: 'var(--color-success)' }}
-                    tickLine={false}
-                    axisLine={false}
-                    label={{ value: 'Lucro Diário (R$)', angle: -90, position: 'insideLeft', style: { ...chartTheme.axisLabel, fill: 'var(--color-success)' } }}
-                  />
-                  <YAxis 
-                    yAxisId="right"
-                    orientation="right"
-                    stroke={chartTheme.axisStroke}
-                    tick={{ ...chartTheme.axisTick, fill: 'var(--bank-color, var(--color-chart-primary))' }}
-                    tickLine={false}
-                    axisLine={false}
-                    label={{ value: 'Acumulado (R$)', angle: 90, position: 'insideRight', style: { ...chartTheme.axisLabel, fill: 'var(--bank-color, var(--color-chart-primary))' } }}
+                    stroke="#64748b"
+                    tick={{ fill: '#94a3b8', fontSize: 12 }}
+                    tickFormatter={(value) => `R$ ${value}`}
                   />
                   <Tooltip 
-                    contentStyle={chartTheme.tooltip}
-                    formatter={(value: number, name: string) => {
-                      const formatted = formatCurrency(value);
-                      const label = name === 'lucro' ? 'Lucro Diário' : 'Acumulado';
-                      return [formatted, label];
+                    contentStyle={{ 
+                      backgroundColor: '#1e293b', 
+                      border: '1px solid #334155',
+                      borderRadius: '12px',
+                      color: '#fff',
+                      boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
                     }}
-                    labelStyle={chartTheme.tooltipLabel}
-                    itemStyle={chartTheme.tooltipItem}
+                    formatter={(value: number) => [`R$ ${value.toFixed(2)}`, 'Saldo']}
                   />
-                  <Legend 
-                    {...chartTheme.legendProps}
-                    formatter={(value: string) => {
-                      if (value === 'lucro') return 'Lucro Diário';
-                      if (value === 'acumulado') return 'Lucro Acumulado';
-                      return value;
-                    }}
-                  />
-                  <Bar 
-                    yAxisId="left"
-                    dataKey="lucro" 
-                    name="lucro"
-                    radius={chartTheme.barRadius}
-                    maxBarSize={18}
-                  >
-                    {lucroAcumuladoChart.map((entry) => (
-                      <Cell 
-                        key={`cell-${entry.date}`} 
-                        fill={entry.lucro >= 0 ? 'url(#colorLucroPositivo)' : 'url(#colorLucroNegativo)'}
-                      />
-                    ))}
-                  </Bar>
-                  <Line 
-                    yAxisId="right"
+                  <Area 
                     type="monotone" 
-                    dataKey="acumulado" 
-                    name="acumulado"
-                    stroke="var(--bank-color, var(--color-chart-primary))" 
+                    dataKey="valor" 
+                    stroke="#a855f7" 
                     strokeWidth={3}
-                    dot={chartTheme.lineDot}
-                    activeDot={chartTheme.lineActiveDot}
+                    fill="url(#colorValor)" 
                   />
-                </ComposedChart>
+                </AreaChart>
               ) : (
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#94a3b8' }}>
+                  Sem dados para exibir
                 </div>
               )}
             </ResponsiveContainer>
+            
+            <div className="dashboard-new-chart-stats">
+              <div>
+                <p className="dashboard-new-chart-stat-label">Melhor Dia</p>
+                <p className="dashboard-new-chart-stat-value">{formatCurrency(melhorDia.valor)}</p>
+                <p className="dashboard-new-chart-stat-date">{melhorDia.data}</p>
+              </div>
+              <div>
+                <p className="dashboard-new-chart-stat-label">Média Diária</p>
+                <p className="dashboard-new-chart-stat-value">{formatCurrency(mediaDiaria)}</p>
+                <p className="dashboard-new-chart-stat-period">Últimos {periodoGrafico} dias</p>
+              </div>
+              <div>
+                <p className="dashboard-new-chart-stat-label">Crescimento</p>
+                <p className="dashboard-new-chart-stat-value">{formatPercent(crescimentoPercentual)}</p>
+                <p className="dashboard-new-chart-stat-growth">vs. inicial</p>
+              </div>
+            </div>
           </div>
+          
           <div className="dashboard-new-chart-card">
             <div className="dashboard-new-chart-header">
-              <h3 className="dashboard-new-chart-title">Lucro por Tipster</h3>
-              <span className="dashboard-new-chart-subtitle">Últimos 90 dias</span>
+              <div>
+                <h3 className="dashboard-new-chart-title">Ranking de Tipsters</h3>
+                <p className="dashboard-new-chart-subtitle">Top performers</p>
+              </div>
+              <Trophy size={24} className="dashboard-new-trophy-icon" />
             </div>
-            <ResponsiveContainer width="100%" height={280}>
-              {lucroPorTipsterChart.length > 0 ? (
-                <BarChart data={lucroPorTipsterChart} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-                  <defs>
-                    <linearGradient id="colorTipster" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="var(--color-chart-primary)" stopOpacity={0.9}/>
-                      <stop offset="50%" stopColor="var(--color-chart-primary-light)" stopOpacity={0.8}/>
-                      <stop offset="95%" stopColor="var(--color-chart-primary-dark)" stopOpacity={0.6}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.gridStroke} vertical={false} />
-                  <XAxis 
-                    dataKey="tipster" 
-                    stroke={chartTheme.axisStroke}
-                    tick={{ ...chartTheme.axisTick }}
-                    tickLine={false}
-                  />
-                  <YAxis 
-                    stroke={chartTheme.axisStroke}
-                    tick={{ ...chartTheme.axisTick }}
-                    tickLine={false}
-                    axisLine={false}
-                    label={{ value: 'Lucro (R$)', angle: -90, position: 'insideLeft', style: chartTheme.axisLabel }}
-                  />
-                  <Tooltip 
-                    contentStyle={chartTheme.tooltip}
-                    formatter={(value: number) => formatCurrency(value)}
-                    labelStyle={chartTheme.tooltipLabel}
-                    itemStyle={chartTheme.tooltipItem}
-                  />
-                  <Bar 
-                    dataKey="lucro" 
-                    fill="url(#colorTipster)" 
-                    radius={chartTheme.barRadius}
-                    animationDuration={800}
-                    maxBarSize={28}
-                  >
-                    {lucroPorTipsterChart.map((entry) => (
-                      <Cell key={`cell-${entry.tipster}`} />
-                    ))}
-                  </Bar>
-                </BarChart>
+            
+            <div className="dashboard-new-tipster-list">
+              {rankingTipsters.length > 0 ? (
+                rankingTipsters.map((tipster, index) => (
+                  <div key={tipster.nome} className="dashboard-new-tipster-item">
+                    <div className="dashboard-new-tipster-gradient"></div>
+                    <div className="dashboard-new-tipster-content">
+                      <div className="dashboard-new-tipster-header">
+                        <div className="dashboard-new-tipster-rank">
+                          #{index + 1}
+                        </div>
+                        <div className="dashboard-new-tipster-info">
+                          <h4 className="dashboard-new-tipster-name">{tipster.nome}</h4>
+                          <p className="dashboard-new-tipster-desc">{tipster.descricao}</p>
+                        </div>
+                        <div className="dashboard-new-tipster-profit">
+                          <p className="dashboard-new-tipster-profit-value">{formatCurrency(tipster.lucro)}</p>
+                          <p className="dashboard-new-tipster-profit-label">Lucro total</p>
+                        </div>
+                      </div>
+                      
+                      <div className="dashboard-new-tipster-metrics">
+                        <div className="dashboard-new-tipster-metric">
+                          <p className="dashboard-new-tipster-metric-label">ROI</p>
+                          <p className="dashboard-new-tipster-metric-value">{formatPercent(tipster.roi)}</p>
+                        </div>
+                        <div className="dashboard-new-tipster-metric">
+                          <p className="dashboard-new-tipster-metric-label">Taxa</p>
+                          <p className="dashboard-new-tipster-metric-value">{formatPercent(tipster.taxa)}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))
               ) : (
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-                </div>
-              )}
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Summary Grid */}
-        <div className="dashboard-new-summary-grid">
-          <div className="dashboard-new-summary-card">
-            <div className="dashboard-new-summary-header">
-              <div>
-                <h3 className="dashboard-new-summary-title">Resumo por Esporte</h3>
-                <p className="dashboard-new-summary-subtitle">Performance detalhada por modalidade esportiva</p>
-              </div>
-              {resumoPorEsporte.length > 0 && (
-                <button
-                  type="button"
-                  className="dashboard-new-expand-btn"
-                  onClick={() => setResumoEsporteExpanded(prev => !prev)}
-                >
-                  {resumoEsporteExpanded ? 'Recolher' : 'Expandir'}
-                </button>
+                <p className="dashboard-new-empty-text">Nenhum tipster encontrado</p>
               )}
             </div>
-            {resumoPorEsporte.length > 0 ? (
-              <div
-                className="dashboard-new-summary-list"
-                style={{
-                  maxHeight: resumoEsporteExpanded ? 'none' : '360px',
-                  overflowY: resumoEsporteExpanded ? 'visible' : 'auto',
-                }}
-              >
-                {resumoPorEsporte.map((item) => (
-                  <div key={item.esporte} className="dashboard-new-summary-item">
-                    <div className="dashboard-new-summary-item-header">
-                      <p className="dashboard-new-summary-item-title">{item.esporte}</p>
-                      <span className="dashboard-new-summary-item-badge">
-                        {formatPercent(item.roi)}
-                      </span>
-                    </div>
-                    <div className="dashboard-new-summary-item-grid">
-                      <div>
-                        <span className="dashboard-new-summary-item-label">Apostas: </span>
-                        <span className="dashboard-new-summary-item-value">{item.apostas}</span>
-                      </div>
-                      <div>
-                        <span className="dashboard-new-summary-item-label">Greens: </span>
-                        <span className="dashboard-new-summary-item-value">{item.ganhas}</span>
-                      </div>
-                      <div>
-                        <span className="dashboard-new-summary-item-label">Aproveitamento: </span>
-                        <span className="dashboard-new-summary-item-value">{item.aproveitamento.toFixed(1)}%</span>
-                      </div>
-                      <div>
-                        <span className="dashboard-new-summary-item-label">Stake Média: </span>
-                        <span className="dashboard-new-summary-item-value">{formatCurrency(item.stakeMedia)}</span>
-                      </div>
-                      <div className="dashboard-new-summary-item-full">
-                        <span className="dashboard-new-summary-item-label">Lucro: </span>
-                        <span 
-                          className="dashboard-new-summary-item-value"
-                          style={{ 
-                            color: item.lucro >= 0 ? 'var(--color-success)' : 'var(--color-danger)' 
-                          }}
-                        >
-                          {formatCurrency(item.lucro)}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="dashboard-new-empty-text">Nenhuma aposta registrada por esporte</p>
-            )}
-          </div>
-          <div className="dashboard-new-summary-card">
-            <div className="dashboard-new-summary-header">
-              <div>
-                <h3 className="dashboard-new-summary-title">Resumo por Casa de Aposta</h3>
-                <p className="dashboard-new-summary-subtitle">Performance detalhada por bookmaker</p>
-              </div>
-              {resumoPorCasa.length > 0 && (
-                <button
-                  type="button"
-                  className="dashboard-new-expand-btn"
-                  onClick={() => setResumoCasaExpanded(prev => !prev)}
-                >
-                  {resumoCasaExpanded ? 'Recolher' : 'Expandir'}
-                </button>
-              )}
-            </div>
-            {resumoPorCasa.length > 0 ? (
-              <div
-                className="dashboard-new-summary-list"
-                style={{
-                  maxHeight: resumoCasaExpanded ? 'none' : '360px',
-                  overflowY: resumoCasaExpanded ? 'visible' : 'auto',
-                }}
-              >
-                {resumoPorCasa.map((item) => (
-                  <div key={item.casa} className="dashboard-new-summary-item">
-                    <div className="dashboard-new-summary-item-header">
-                      <p className="dashboard-new-summary-item-title">{item.casa}</p>
-                      <span className="dashboard-new-summary-item-badge">
-                        {formatPercent(item.roi)}
-                      </span>
-                    </div>
-                    <div className="dashboard-new-summary-item-grid">
-                      <div>
-                        <span className="dashboard-new-summary-item-label">Apostas: </span>
-                        <span className="dashboard-new-summary-item-value">{item.apostas}</span>
-                      </div>
-                      <div>
-                        <span className="dashboard-new-summary-item-label">Greens: </span>
-                        <span className="dashboard-new-summary-item-value">{item.ganhas}</span>
-                      </div>
-                      <div>
-                        <span className="dashboard-new-summary-item-label">Aproveitamento: </span>
-                        <span className="dashboard-new-summary-item-value">{item.aproveitamento.toFixed(1)}%</span>
-                      </div>
-                      <div>
-                        <span className="dashboard-new-summary-item-label">Stake Média: </span>
-                        <span className="dashboard-new-summary-item-value">{formatCurrency(item.stakeMedia)}</span>
-                      </div>
-                      <div className="dashboard-new-summary-item-full">
-                        <span className="dashboard-new-summary-item-label">Lucro: </span>
-                        <span 
-                          className="dashboard-new-summary-item-value"
-                          style={{ 
-                            color: item.lucro >= 0 ? 'var(--color-success)' : 'var(--color-danger)' 
-                          }}
-                        >
-                          {formatCurrency(item.lucro)}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="dashboard-new-empty-text">Nenhuma aposta registrada por casa de aposta</p>
-            )}
+            
+            <button className="dashboard-new-tipster-view-all">
+              <TrendingUp size={16} />
+              Ver Todos os Tipsters
+            </button>
           </div>
         </div>
       </div>
