@@ -20,7 +20,18 @@ export function initSentry(): void {
   try {
     const envMode: unknown = import.meta.env.MODE;
     const environment = typeof envMode === 'string' ? envMode : 'production';
-    (Sentry.init as (options: {
+    
+    // Criar integrações de forma type-safe
+    const browserTracing = (Sentry as { browserTracingIntegration?: () => unknown }).browserTracingIntegration?.();
+    const replay = (Sentry as { replayIntegration?: (opts: unknown) => unknown }).replayIntegration?.({
+      maskAllText: true,
+      blockAllMedia: true,
+    });
+    
+    const integrations = [browserTracing, replay].filter((x): x is NonNullable<typeof x> => x != null);
+    
+    // Type assertion para evitar unsafe member access
+    const sentryInit = (Sentry as unknown as { init: (options: {
       dsn: string;
       environment: string;
       sendDefaultPii: boolean;
@@ -31,7 +42,9 @@ export function initSentry(): void {
       beforeSend: (event: unknown, hint: { originalException?: unknown }) => unknown;
       ignoreErrors: string[];
       release?: string;
-    }) => void)({
+    }) => void }).init;
+    
+    sentryInit({
       dsn: sentryDsn,
       environment,
       
@@ -39,14 +52,7 @@ export function initSentry(): void {
       sendDefaultPii: true,
       
       // Integrações do React
-      integrations: [
-        Sentry.browserTracingIntegration(),
-        Sentry.replayIntegration({
-          // Gravar sessões apenas quando há erros (economiza recursos)
-          maskAllText: true,
-          blockAllMedia: true,
-        }),
-      ],
+      integrations,
 
       // Performance Monitoring
       tracesSampleRate: 0.1, // 10% das transações (reduz carga)

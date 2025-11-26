@@ -47,10 +47,11 @@ export default function TelegramStatus() {
   // Autenticar via Telegram Web App
   useEffect(() => {
     const authenticateTelegram = async () => {
-      if (isTelegram && window.Telegram?.WebApp?.initData) {
+      const webapp = window.Telegram?.WebApp;
+      if (isTelegram && webapp?.initData) {
         try {
           const { data } = await api.post<{ token?: string }>('/auth/telegram', {
-            initData: window.Telegram.WebApp.initData
+            initData: webapp.initData
           });
           if (typeof data.token === 'string') {
             localStorage.setItem('token', data.token);

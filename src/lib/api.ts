@@ -147,8 +147,9 @@ api.interceptors.response.use(
 
     // Tratar rate limiting
     if (error.response?.status === 429) {
-      const retryAfter = error.response.data?.retryAfter ?? 60;
-      const message = error.response.data?.error ?? 'Muitas requisições. Aguarde alguns minutos.';
+      const data = error.response.data;
+      const retryAfter = (typeof data === 'object' && data && 'retryAfter' in data) ? data.retryAfter! as number : 60;
+      const message = (typeof data === 'object' && data && 'error' in data) ? data.error! as string : 'Muitas requisições. Aguarde alguns minutos.';
       
       console.warn(`Rate limit atingido. Aguarde ${retryAfter} segundos.`);
       

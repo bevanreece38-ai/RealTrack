@@ -185,7 +185,8 @@ export default function TelegramEdit() {
       const hasTelegram = typeof window !== 'undefined' && window.Telegram?.WebApp;
       console.log('hasTelegram:', hasTelegram);
       console.log('Telegram WebApp:', !!window.Telegram?.WebApp);
-      console.log('initData:', window.Telegram?.WebApp?.initData ? 'presente' : 'ausente');
+      const webapp = window.Telegram?.WebApp;
+      console.log('initData:', webapp?.initData ? 'presente' : 'ausente');
       console.log('User-Agent:', navigator.userAgent);
       console.log('URL:', window.location.href);
       

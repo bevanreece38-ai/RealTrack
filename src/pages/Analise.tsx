@@ -46,15 +46,19 @@ export default function Analise() {
   // Sincronizar dados derivados com o hook de análise
   const evolucaoRoiMensal = useMemo(() => data.evolucaoRoiMensal, [data.evolucaoRoiMensal]);
   const distribuicaoOdds = useMemo(() => data.distribuicaoOdds, [data.distribuicaoOdds]);
-  const heatmap = useMemo(() => {
-    if (!data.heatmap || Object.keys(data.heatmap).length === 0) {
+  const heatmap = useMemo((): AnaliseHeatmapData => {
+    const hm: unknown = data.heatmap;
+    if (!hm || (typeof hm === 'object' && Object.keys(hm as Record<string, unknown>).length === 0)) {
       return defaultHeatmap;
     }
-    return data.heatmap;
+    return hm as AnaliseHeatmapData;
   }, [data.heatmap]);
   const winRatePorEsporte = useMemo(() => data.winRatePorEsporte, [data.winRatePorEsporte]);
   const comparacaoBookmakers = useMemo(
-    () => data.comparacaoBookmakers ?? [],
+    () => {
+      const bks = data.comparacaoBookmakers;
+      return Array.isArray(bks) ? bks : [];
+    },
     [data.comparacaoBookmakers],
   );
 
@@ -229,8 +233,8 @@ export default function Analise() {
                   {row}
                 </span>
                 {heatmapCols.map((col) => {
-                  const rowData = heatmap[row] as Record<string, { roi: number; investido: number }> | undefined;
-                  const cellData = rowData?.[col] as { roi: number; investido: number } | undefined;
+                  const rowData: unknown = heatmap[row];
+                  const cellData = (typeof rowData === 'object' && rowData) ? (rowData as Record<string, { roi: number; investido: number }>)[col] : undefined;
                   const roi = typeof cellData?.roi === 'number' ? cellData.roi : 0;
                   const investido = typeof cellData?.investido === 'number' ? cellData.investido : 0;
                   const color = getHeatmapColor(roi);
