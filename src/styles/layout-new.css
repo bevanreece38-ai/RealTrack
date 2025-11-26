@@ -531,13 +531,15 @@
 .layout-new-profile-box {
   padding: 1rem;
   border-top: 1px solid rgba(168, 85, 247, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .layout-new-profile-info {
   display: flex;
   align-items: center;
   gap: 0.625rem;
-  margin-bottom: 0.625rem;
 }
 
 .layout-new-profile-avatar {
@@ -582,45 +584,27 @@
 
 .layout-new-profile-actions {
   display: flex;
-  gap: 0.5rem;
+  align-items: center;
+  gap: 0.75rem;
 }
 
 .layout-new-profile-action-btn,
 .layout-new-profile-logout-btn {
-  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
-  padding: 0.5rem 0.75rem;
+  padding: 0.5rem;
   border-radius: 0.5rem;
   border: none;
-  font-size: 0.875rem;
-  font-weight: 500;
+  background: transparent;
+  color: #94a3b8;
   cursor: pointer;
   transition: all 0.2s;
 }
 
-.layout-new-profile-action-btn {
-  background: transparent;
-  color: #94a3b8;
-}
-
-.layout-new-profile-action-btn:hover {
-  background: rgba(51, 65, 85, 0.5);
-  color: white;
-}
-
-.layout-new-profile-logout-btn {
-  background: transparent;
-  color: #94a3b8;
-  border: 1px solid rgba(239, 68, 68, 0.2);
-}
-
+.layout-new-profile-action-btn:hover,
 .layout-new-profile-logout-btn:hover {
-  background: rgba(239, 68, 68, 0.1);
-  color: #f87171; /* red-400 */
-  border-color: rgba(239, 68, 68, 0.4);
+  color: white;
 }
 
 .layout-new-sidebar.collapsed .layout-new-profile-action-btn {
