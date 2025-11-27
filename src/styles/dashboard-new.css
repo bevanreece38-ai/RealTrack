@@ -607,9 +607,11 @@
   color: #10b981; /* emerald-500 */
 }
 
-.dashboard-new-recent-performance {
-  max-height: 400px;
-  overflow-y: auto;
+.dashboard-new-performance-card {
+  padding: 1.5rem;
+  height: auto;
+  min-height: 400px;
+  overflow-y: hidden;
 }
 
 .dashboard-new-recent-list {
@@ -731,6 +733,12 @@
 .recreate-sports-breakdown {
   max-height: 600px;
   overflow-y: auto;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+.recreate-sports-breakdown::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
 }
 
 .recreate-sports-grid {
