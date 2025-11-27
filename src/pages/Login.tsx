@@ -86,7 +86,7 @@ export default function Login() {
               <div className="text-slate-500 text-sm">Bot Suporte</div>
             </div>
             <div>
-              <div className="text-emerald-400 text-2xl mb-1">87%</div>
+              <div className="text-emerald-400 text-2xl mb-1">90%</div>
               <div className="text-slate-500 text-sm">Taxa de Sucesso</div>
             </div>
             <div>

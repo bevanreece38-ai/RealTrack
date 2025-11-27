@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, User } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, Target, ChevronRight, User } from 'lucide-react';
 import api from '../lib/api';
 import { type ApiError } from '../types/api';
 
@@ -14,8 +14,13 @@ export default function Cadastro() {
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [confirmarSenha, setConfirmarSenha] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const nameInputRef = useRef<HTMLInputElement>(null);
+  const emailInputRef = useRef<HTMLInputElement>(null);
+  const passwordInputRef = useRef<HTMLInputElement>(null);
+  const confirmPasswordInputRef = useRef<HTMLInputElement>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,457 +59,267 @@ export default function Cadastro() {
   };
 
   return (
-    <div style={{ 
-      minHeight: '100vh', 
-      display: 'flex',
-      position: 'relative',
-      overflow: 'hidden',
-      background: '#0a0e1a'
-    }}>
-      {/* Background com estrelas e montanhas */}
-      <div style={{
-        position: 'absolute',
-        inset: 0,
-        background: `
-          radial-gradient(ellipse at 20% 30%, rgba(139, 92, 246, 0.15) 0%, transparent 50%),
-          radial-gradient(ellipse at 80% 70%, rgba(168, 85, 247, 0.1) 0%, transparent 50%),
-          linear-gradient(135deg, #0a0e1a 0%, #1a1f2e 25%, #0f1419 50%, #1a1f2e 75%, #0a0e1a 100%)
-        `,
-        backgroundAttachment: 'fixed'
-      }}>
-        {/* Estrelas */}
-        <div style={{
-          position: 'absolute',
-          inset: 0,
-          backgroundImage: `
-            radial-gradient(2px 2px at 20% 30%, white, transparent),
-            radial-gradient(2px 2px at 60% 70%, white, transparent),
-            radial-gradient(1px 1px at 50% 50%, white, transparent),
-            radial-gradient(1px 1px at 80% 10%, white, transparent),
-            radial-gradient(2px 2px at 90% 40%, white, transparent),
-            radial-gradient(1px 1px at 33% 60%, white, transparent),
-            radial-gradient(1px 1px at 10% 80%, white, transparent),
-            radial-gradient(2px 2px at 40% 20%, white, transparent),
-            radial-gradient(1px 1px at 70% 50%, white, transparent),
-            radial-gradient(1px 1px at 15% 40%, white, transparent)
-          `,
-          backgroundRepeat: 'repeat',
-          backgroundSize: '200% 200%',
-          opacity: 0.6,
-          animation: 'twinkle 8s ease-in-out infinite alternate'
-        }} />
-        {/* Montanhas */}
-        <div style={{
-          position: 'absolute',
-          bottom: 0,
-          left: 0,
-          right: 0,
-          height: '40%',
-          background: `
-            linear-gradient(to top, 
-              #1a1f2e 0%, 
-              #0f1419 30%, 
-              #0a0e1a 60%,
-              transparent 100%
-            )
-          `,
-          clipPath: 'polygon(0% 100%, 0% 60%, 20% 50%, 40% 55%, 60% 45%, 80% 50%, 100% 55%, 100% 100%)'
-        }} />
-        <div style={{
-          position: 'absolute',
-          bottom: 0,
-          left: 0,
-          right: 0,
-          height: '35%',
-          background: `
-            linear-gradient(to top, 
-              #0f1419 0%, 
-              #0a0e1a 40%,
-              transparent 100%
-            )
-          `,
-          clipPath: 'polygon(0% 100%, 0% 70%, 15% 65%, 35% 70%, 55% 60%, 75% 65%, 100% 70%, 100% 100%)',
-          opacity: 0.8
-        }} />
-      </div>
-
-      {/* Conteúdo do Cadastro */}
-      <div style={{
-        position: 'relative',
-        zIndex: 10,
-        width: '100%',
-        maxWidth: '520px',
-        padding: '32px 32px 40px',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'center',
-        margin: '0 auto'
-      }}>
-      {/* Logo e Título */}
-      <div style={{ marginBottom: '28px', textAlign: 'center' }}>
-        <h1 style={{ 
-          margin: '0 0 10px', 
-          fontSize: '2.2rem', 
-          fontWeight: 700,
-          color: 'var(--color-text-white-dark)',
-          fontFamily: 'Inter, system-ui, sans-serif',
-          letterSpacing: '-0.02em'
-        }}>
-          Real Comando
-          <span style={{
-            display: 'inline-block',
-            width: '8px',
-            height: '8px',
-            borderRadius: '50%',
-            background: 'conic-gradient(from 180deg, #22d3ee, #6366f1, #ec4899, #22d3ee)',
-            marginLeft: '8px',
-            boxShadow: '0 0 16px rgba(129, 140, 248, 0.8)'
-          }} />
-        </h1>
-        <p style={{ 
-          margin: 0, 
-          color: 'rgba(248, 250, 252, 0.7)',
-          fontSize: '1rem'
-        }}>
-          Crie sua conta para acessar o dashboard
-        </p>
-      </div>
-
-      {/* Card do Formulário */}
-      <div style={{
-        width: '100%',
-        maxWidth: '520px',
-        padding: '24px 22px 26px',
-        position: 'relative',
-        marginTop: '-4px',
-        marginBottom: '-4px'
-      }}>
-        <div style={{
-          position: 'absolute',
-          inset: 0,
-          background: 'radial-gradient(circle at top, rgba(56,189,248,0.1), transparent 55%), rgba(15,23,42,0.9)',
-          backdropFilter: 'blur(26px) saturate(200%)',
-          WebkitBackdropFilter: 'blur(26px) saturate(200%)',
-          borderRadius: '26px',
-          border: '1px solid rgba(148, 163, 184, 0.45)',
-          boxShadow: '0 24px 80px rgba(15, 23, 42, 0.95), 0 0 0 1px rgba(15,23,42,0.8)',
-          zIndex: -1
-        }} />
-        <h2 style={{ 
-          margin: '0 0 8px', 
-          fontSize: '1.75rem', 
-          fontWeight: 700,
-          color: 'var(--color-text-white-dark)',
-          textAlign: 'center'
-        }}>
-          Criar Conta
-        </h2>
-        <p style={{ 
-          margin: '0 0 24px', 
-          color: 'var(--color-text-muted-light)',
-          fontSize: '0.9rem',
-          textAlign: 'center'
-        }}>
-          Preencha os dados para criar sua conta
-        </p>
-
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <label style={{ 
-              fontSize: '0.9rem', 
-              fontWeight: 600,
-              color: 'var(--color-text-white-dark)'
-            }}>
-              Apelido
-            </label>
-            <div style={{ position: 'relative' }}>
-              <User 
-                size={20} 
-                style={{ 
-                  position: 'absolute', 
-                  left: '14px', 
-                  top: '50%', 
-                  transform: 'translateY(-50%)',
-                  color: 'var(--color-text-disabled)',
-                  pointerEvents: 'none'
-                }} 
-              />
-              <input
-                type="text"
-                value={nomeCompleto}
-                onChange={(e) => setNomeCompleto(e.target.value)}
-                placeholder="Seu apelido"
-                required
-                autoComplete="name"
-                style={{
-                  width: '100%',
-                  padding: '13px 13px 13px 46px',
-                  border: '1px solid rgba(148, 163, 184, 0.5)',
-                  borderRadius: '12px',
-                  fontSize: '0.95rem',
-                  background: 'rgba(15, 23, 42, 0.92)',
-                  color: '#e5e7eb',
-                  outline: 'none',
-                  transition: 'all 0.25s ease',
-                  boxShadow: '0 0 0 0 rgba(129, 140, 248, 0)'
-                }}
-                onFocus={(e) => {
-                  e.target.style.borderColor = '#8b5cf6';
-                  e.target.style.boxShadow = '0 0 0 3px rgba(129, 140, 248, 0.35)';
-                  e.target.style.background = '#020617';
-                }}
-                onBlur={(e) => {
-                  e.target.style.borderColor = 'rgba(148, 163, 184, 0.5)';
-                  e.target.style.boxShadow = '0 0 0 0 rgba(129, 140, 248, 0)';
-                  e.target.style.background = 'rgba(15, 23, 42, 0.92)';
-                }}
-              />
+    <div className="w-screen h-screen bg-gradient-to-br from-emerald-950 via-slate-950 to-slate-950 flex flex-col lg:flex-row relative overflow-hidden" style={{ transform: 'scale(1.05)', transformOrigin: 'top left', width: '100vw', height: '100vh', overflow: 'hidden', position: 'fixed', top: '0', left: '0' }}>
+      {/* Decorative Elements */}
+      <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/5 rounded-full blur-3xl" />
+      <div className="absolute bottom-0 left-0 w-96 h-96 bg-emerald-600/5 rounded-full blur-3xl" />
+      
+      {/* Left Panel - Hero */}
+      <div className="lg:w-1/2 p-8 lg:p-16 flex flex-col justify-between relative z-10">
+        {/* Logo & Title */}
+        <div className="pt-20">
+          <div className="flex items-center gap-3 mb-16">
+            <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/30">
+              <Target className="text-white" size={24} strokeWidth={2.5} />
+            </div>
+            <div>
+              <div className="text-white text-xl">Real Comando</div>
+              <div className="text-emerald-400 text-xs tracking-wider">Planilha Esportiva</div>
             </div>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <label style={{ 
-              fontSize: '0.9rem', 
-              fontWeight: 600,
-              color: 'var(--color-text-white-dark)'
-            }}>
-              Email
-            </label>
-            <div style={{ position: 'relative' }}>
-              <Mail 
-                size={20} 
-                style={{ 
-                  position: 'absolute', 
-                  left: '14px', 
-                  top: '50%', 
-                  transform: 'translateY(-50%)',
-                  color: 'var(--color-text-disabled)',
-                  pointerEvents: 'none'
-                }} 
-              />
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="seu@email.com"
-                required
-                autoComplete="email"
-                style={{
-                  width: '100%',
-                  padding: '13px 13px 13px 44px',
-                  border: '1px solid rgba(148, 163, 184, 0.5)',
-                  borderRadius: '12px',
-                  fontSize: '0.95rem',
-                  background: 'rgba(15, 23, 42, 0.92)',
-                  color: '#e5e7eb',
-                  outline: 'none',
-                  transition: 'all 0.25s ease',
-                  boxShadow: '0 0 0 0 rgba(129, 140, 248, 0)'
-                }}
-                onFocus={(e) => {
-                  e.target.style.borderColor = '#8b5cf6';
-                  e.target.style.boxShadow = '0 0 0 3px rgba(129, 140, 248, 0.35)';
-                  e.target.style.background = '#020617';
-                }}
-                onBlur={(e) => {
-                  e.target.style.borderColor = 'rgba(148, 163, 184, 0.5)';
-                  e.target.style.boxShadow = '0 0 0 0 rgba(129, 140, 248, 0)';
-                  e.target.style.background = 'rgba(15, 23, 42, 0.92)';
-                }}
-              />
+          <div className="max-w-xl pt-10">
+            <h1 className="text-white text-5xl lg:text-6xl mb-6 leading-tight">
+              Comece sua jornada
+              <span className="block text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-400 mt-2">
+                nas apostas esportivas
+              </span>
+            </h1>
+            <p className="text-slate-400 text-lg leading-relaxed">
+              Crie sua conta e tenha acesso a ferramentas profissionais para análise e gestão.
+            </p>
+          </div>
+        </div>
+
+        {/* Bottom Section */}
+        <div className="hidden lg:block">
+          <div className="grid grid-cols-3 gap-6 pb-8 border-b border-slate-800/50">
+            <div>
+              <div className="text-emerald-400 text-2xl mb-1">24/7</div>
+              <div className="text-slate-500 text-sm">Bot Suporte</div>
+            </div>
+            <div>
+              <div className="text-emerald-400 text-2xl mb-1">90%</div>
+              <div className="text-slate-500 text-sm">Taxa de Sucesso</div>
+            </div>
+            <div>
+              <div className="text-emerald-400 text-2xl mb-1">5+</div>
+              <div className="text-slate-500 text-sm">Usuários Ativos</div>
             </div>
           </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <label style={{ 
-              fontSize: '0.9rem', 
-              fontWeight: 600,
-              color: 'var(--color-text-white-dark)'
-            }}>
-              Senha
-            </label>
-            <div style={{ position: 'relative' }}>
-              <Lock 
-                size={20} 
-                style={{ 
-                  position: 'absolute', 
-                  left: '14px', 
-                  top: '50%', 
-                  transform: 'translateY(-50%)',
-                  color: 'var(--color-text-disabled)',
-                  pointerEvents: 'none'
-                }} 
-              />
-              <input
-                type="password"
-                value={senha}
-                onChange={(e) => setSenha(e.target.value)}
-                placeholder="••••••••"
-                required
-                autoComplete="new-password"
-                style={{
-                  width: '100%',
-                  padding: '13px 13px 13px 44px',
-                  border: '1px solid rgba(148, 163, 184, 0.5)',
-                  borderRadius: '12px',
-                  fontSize: '0.95rem',
-                  background: 'rgba(15, 23, 42, 0.92)',
-                  color: '#e5e7eb',
-                  outline: 'none',
-                  transition: 'all 0.25s ease',
-                  boxShadow: '0 0 0 0 rgba(129, 140, 248, 0)'
-                }}
-                onFocus={(e) => {
-                  e.target.style.borderColor = '#8b5cf6';
-                  e.target.style.boxShadow = '0 0 0 3px rgba(129, 140, 248, 0.35)';
-                  e.target.style.background = '#020617';
-                }}
-                onBlur={(e) => {
-                  e.target.style.borderColor = 'rgba(148, 163, 184, 0.5)';
-                  e.target.style.boxShadow = '0 0 0 0 rgba(129, 140, 248, 0)';
-                  e.target.style.background = 'rgba(15, 23, 42, 0.92)';
-                }}
-              />
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <label style={{ 
-              fontSize: '0.9rem', 
-              fontWeight: 600,
-              color: 'var(--color-text-white-dark)'
-            }}>
-              Confirmar Senha
-            </label>
-            <div style={{ position: 'relative' }}>
-              <Lock 
-                size={20} 
-                style={{ 
-                  position: 'absolute', 
-                  left: '14px', 
-                  top: '50%', 
-                  transform: 'translateY(-50%)',
-                  color: 'var(--color-text-disabled)',
-                  pointerEvents: 'none'
-                }} 
-              />
-              <input
-                type="password"
-                value={confirmarSenha}
-                onChange={(e) => setConfirmarSenha(e.target.value)}
-                placeholder="••••••••"
-                required
-                autoComplete="new-password"
-                style={{
-                  width: '100%',
-                  padding: '13px 13px 13px 44px',
-                  border: '1px solid rgba(148, 163, 184, 0.5)',
-                  borderRadius: '12px',
-                  fontSize: '0.95rem',
-                  background: 'rgba(15, 23, 42, 0.92)',
-                  color: '#e5e7eb',
-                  outline: 'none',
-                  transition: 'all 0.25s ease',
-                  boxShadow: '0 0 0 0 rgba(129, 140, 248, 0)'
-                }}
-                onFocus={(e) => {
-                  e.target.style.borderColor = '#8b5cf6';
-                  e.target.style.boxShadow = '0 0 0 3px rgba(129, 140, 248, 0.35)';
-                  e.target.style.background = '#020617';
-                }}
-                onBlur={(e) => {
-                  e.target.style.borderColor = 'rgba(148, 163, 184, 0.5)';
-                  e.target.style.boxShadow = '0 0 0 0 rgba(129, 140, 248, 0)';
-                  e.target.style.background = 'rgba(15, 23, 42, 0.92)';
-                }}
-              />
-            </div>
-          </div>
-
-          {error && (
-            <div style={{
-              padding: '12px 16px',
-              background: 'rgba(248, 113, 113, 0.14)',
-              border: '1px solid rgba(248, 113, 113, 0.6)',
-              borderRadius: '12px',
-              color: '#fecaca',
-              fontSize: '0.9rem'
-            }}>
-              {error}
-            </div>
-          )}
-
-          <button 
-            type="submit" 
-            disabled={loading} 
-            style={{ 
-              width: '100%', 
-              padding: '15px',
-              background: loading 
-                ? 'rgba(15, 23, 42, 0.8)' 
-                : 'linear-gradient(135deg, #22d3ee 0%, #6366f1 40%, #ec4899 80%)',
-              backgroundSize: '180% 100%',
-              color: 'var(--color-text-white-dark)',
-              border: 'none',
-              borderRadius: '999px',
-              fontSize: '1rem',
-              fontWeight: 600,
-              cursor: loading ? 'not-allowed' : 'pointer',
-              transition: 'all 0.25s ease',
-              marginTop: '8px',
-              boxShadow: loading 
-                ? 'none' 
-                : '0 12px 35px rgba(37, 99, 235, 0.55)',
-              position: 'relative',
-              overflow: 'hidden'
-            }}
-            onMouseEnter={(e) => {
-              if (!loading) {
-                e.currentTarget.style.backgroundPosition = '100% 0';
-                e.currentTarget.style.transform = 'translateY(-1px) scale(1.01)';
-                e.currentTarget.style.boxShadow = '0 18px 40px rgba(37, 99, 235, 0.7)';
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (!loading) {
-                e.currentTarget.style.backgroundPosition = '0% 0';
-                e.currentTarget.style.transform = 'translateY(0) scale(1)';
-                e.currentTarget.style.boxShadow = '0 12px 35px rgba(37, 99, 235, 0.55)';
-              }
-            }}
-          >
-            {loading ? 'Criando conta...' : 'Criar Conta'}
-          </button>
-        </form>
-
-        <div style={{ 
-          textAlign: 'center', 
-          marginTop: '24px',
-          paddingTop: '20px',
-          borderTop: '1px solid rgba(30, 64, 175, 0.7)'
-        }}>
-          <p style={{ 
-            margin: 0, 
-            color: 'rgba(226, 232, 240, 0.95)',
-            fontSize: '0.9rem'
-          }}>
-            Já tem uma conta?{' '}
-            <Link 
-              to="/login" 
-              style={{ 
-                color: '#60a5fa',
-                fontWeight: 600,
-                textDecoration: 'none',
-                transition: 'color 0.2s'
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.color = '#93c5fd'}
-              onMouseLeave={(e) => e.currentTarget.style.color = '#60a5fa'}
-            >
-              Faça login
-            </Link>
-          </p>
         </div>
       </div>
+
+      {/* Right Panel - Register Form */}
+      <div className="lg:w-1/2 flex items-center justify-center p-8 relative z-10">
+        <div className="w-full max-w-md">
+          {/* Background Card Effect */}
+          <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent rounded-3xl blur-3xl" />
+          
+          {/* Register Card */}
+          <div className="relative bg-slate-900/90 backdrop-blur-2xl border border-slate-800/50 rounded-2xl p-8 lg:p-10 shadow-2xl">
+            {/* Header */}
+            <div className="mb-8">
+              <h2 className="text-white text-2xl mb-2">Criar conta</h2>
+              <p className="text-slate-400">Preencha os dados para começar</p>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleSubmit} className="space-y-5">
+              {/* Name */}
+              <div>
+                <label htmlFor="name" className="block text-slate-300 mb-2.5 text-sm">
+                  Nome completo
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
+                    <User className="text-slate-500" size={18} />
+                  </div>
+                  <input
+                    ref={nameInputRef}
+                    id="name"
+                    type="text"
+                    value={nomeCompleto}
+                    onChange={(e) => setNomeCompleto(e.target.value)}
+                    placeholder="Seu nome completo"
+                    className="w-full bg-black border border-slate-700/50 text-white rounded-xl pl-11 pr-4 py-3.5 text-sm placeholder:text-slate-600 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20 transition-all"
+                    style={{ 
+                      color: '#ffffff !important', 
+                      backgroundColor: '#000000 !important', 
+                      WebkitTextFillColor: '#ffffff !important',
+                      WebkitBoxShadow: '0 0 0 1000px #000000 inset !important',
+                      boxShadow: 'inset 0 0 0 1000px #000000 !important',
+                      transition: 'background-color 5000s ease-in-out 0s',
+                      transitionDelay: '5000s'
+                    }}
+                    required
+                    autoComplete="name"
+                  />
+                </div>
+              </div>
+
+              {/* Email */}
+              <div>
+                <label htmlFor="email" className="block text-slate-300 mb-2.5 text-sm">
+                  Endereço de e-mail
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
+                    <Mail className="text-slate-500" size={18} />
+                  </div>
+                  <input
+                    ref={emailInputRef}
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="voce@exemplo.com"
+                    className="w-full bg-black border border-slate-700/50 text-white rounded-xl pl-11 pr-4 py-3.5 text-sm placeholder:text-slate-600 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20 transition-all"
+                    style={{ 
+                      color: '#ffffff !important', 
+                      backgroundColor: '#000000 !important', 
+                      WebkitTextFillColor: '#ffffff !important',
+                      WebkitBoxShadow: '0 0 0 1000px #000000 inset !important',
+                      boxShadow: 'inset 0 0 0 1000px #000000 !important',
+                      transition: 'background-color 5000s ease-in-out 0s',
+                      transitionDelay: '5000s'
+                    }}
+                    required
+                    autoComplete="email"
+                  />
+                </div>
+              </div>
+
+              {/* Password */}
+              <div>
+                <label htmlFor="password" className="block text-slate-300 mb-2.5 text-sm">
+                  Senha
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
+                    <Lock className="text-slate-500" size={18} />
+                  </div>
+                  <input
+                    ref={passwordInputRef}
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    value={senha}
+                    onChange={(e) => setSenha(e.target.value)}
+                    placeholder="••••••••••"
+                    className="w-full bg-black border border-slate-700/50 text-white rounded-xl pl-11 pr-11 py-3.5 text-sm placeholder:text-slate-600 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20 transition-all"
+                    style={{ 
+                      color: '#ffffff !important', 
+                      backgroundColor: '#000000 !important', 
+                      WebkitTextFillColor: '#ffffff !important',
+                      WebkitBoxShadow: '0 0 0 1000px #000000 inset !important',
+                      boxShadow: 'inset 0 0 0 1000px #000000 !important',
+                      transition: 'background-color 5000s ease-in-out 0s',
+                      transitionDelay: '5000s'
+                    }}
+                    required
+                    autoComplete="new-password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 right-0 flex items-center pr-4 text-slate-500 hover:text-slate-300 transition-colors"
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Confirm Password */}
+              <div>
+                <label htmlFor="confirmPassword" className="block text-slate-300 mb-2.5 text-sm">
+                  Confirmar senha
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
+                    <Lock className="text-slate-500" size={18} />
+                  </div>
+                  <input
+                    ref={confirmPasswordInputRef}
+                    id="confirmPassword"
+                    type={showPassword ? 'text' : 'password'}
+                    value={confirmarSenha}
+                    onChange={(e) => setConfirmarSenha(e.target.value)}
+                    placeholder="••••••••••"
+                    className="w-full bg-black border border-slate-700/50 text-white rounded-xl pl-11 pr-11 py-3.5 text-sm placeholder:text-slate-600 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20 transition-all"
+                    style={{ 
+                      color: '#ffffff !important', 
+                      backgroundColor: '#000000 !important', 
+                      WebkitTextFillColor: '#ffffff !important',
+                      WebkitBoxShadow: '0 0 0 1000px #000000 inset !important',
+                      boxShadow: 'inset 0 0 0 1000px #000000 !important',
+                      transition: 'background-color 5000s ease-in-out 0s',
+                      transitionDelay: '5000s'
+                    }}
+                    required
+                    autoComplete="new-password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 right-0 flex items-center pr-4 text-slate-500 hover:text-slate-300 transition-colors"
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Error Message */}
+              {error && (
+                <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm">
+                  {error}
+                </div>
+              )}
+
+              {/* Submit Button */}
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 disabled:from-slate-600 disabled:to-slate-700 text-white py-4 rounded-xl transition-all shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40 disabled:shadow-none flex items-center justify-center gap-2 group mt-7 disabled:cursor-not-allowed"
+              >
+                <span>{loading ? 'Criando conta...' : 'Criar conta'}</span>
+                <ChevronRight size={18} className="group-hover:translate-x-0.5 transition-transform" />
+              </button>
+            </form>
+
+            {/* Divider */}
+            <div className="relative my-7">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-slate-800"></div>
+              </div>
+              <div className="relative flex justify-center">
+                <span className="px-4 bg-slate-900 text-slate-600 text-xs uppercase tracking-wider">
+                  Já tem conta?
+                </span>
+              </div>
+            </div>
+
+            {/* Login Link */}
+            <div className="text-center">
+              <Link 
+                to="/login" 
+                className="inline-flex items-center justify-center gap-2 text-slate-300 hover:text-emerald-400 transition-colors group"
+              >
+                <span className="text-sm">Faça login na sua conta</span>
+                <ChevronRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
+              </Link>
+            </div>
+          </div>
+
+          {/* Trust Badge */}
+          <div className="mt-6 text-center">
+            <p className="text-slate-600 text-xs flex items-center justify-center gap-2">
+              <svg className="w-4 h-4 text-emerald-500" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+              </svg>
+              Seus dados estão protegidos com criptografia de ponta
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );
