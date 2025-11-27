@@ -1,5 +1,8 @@
 /* Fontes carregadas via link no HTML para melhor performance */
 /* @import bloqueia renderização, link permite carregamento assíncrono */
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
 @import './styles/colors.css';
 @import './styles/components/cards.css';
 @import './styles/pages/index.css';
