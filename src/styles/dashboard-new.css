@@ -699,197 +699,347 @@
   margin: 0;
 }
 
-/* Sports Breakdown Styles */
-.dashboard-new-sports-breakdown {
+/* Recreate Design - Sports Breakdown Styles */
+.recreate-sports-breakdown {
   max-height: 600px;
   overflow-y: auto;
 }
 
-.dashboard-new-sports-grid {
+.recreate-sports-grid {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 1rem;
 }
 
-.dashboard-new-sport-item {
-  background: rgba(30, 41, 59, 0.5); /* slate-900/50 */
-  border: 1px solid rgba(71, 85, 105, 0.3);
-  border-radius: 0.75rem;
+.recreate-sport-card {
+  border: 1px solid rgba(120, 120, 128, 0.5);
+  border-radius: 1rem;
+  background: linear-gradient(to bottom right, #1a1a2e, #16162a);
   overflow: hidden;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
   transition: all 0.3s ease;
-  cursor: pointer;
 }
 
-.dashboard-new-sport-item:hover {
-  background: rgba(30, 41, 59, 0.8);
-  border-color: rgba(71, 85, 105, 0.5);
+.recreate-sport-card:hover {
+  border-color: rgba(168, 85, 247, 0.3);
+  box-shadow: 0 25px 50px -12px rgba(168, 85, 247, 0.1);
 }
 
-.dashboard-new-sport-item.expanded {
-  background: rgba(30, 41, 59, 0.9);
-  border-color: rgba(147, 51, 234, 0.3);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-}
-
-.dashboard-new-sport-header {
+.recreate-sport-button {
+  width: 100%;
+  padding: 1.5rem 2rem;
+  background: transparent;
+  border: none;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1rem;
-  gap: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
 }
 
-.dashboard-new-sport-main {
+.recreate-sport-button:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.recreate-sport-main {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  flex: 1;
-  min-width: 0;
+  gap: 1.25rem;
 }
 
-.dashboard-new-sport-icon {
-  width: 40px;
-  height: 40px;
+.recreate-sport-icon {
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 1rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(71, 85, 105, 0.3);
-  border-radius: 0.5rem;
   font-size: 1.25rem;
-  flex-shrink: 0;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease;
 }
 
-.dashboard-new-sport-info {
-  flex: 1;
-  min-width: 0;
+.recreate-sport-card:hover .recreate-sport-icon {
+  transform: scale(1.1);
 }
 
-.dashboard-new-sport-name {
+.recreate-sport-icon.positive {
+  background: linear-gradient(to bottom right, rgba(16, 185, 129, 0.2), rgba(5, 150, 105, 0.2));
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.recreate-sport-icon.negative {
+  background: linear-gradient(to bottom right, rgba(239, 68, 68, 0.2), rgba(220, 38, 38, 0.2));
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.recreate-sport-info {
+  text-align: left;
+}
+
+.recreate-sport-name {
   color: white;
-  font-size: 1rem;
-  font-weight: 600;
-  margin: 0 0 0.25rem 0;
+  font-weight: 500;
+  margin-bottom: 0.25rem;
 }
 
-.dashboard-new-sport-subtitle {
-  color: #64748b; /* slate-500 */
-  font-size: 0.75rem;
-  margin: 0;
+.recreate-sport-subtitle {
+  color: rgba(156, 163, 175, 0.7);
+  font-size: 0.875rem;
 }
 
-.dashboard-new-sport-metrics {
+.recreate-sport-metrics {
   display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  align-items: flex-end;
-  margin-right: 1rem;
+  align-items: center;
+  gap: 2.5rem;
 }
 
-.dashboard-new-sport-roi,
-.dashboard-new-sport-profit {
+.recreate-sport-roi,
+.recreate-sport-profit {
   text-align: right;
 }
 
-.dashboard-new-sport-roi-value,
-.dashboard-new-sport-profit-value {
-  font-size: 0.875rem;
+.recreate-sport-roi-value,
+.recreate-sport-profit-value {
+  font-size: 1.5rem;
   font-weight: 600;
-  display: block;
+  margin-bottom: 0.25rem;
 }
 
-.dashboard-new-sport-roi-value.positive,
-.dashboard-new-sport-profit-value.positive {
-  color: #10b981; /* emerald-500 */
+.recreate-sport-roi-value.positive,
+.recreate-sport-profit-value.positive {
+  color: #34d399;
 }
 
-.dashboard-new-sport-roi-value.negative,
-.dashboard-new-sport-profit-value.negative {
-  color: #ef4444; /* red-500 */
+.recreate-sport-roi-value.negative,
+.recreate-sport-profit-value.negative {
+  color: #f87171;
 }
 
-.dashboard-new-sport-expand {
-  flex-shrink: 0;
-  width: 32px;
-  height: 32px;
+.recreate-sport-roi-label,
+.recreate-sport-profit-label {
+  color: rgba(156, 163, 175, 0.7);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.recreate-sport-expand {
+  width: 1.5rem;
+  height: 1.5rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(71, 85, 105, 0.3);
-  border-radius: 50%;
-  transition: all 0.2s;
+  transition: transform 0.3s ease;
 }
 
-.dashboard-new-sport-item:hover .dashboard-new-sport-expand {
-  background: rgba(71, 85, 105, 0.5);
+.recreate-sport-expand.rotated {
+  transform: rotate(180deg);
 }
 
-.dashboard-new-sport-expand-icon {
-  color: white;
-  font-size: 1.25rem;
-  font-weight: 600;
-  line-height: 1;
+.recreate-sport-expand-icon {
+  color: rgba(156, 163, 175, 0.7);
+  font-size: 0.875rem;
+  transition: color 0.2s ease;
 }
 
-.dashboard-new-sport-details {
-  border-top: 1px solid rgba(71, 85, 105, 0.3);
-  padding: 1rem;
-  background: rgba(15, 23, 42, 0.5);
+.recreate-sport-card:hover .recreate-sport-expand-icon {
+  color: #a78bfa;
 }
 
-.dashboard-new-sport-stats-grid {
+/* Expanded Content */
+.recreate-sport-expanded {
+  padding: 0 2rem 2rem;
+  animation: fadeInSlideDown 0.3s ease;
+}
+
+@keyframes fadeInSlideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-1rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.recreate-stats-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1rem;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 2rem;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(8px);
+  border-radius: 1rem;
+  padding: 2rem;
+  margin-bottom: 1.5rem;
+  border: 1px solid rgba(120, 120, 128, 0.5);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
 }
 
-.dashboard-new-sport-stat {
+.recreate-stat-item {
   text-align: center;
-  padding: 0.75rem;
-  background: rgba(30, 41, 59, 0.5);
-  border-radius: 0.5rem;
-  border: 1px solid rgba(71, 85, 105, 0.2);
 }
 
-.dashboard-new-sport-stat-label {
-  color: #64748b; /* slate-500 */
+.recreate-stat-label {
+  color: rgba(156, 163, 175, 0.7);
   font-size: 0.75rem;
-  margin: 0 0 0.5rem 0;
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.recreate-stat-value {
+  color: white;
+  font-size: 1.875rem;
+  font-weight: 600;
+}
+
+.recreate-stat-value.positive {
+  color: #34d399;
+}
+
+.recreate-stat-value.negative {
+  color: #f87171;
+}
+
+.recreate-stat-subtitle {
+  color: rgba(52, 211, 153, 0.6);
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+}
+
+/* Recent Activity */
+.recreate-recent-activity h3.recreate-activity-title {
+  color: rgba(156, 163, 175, 0.7);
+  margin-bottom: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 0.75rem;
+}
+
+.recreate-activity-table {
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(8px);
+  border-radius: 1rem;
+  overflow: hidden;
+  border: 1px solid rgba(120, 120, 128, 0.5);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+.recreate-table-header {
+  display: grid;
+  grid-template-columns: 5fr 2fr 2fr 3fr;
+  gap: 1rem;
+  padding: 1.25rem 2rem;
+  border-bottom: 1px solid rgba(120, 120, 128, 0.5);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.recreate-header-col {
+  color: rgba(156, 163, 175, 0.7);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.recreate-header-col:last-child {
+  text-align: right;
+}
+
+.recreate-table-row {
+  display: grid;
+  grid-template-columns: 5fr 2fr 2fr 3fr;
+  gap: 1rem;
+  padding: 1.25rem 2rem;
+  border-bottom: 1px solid rgba(120, 120, 128, 0.3);
+  transition: all 0.2s ease;
+}
+
+.recreate-table-row:last-child {
+  border-bottom: none;
+}
+
+.recreate-table-row:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.recreate-table-desc {
+  color: rgba(229, 231, 235, 0.8);
+}
+
+.recreate-table-amount {
+  color: rgba(156, 163, 175, 0.7);
+  text-align: right;
+}
+
+.recreate-table-profit {
+  text-align: right;
   font-weight: 500;
 }
 
-.dashboard-new-sport-stat-value {
-  color: white;
-  font-size: 0.875rem;
-  font-weight: 600;
-  margin: 0;
+.recreate-table-profit.positive {
+  color: #34d399;
 }
 
-.dashboard-new-sport-stat-value.positive {
-  color: #10b981; /* emerald-500 */
+.recreate-table-profit.negative {
+  color: #f87171;
 }
 
-.dashboard-new-sport-stat-value.negative {
-  color: #ef4444; /* red-500 */
+.recreate-table-status {
+  text-align: right;
+}
+
+.recreate-status-badge {
+  display: inline-block;
+  padding: 0.375rem 1rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+.recreate-status-badge.win {
+  background: linear-gradient(to right, rgba(16, 185, 129, 0.3), rgba(5, 150, 105, 0.3));
+  color: #86efac;
+  border: 1px solid rgba(16, 185, 129, 0.5);
+}
+
+.recreate-status-badge.loss {
+  background: linear-gradient(to right, rgba(239, 68, 68, 0.3), rgba(220, 38, 38, 0.3));
+  color: #fca5a5;
+  border: 1px solid rgba(239, 68, 68, 0.5);
 }
 
 @media (max-width: 768px) {
-  .dashboard-new-sport-header {
+  .recreate-sport-button {
     flex-direction: column;
     align-items: flex-start;
+    gap: 1rem;
+  }
+  
+  .recreate-sport-metrics {
+    width: 100%;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+  
+  .recreate-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+  
+  .recreate-table-header,
+  .recreate-table-row {
+    grid-template-columns: 1fr;
     gap: 0.5rem;
   }
   
-  .dashboard-new-sport-metrics {
-    width: 100%;
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: center;
-    margin-right: 0;
-  }
-  
-  .dashboard-new-sport-stats-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 0.75rem;
+  .recreate-header-col,
+  .recreate-table-amount,
+  .recreate-table-profit,
+  .recreate-table-status {
+    text-align: left;
   }
 }
 
