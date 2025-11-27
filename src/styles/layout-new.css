@@ -96,13 +96,22 @@
   display: flex;
   flex-direction: column;
   transition: width 0.3s ease;
-  overflow-x: hidden;
+  overflow: hidden;
   scrollbar-width: none; /* Firefox */
   -ms-overflow-style: none; /* IE/Edge */
 }
 
 .layout-new-sidebar::-webkit-scrollbar {
   display: none; /* Chrome/Safari */
+}
+
+.layout-new-sidebar *::-webkit-scrollbar {
+  display: none;
+}
+
+.layout-new-sidebar * {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
 .layout-new-sidebar.collapsed {
@@ -469,7 +478,7 @@
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  overflow-y: auto;
+  overflow: hidden;
 }
 
 .layout-new-nav-item {
