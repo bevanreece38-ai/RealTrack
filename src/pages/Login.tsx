@@ -124,8 +124,14 @@ export default function Login() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="voce@exemplo.com"
-                    className="w-full bg-slate-950/50 border border-slate-700/50 text-white rounded-xl pl-11 pr-4 py-3.5 text-sm placeholder:text-slate-600 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20 transition-all"
-                    style={{ color: '#ffffff !important', backgroundColor: '#0f172a !important', WebkitTextFillColor: '#ffffff !important' }}
+                    className="w-full bg-black border border-slate-700/50 text-white rounded-xl pl-11 pr-4 py-3.5 text-sm placeholder:text-slate-600 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20 transition-all"
+                    style={{ 
+                      color: '#ffffff !important', 
+                      backgroundColor: '#000000 !important', 
+                      WebkitTextFillColor: '#ffffff !important',
+                      WebkitBoxShadow: '0 0 0 1000px #000000 inset !important',
+                      boxShadow: 'inset 0 0 0 1000px #000000 !important'
+                    }}
                     required
                     autoComplete="email"
                   />
@@ -148,8 +154,14 @@ export default function Login() {
                     value={senha}
                     onChange={(e) => setSenha(e.target.value)}
                     placeholder="••••••••••"
-                    className="w-full bg-slate-950/50 border border-slate-700/50 text-white rounded-xl pl-11 pr-11 py-3.5 text-sm placeholder:text-slate-600 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20 transition-all"
-                    style={{ color: '#ffffff !important', backgroundColor: '#0f172a !important', WebkitTextFillColor: '#ffffff !important' }}
+                    className="w-full bg-black border border-slate-700/50 text-white rounded-xl pl-11 pr-11 py-3.5 text-sm placeholder:text-slate-600 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20 transition-all"
+                    style={{ 
+                      color: '#ffffff !important', 
+                      backgroundColor: '#000000 !important', 
+                      WebkitTextFillColor: '#ffffff !important',
+                      WebkitBoxShadow: '0 0 0 1000px #000000 inset !important',
+                      boxShadow: 'inset 0 0 0 1000px #000000 !important'
+                    }}
                     required
                     autoComplete="current-password"
                   />
