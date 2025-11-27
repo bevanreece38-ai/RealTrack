@@ -758,8 +758,8 @@
 }
 
 .recreate-sport-card:hover {
-  border-color: rgba(168, 85, 247, 0.3);
-  box-shadow: 0 25px 50px -12px rgba(168, 85, 247, 0.1);
+  border-color: rgba(120, 120, 128, 0.5);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
 }
 
 .recreate-sport-button {
@@ -775,7 +775,7 @@
 }
 
 .recreate-sport-button:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: transparent;
 }
 
 .recreate-sport-main {
@@ -797,7 +797,7 @@
 }
 
 .recreate-sport-card:hover .recreate-sport-icon {
-  transform: scale(1.1);
+  transform: scale(1);
 }
 
 .recreate-sport-icon.positive {
@@ -881,7 +881,7 @@
 }
 
 .recreate-sport-card:hover .recreate-sport-expand-icon {
-  color: #a78bfa;
+  color: rgba(156, 163, 175, 0.7);
 }
 
 /* Expanded Content */
