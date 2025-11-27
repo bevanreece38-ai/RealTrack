@@ -4,47 +4,80 @@
 @import './styles/components/cards.css';
 @import './styles/pages/index.css';
 
-/* Remove purple glow from ALL buttons globally */
-button:focus,
-.btn:focus,
-input:focus,
-select:focus,
-textarea:focus {
+/* Remove purple glow from ALL buttons globally - MAXIMUM SPECIFICITY */
+html body button:focus,
+html body .btn:focus,
+html body input:focus,
+html body select:focus,
+html body textarea:focus,
+html body button:focus-visible,
+html body .btn:focus-visible,
+html body input:focus-visible,
+html body select:focus-visible,
+html body textarea:focus-visible {
   outline: none !important;
   box-shadow: none !important;
   border-color: inherit !important;
 }
 
-/* Remove purple glow from all interactive elements */
-*:focus {
+/* Remove purple glow from all interactive elements - MAXIMUM SPECIFICITY */
+html body *:focus,
+html body *:focus-visible {
   outline: none !important;
   box-shadow: none !important;
 }
 
-/* Override bank-color variables on focus to prevent purple glow */
-button:focus *,
-.btn:focus *,
-input:focus *,
-select:focus *,
-textarea:focus * {
+/* Override bank-color variables on focus to prevent purple glow - MAXIMUM SPECIFICITY */
+html body button:focus *,
+html body .btn:focus *,
+html body input:focus *,
+html body select:focus *,
+html body textarea:focus *,
+html body button:focus-visible *,
+html body .btn:focus-visible *,
+html body input:focus-visible *,
+html body select:focus-visible *,
+html body textarea:focus-visible * {
   --bank-color: inherit !important;
   --bank-color-light: inherit !important;
   --bank-color-accent: inherit !important;
   --bank-color-dark: inherit !important;
 }
 
-/* Aggressive removal of any purple box-shadow or border */
-*[style*="box-shadow: var(--bank-color"],
-*[style*="border-color: var(--bank-color"],
-*[style*="border: var(--bank-color"] {
+/* Aggressive removal of any purple box-shadow or border - MAXIMUM SPECIFICITY */
+html body *[style*="box-shadow: var(--bank-color"],
+html body *[style*="border-color: var(--bank-color"],
+html body *[style*="border: var(--bank-color"],
+html body *[style*="box-shadow"][style*="8a2be2"],
+html body *[style*="box-shadow"][style*="9333ea"],
+html body *[style*="border"][style*="8a2be2"],
+html body *[style*="border"][style*="9333ea"] {
   box-shadow: none !important;
   border-color: inherit !important;
 }
 
-/* Remove any focus-visible purple glow */
-*:focus-visible {
-  outline: none !important;
+/* Target any element with purple colors in styles */
+html body *[style*="rgb(138, 43, 226)"],
+html body *[style*="rgb(147, 51, 234)"],
+html body *[style*="#8a2be2"],
+html body *[style*="#9333ea"] {
   box-shadow: none !important;
+  outline: none !important;
+  border-color: inherit !important;
+}
+
+/* Ultimate fallback - remove all box-shadows and outlines */
+html body * {
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+/* Re-enable box-shadows only for specific elements that need them */
+html body .card,
+html body .dashboard-new-hero-main,
+html body .dashboard-new-hero-card,
+html body .dashboard-new-chart-card {
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
 }
 
 :root {
