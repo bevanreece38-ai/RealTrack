@@ -1231,54 +1231,54 @@ button {
 /* Estilos antigos de stat-card removidos - agora em styles/components/cards.css */
 /* Usar .stat-card-new para os novos cards com estilo do Dashboard */
 
+/* Card padronizado - mesmo estilo dos stat-card-new */
 .card {
-  background: var(--surface);
-  border: 1px solid var(--color-border-card);
-  border-radius: var(--card-radius);
-  padding: 24px;
+  background: rgba(51, 65, 85, 0.5) !important; /* slate-800/50 - cor única para todos */
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  border: 1px solid rgba(71, 85, 105, 0.5) !important; /* slate-600/50 - cor única para todos */
+  border-radius: 1rem !important;
+  padding: 1.5rem !important;
   display: flex;
   flex-direction: column;
   gap: 16px;
-  box-shadow: var(--color-shadow-md);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: none !important;
+  transition: all 0.2s !important;
+  position: relative;
 }
 
 .card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--color-shadow-lg);
+  border-color: rgba(71, 85, 105, 0.7) !important;
+  transform: none !important;
+  box-shadow: none !important;
 }
 
 [data-theme='dark'] .card {
-  background: var(--color-bg-card-dark) !important;
-  backdrop-filter: blur(40px) saturate(200%) !important;
-  -webkit-backdrop-filter: blur(40px) saturate(200%) !important;
-  border: 1px solid var(--color-border-card-dark) !important;
-  box-shadow: var(--color-shadow-glass-card-dark) !important;
-  position: relative;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background: rgba(51, 65, 85, 0.5) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  border: 1px solid rgba(71, 85, 105, 0.5) !important;
+  box-shadow: none !important;
 }
 
 [data-theme='dark'] .card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(139, 92, 246, 0.5), transparent);
-  opacity: 0;
-  transition: opacity 0.3s ease;
+  display: none !important;
 }
 
 [data-theme='dark'] .card:hover {
-  background: var(--color-bg-hover-dark-alt) !important;
-  border-color: var(--color-border-nav-icon-active-dark) !important;
-  box-shadow: var(--color-shadow-card-hover-dark) !important;
-  transform: translateY(-4px);
+  background: rgba(51, 65, 85, 0.5) !important;
+  border-color: rgba(71, 85, 105, 0.7) !important;
+  box-shadow: none !important;
+  transform: none !important;
 }
 
 [data-theme='dark'] .card:hover::before {
-  opacity: 1;
+  display: none !important;
+}
+
+[data-theme='light'] .card {
+  background: rgba(241, 245, 249, 0.8) !important;
+  border-color: rgba(148, 163, 184, 0.3) !important;
 }
 
 .card-title {
