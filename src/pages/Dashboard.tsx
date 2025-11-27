@@ -96,6 +96,7 @@ export default function Dashboard() {
   const [resumoPorEsporte, setResumoPorEsporte] = useState<ResumoEsporteItem[]>([]);
   const [resumoPorCasa, setResumoPorCasa] = useState<ResumoCasaItem[]>([]);
   const [periodoGrafico, setPeriodoGrafico] = useState('7');
+  const [expandedSport, setExpandedSport] = useState<string | null>(null);
   
   // Mock data for recent performance
   const [apostasRecentes] = useState([
@@ -695,6 +696,7 @@ export default function Dashboard() {
             </ResponsiveContainer>
           </div>
           
+          {/* Performance Recente Card */}
           <div className="dashboard-new-chart-card">
             <div className="dashboard-new-chart-header">
               <div>
@@ -727,6 +729,93 @@ export default function Dashboard() {
               ) : (
                 <div className="dashboard-new-empty-state">
                   <p className="dashboard-new-empty-text">Nenhuma aposta recente</p>
+                </div>
+              )}
+            </div>
+          </div>
+          
+          {/* Desempenho por Esporte Card */}
+          <div className="dashboard-new-chart-card dashboard-new-chart-card--full-width">
+            <div className="dashboard-new-chart-header">
+              <div>
+                <h3 className="dashboard-new-chart-title">Desempenho por Esporte</h3>
+                <p className="dashboard-new-chart-subtitle">Clique para ver detalhes</p>
+              </div>
+            </div>
+            
+            <div className="dashboard-new-sports-breakdown">
+              {resumoPorEsporte && resumoPorEsporte.length > 0 ? (
+                <div className="dashboard-new-sports-grid">
+                  {resumoPorEsporte.map((esporte, index) => (
+                    <div 
+                      key={esporte.esporte || index} 
+                      className={`dashboard-new-sport-item ${expandedSport === esporte.esporte ? 'expanded' : ''}`}
+                      onClick={() => setExpandedSport(expandedSport === esporte.esporte ? null : esporte.esporte)}
+                    >
+                      <div className="dashboard-new-sport-header">
+                        <div className="dashboard-new-sport-info">
+                          <h4 className="dashboard-new-sport-name">{esporte.esporte || 'Outros'}</h4>
+                          <p className="dashboard-new-sport-count">{esporte.apostas || 0} apostas</p>
+                        </div>
+                        <div className="dashboard-new-sport-stats">
+                          <div className="dashboard-new-sport-roi">
+                            <span className={`dashboard-new-sport-roi-value ${esporte.roi >= 0 ? 'positive' : 'negative'}`}>
+                              {formatPercent(esporte.roi)}
+                            </span>
+                          </div>
+                          <div className="dashboard-new-sport-profit">
+                            <span className={`dashboard-new-sport-profit-value ${esporte.lucro >= 0 ? 'positive' : 'negative'}`}>
+                              {formatCurrency(esporte.lucro)}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="dashboard-new-sport-expand">
+                          <span className="dashboard-new-sport-expand-icon">
+                            {expandedSport === esporte.esporte ? '−' : '+'}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      {expandedSport === esporte.esporte && (
+                        <div className="dashboard-new-sport-details">
+                          <div className="dashboard-new-sport-detail-row">
+                            <div className="dashboard-new-sport-detail-item">
+                              <p className="dashboard-new-sport-detail-label">Investimento</p>
+                              <p className="dashboard-new-sport-detail-value">{formatCurrency(esporte.stakeMedia * esporte.apostas)}</p>
+                            </div>
+                            <div className="dashboard-new-sport-detail-item">
+                              <p className="dashboard-new-sport-detail-label">Taxa de Acerto</p>
+                              <p className="dashboard-new-sport-detail-value">{formatPercent(esporte.aproveitamento)}</p>
+                            </div>
+                            <div className="dashboard-new-sport-detail-item">
+                              <p className="dashboard-new-sport-detail-label">Stake Médio</p>
+                              <p className="dashboard-new-sport-detail-value">{formatCurrency(esporte.stakeMedia)}</p>
+                            </div>
+                          </div>
+                          <div className="dashboard-new-sport-detail-row">
+                            <div className="dashboard-new-sport-detail-item">
+                              <p className="dashboard-new-sport-detail-label">Apostas Ganhas</p>
+                              <p className="dashboard-new-sport-detail-value positive">{esporte.ganhas}</p>
+                            </div>
+                            <div className="dashboard-new-sport-detail-item">
+                              <p className="dashboard-new-sport-detail-label">Apostas Perdidas</p>
+                              <p className="dashboard-new-sport-detail-value negative">{esporte.apostas - esporte.ganhas}</p>
+                            </div>
+                            <div className="dashboard-new-sport-detail-item">
+                              <p className="dashboard-new-sport-detail-label">Lucro Médio</p>
+                              <p className={`dashboard-new-sport-detail-value ${esporte.lucro / esporte.apostas >= 0 ? 'positive' : 'negative'}`}>
+                                {formatCurrency(esporte.lucro / esporte.apostas)}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="dashboard-new-empty-state">
+                  <p className="dashboard-new-empty-text">Nenhum dado por esporte disponível</p>
                 </div>
               )}
             </div>
