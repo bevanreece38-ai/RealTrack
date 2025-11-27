@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { AreaChart, Area, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid } from 'recharts';
+import { LineChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { Filter, TrendingUp, ArrowUpRight, Calendar, Trophy } from 'lucide-react';
 import FilterPopover from '../components/FilterPopover';
 import DateInput from '../components/DateInput';
@@ -206,21 +206,26 @@ export default function Dashboard() {
       ? lucroAcumulado.slice(-7)
       : periodoGrafico === '30'
       ? lucroAcumulado.slice(-30)
+      : periodoGrafico === '90'
+      ? lucroAcumulado.slice(-90)
+      : periodoGrafico === '365'
+      ? lucroAcumulado.slice(-365)
       : lucroAcumulado;
     
     return sliced.map((item) => ({
       date: new Date(item.date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }),
-      valor: Number(item.acumulado.toFixed(2))
+      diário: Number(item.lucro.toFixed(2)),
+      acumulado: Number(item.acumulado.toFixed(2))
     }));
   }, [lucroAcumulado, periodoGrafico]);
 
   // Calcular crescimento percentual
   const crescimentoPercentual = useMemo(() => {
     if (evolucaoBancaChart.length < 2) return 0;
-    const primeiro = evolucaoBancaChart[0]?.valor ?? 0;
-    const ultimo = evolucaoBancaChart[evolucaoBancaChart.length - 1]?.valor ?? 0;
+    const primeiro = evolucaoBancaChart[0]?.acumulado ?? 0;
+    const ultimo = evolucaoBancaChart[evolucaoBancaChart.length - 1]?.acumulado ?? 0;
     if (primeiro === 0) return 0;
-    return ((ultimo - primeiro) / primeiro) * 100;
+    return ((ultimo - primeiro) / Math.abs(primeiro)) * 100;
   }, [evolucaoBancaChart]);
 
   // Calcular melhor dia e média diária
@@ -237,7 +242,7 @@ export default function Dashboard() {
 
   const mediaDiaria = useMemo(() => {
     if (lucroAcumulado.length === 0) return 0;
-    const periodo = periodoGrafico === '7' ? 7 : periodoGrafico === '30' ? 30 : lucroAcumulado.length;
+    const periodo = periodoGrafico === '7' ? 7 : periodoGrafico === '30' ? 30 : periodoGrafico === '90' ? 90 : periodoGrafico === '365' ? 365 : lucroAcumulado.length;
     const sliced = lucroAcumulado.slice(-periodo);
     const soma = sliced.reduce((acc, item) => acc + item.lucro, 0);
     return soma / sliced.length;
@@ -565,35 +570,69 @@ export default function Dashboard() {
           <div className="dashboard-new-chart-card dashboard-new-chart-card--large">
             <div className="dashboard-new-chart-header">
               <div>
-                <h3 className="dashboard-new-chart-title">Evolução da Banca</h3>
-                <p className="dashboard-new-chart-subtitle">Crescimento acumulado</p>
+                <h3 className="dashboard-new-chart-title">Evolução do Lucro</h3>
+                <p className="dashboard-new-chart-subtitle">Desempenho diário e acumulado</p>
               </div>
               
               <div className="dashboard-new-chart-controls">
-                <div className="dashboard-new-growth-badge">
-                  <TrendingUp size={16} />
-                  <span>{formatPercent(crescimentoPercentual)}</span>
+                <div className="dashboard-new-time-buttons">
+                  <button 
+                    className={`dashboard-new-time-btn ${periodoGrafico === '7' ? 'active' : ''}`}
+                    onClick={() => setPeriodoGrafico('7')}
+                  >
+                    7d
+                  </button>
+                  <button 
+                    className={`dashboard-new-time-btn ${periodoGrafico === '30' ? 'active' : ''}`}
+                    onClick={() => setPeriodoGrafico('30')}
+                  >
+                    30d
+                  </button>
+                  <button 
+                    className={`dashboard-new-time-btn ${periodoGrafico === '90' ? 'active' : ''}`}
+                    onClick={() => setPeriodoGrafico('90')}
+                  >
+                    90d
+                  </button>
+                  <button 
+                    className={`dashboard-new-time-btn ${periodoGrafico === '365' ? 'active' : ''}`}
+                    onClick={() => setPeriodoGrafico('365')}
+                  >
+                    1y
+                  </button>
                 </div>
-                <select 
-                  className="dashboard-new-period-select"
-                  value={periodoGrafico}
-                  onChange={(e) => setPeriodoGrafico(e.target.value)}
-                >
-                  <option value="7">7 dias</option>
-                  <option value="30">30 dias</option>
-                  <option value="90">90 dias</option>
-                </select>
               </div>
             </div>
+            
+            {/* Summary Cards */}
+            <div className="dashboard-new-summary-cards">
+              <div className="dashboard-new-summary-card">
+                <div className="dashboard-new-summary-header">
+                  <p className="dashboard-new-summary-label">Total Acumulado</p>
+                  <div className="dashboard-new-summary-trend">
+                    <TrendingUp size={16} />
+                    <span>{formatPercent(crescimentoPercentual)}</span>
+                  </div>
+                </div>
+                <h3 className="dashboard-new-summary-value">{formatCurrency(metricas.lucroTotal)}</h3>
+              </div>
+              
+              <div className="dashboard-new-summary-card">
+                <p className="dashboard-new-summary-label">Melhor Dia</p>
+                <h3 className="dashboard-new-summary-value">{formatCurrency(melhorDia.valor)}</h3>
+                <p className="dashboard-new-summary-date">{melhorDia.data}</p>
+              </div>
+              
+              <div className="dashboard-new-summary-card">
+                <p className="dashboard-new-summary-label">Média Diária</p>
+                <h3 className="dashboard-new-summary-value">{formatCurrency(mediaDiaria)}</h3>
+                <p className="dashboard-new-summary-period">Últimos {periodoGrafico === '365' ? '1 ano' : `${periodoGrafico} dias`}</p>
+              </div>
+            </div>
+            
             <ResponsiveContainer width="100%" height={300}>
               {evolucaoBancaChart.length > 0 ? (
-                <AreaChart data={evolucaoBancaChart} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="colorValor" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#a855f7" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#a855f7" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
+                <LineChart data={evolucaoBancaChart} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.2} />
                   <XAxis 
                     dataKey="date" 
@@ -613,16 +652,26 @@ export default function Dashboard() {
                       color: '#fff',
                       boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
                     }}
-                    formatter={(value: number) => [`R$ ${value.toFixed(2)}`, 'Saldo']}
+                    formatter={(value: number, name: string) => [
+                      `R$ ${value.toFixed(2)}`, 
+                      name === 'diário' ? 'Lucro Diário' : 'Acumulado'
+                    ]}
                   />
-                  <Area 
+                  <Line 
                     type="monotone" 
-                    dataKey="valor" 
-                    stroke="#a855f7" 
-                    strokeWidth={3}
-                    fill="url(#colorValor)" 
+                    dataKey="diário" 
+                    stroke="#3b82f6" 
+                    strokeWidth={2}
+                    dot={false}
                   />
-                </AreaChart>
+                  <Line 
+                    type="monotone" 
+                    dataKey="acumulado" 
+                    stroke="#10b981" 
+                    strokeWidth={3}
+                    dot={false}
+                  />
+                </LineChart>
               ) : (
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#94a3b8' }}>
                   Sem dados para exibir
