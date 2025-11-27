@@ -12,6 +12,7 @@ import api from '../lib/api';
 import { useBancas } from '../hooks/useBancas';
 import { formatCurrency, formatDate, formatDateDisplay, normalizeDisplayToISO, getTodayDateISO, toISODate } from '../utils/formatters';
 import { type ApiFinancialTransaction, type ApiFinancialSummary, type ApiError } from '../types/api';
+import '../styles/pages/financeiro.css';
 
 interface FinanceiroFilters {
   tipo: string;
@@ -348,7 +349,7 @@ export default function Financeiro() {
 
 
   return (
-    <div>
+    <div className="financeiro-page">
       <PageHeader
         title='Financeiro'
         subtitle='Gerencie suas transações e acompanhe seus saldos'

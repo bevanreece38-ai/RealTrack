@@ -10,6 +10,7 @@ import EmptyState from '../components/EmptyState';
 import { type Banco, type BancoStats } from '../data/mock';
 import { BANK_COLOR_PALETTE, DEFAULT_BANK_COLOR, normalizeColor } from '../utils/colors';
 import { formatNumber, formatDateTime } from '../utils/formatters';
+import '../styles/pages/bancas.css';
 
 interface BancoMetricasApi {
   totalApostas?: number;
@@ -232,7 +233,7 @@ export default function Bancas() {
   const statsData = selectedBanco ? statsOverride ?? selectedBanco.stats : undefined;
 
   return (
-    <div>
+    <div className="bancas-page">
       <PageHeader title="Bancas" subtitle="Gerencie suas bancas" badge="Padrão" />
 
       <div className="stat-grid">

@@ -15,6 +15,7 @@ import type { AnaliseFilters } from '../types/AnaliseFilters';
 import type { AnaliseHeatmapData } from '../types/AnaliseData';
 import type { RoiChartPoint } from '../types/RoiChartPoint';
 import type { OddsChartPoint } from '../types/OddsChartPoint';
+import '../styles/pages/analise.css';
 
 const heatmapRows = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
 const heatmapCols = ['Manhã (06-12)', 'Tarde (12-18)', 'Noite (18-24)', 'Madrugada (00-06)'];
@@ -107,7 +108,7 @@ export default function Analise() {
   ];
 
   return (
-    <div>
+    <div className="analise-page">
       <PageHeader
         title="Gráficos"
         subtitle="Visualize suas métricas e acompanhe evolução"

@@ -1,0 +1,225 @@
+/* ============================================
+   PÁGINA ATUALIZAR (APOSTAS) - Todos os estilos de grid/card
+   ============================================ */
+
+/* Grid de estatísticas */
+.atualizar-page .stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+  margin-bottom: 32px;
+}
+
+/* Card de apostas */
+.atualizar-page .apostas-card {
+  margin-bottom: 24px;
+}
+
+.atualizar-page .apostas-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.atualizar-page .apostas-card__title {
+  color: white;
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.atualizar-page .apostas-card__actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Tabela de apostas */
+.atualizar-page table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.atualizar-page table th,
+.atualizar-page table td {
+  padding: 12px 16px;
+  text-align: left;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.atualizar-page table th {
+  color: #94a3b8;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.atualizar-page table td {
+  color: #e2e8f0;
+  font-size: 0.875rem;
+}
+
+.atualizar-page table tbody tr:hover {
+  background: rgba(51, 65, 85, 0.3);
+}
+
+/* Badges de status */
+.atualizar-page .status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.atualizar-page .status-badge--green {
+  background: rgba(16, 185, 129, 0.1);
+  color: #34d399;
+}
+
+.atualizar-page .status-badge--red {
+  background: rgba(239, 68, 68, 0.1);
+  color: #f87171;
+}
+
+.atualizar-page .status-badge--yellow {
+  background: rgba(245, 158, 11, 0.1);
+  color: #fbbf24;
+}
+
+.atualizar-page .status-badge--gray {
+  background: rgba(148, 163, 184, 0.1);
+  color: #94a3b8;
+}
+
+/* Ações da tabela */
+.atualizar-page .action-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.atualizar-page .action-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.atualizar-page .action-btn:hover {
+  background: rgba(51, 65, 85, 0.5);
+  color: white;
+  border-color: rgba(147, 51, 234, 0.4);
+}
+
+.atualizar-page .action-btn--danger:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: #f87171;
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
+/* Formulário de nova aposta */
+.atualizar-page .form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.atualizar-page .form-grid--full {
+  grid-column: span 2;
+}
+
+/* Paginação */
+.atualizar-page .pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 24px;
+}
+
+.atualizar-page .pagination-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.atualizar-page .pagination-btn:hover:not(:disabled) {
+  background: rgba(51, 65, 85, 0.5);
+  color: white;
+  border-color: rgba(147, 51, 234, 0.4);
+}
+
+.atualizar-page .pagination-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.atualizar-page .pagination-btn--active {
+  background: linear-gradient(135deg, #9333ea 0%, #7c3aed 100%);
+  color: white;
+  border-color: transparent;
+}
+
+/* Light theme */
+[data-theme='light'] .atualizar-page table th {
+  color: #64748b;
+}
+
+[data-theme='light'] .atualizar-page table td {
+  color: #1e293b;
+}
+
+[data-theme='light'] .atualizar-page table tbody tr:hover {
+  background: rgba(241, 245, 249, 0.5);
+}
+
+[data-theme='light'] .atualizar-page .apostas-card__title {
+  color: #1e293b;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .atualizar-page .stat-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .atualizar-page .form-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .atualizar-page .form-grid--full {
+    grid-column: span 1;
+  }
+  
+  .atualizar-page table {
+    display: block;
+    overflow-x: auto;
+  }
+}
+
+@media (max-width: 480px) {
+  .atualizar-page .stat-grid {
+    grid-template-columns: 1fr;
+  }
+}
+

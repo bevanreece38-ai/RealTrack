@@ -17,6 +17,7 @@ import api from '../lib/api';
 import { formatCurrency as formatCurrencyUtil, formatDate as formatDateUtil } from '../utils/formatters';
 import { useTipsters } from '../hooks/useTipsters';
 import { useBancas } from '../hooks/useBancas';
+import '../styles/pages/atualizar.css';
 // Tesseract será carregado dinamicamente apenas quando necessário (biblioteca pesada ~2MB)
 import { type ApiBetWithBank, type ApiError, type ApiUploadTicketResponse } from '../types/api';
 
@@ -1104,7 +1105,7 @@ export default function Atualizar() {
     : 0;
 
   return (
-    <div>
+    <div className="atualizar-page">
       <PageHeader
         title="Apostas"
         subtitle="Gerencie suas apostas e acompanhe resultados"
