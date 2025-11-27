@@ -608,32 +608,6 @@ export default function Dashboard() {
               </div>
             </div>
             
-            {/* Summary Cards */}
-            <div className="dashboard-new-summary-cards">
-              <div className="dashboard-new-summary-card">
-                <div className="dashboard-new-summary-header">
-                  <p className="dashboard-new-summary-label">Total Acumulado</p>
-                  <div className="dashboard-new-summary-trend">
-                    <TrendingUp size={16} />
-                    <span>{formatPercent(crescimentoPercentual)}</span>
-                  </div>
-                </div>
-                <h3 className="dashboard-new-summary-value">{formatCurrency(metricas.lucroTotal)}</h3>
-              </div>
-              
-              <div className="dashboard-new-summary-card">
-                <p className="dashboard-new-summary-label">Melhor Dia</p>
-                <h3 className="dashboard-new-summary-value">{formatCurrency(melhorDia.valor)}</h3>
-                <p className="dashboard-new-summary-date">{melhorDia.data}</p>
-              </div>
-              
-              <div className="dashboard-new-summary-card">
-                <p className="dashboard-new-summary-label">Média Diária</p>
-                <h3 className="dashboard-new-summary-value">{formatCurrency(mediaDiaria)}</h3>
-                <p className="dashboard-new-summary-period">Últimos {periodoGrafico === '365' ? '1 ano' : `${periodoGrafico} dias`}</p>
-              </div>
-            </div>
-            
             <ResponsiveContainer width="100%" height={200}>
               {evolucaoBancaChart.length > 0 ? (
                 <LineChart data={evolucaoBancaChart} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
