@@ -1012,22 +1012,26 @@ export default function Atualizar() {
       { 
         title: 'Total Apostas', 
         value: apostas.length.toString(), 
-        helper: 'apostas registradas' 
+        helper: 'apostas registradas',
+        color: 'blue' as const
       },
       { 
         title: 'Valor Investido', 
         value: formatCurrency(totalInvestido), 
-        helper: 'total investido' 
+        helper: 'total investido',
+        color: 'purple' as const
       },
       { 
         title: 'Ganhos', 
         value: formatCurrency(ganhos), 
-        helper: 'lucro obtido' 
+        helper: 'lucro obtido',
+        color: 'emerald' as const
       },
       { 
         title: 'Pendente', 
         value: formatCurrency(pendente), 
-        helper: 'aguardando resultado' 
+        helper: 'aguardando resultado',
+        color: 'amber' as const
       }
     ];
   }, [apostas, formatCurrency]);
@@ -1329,7 +1333,7 @@ export default function Atualizar() {
 
       <div className="stat-grid">
         {stats.map((stat) => (
-          <StatCard key={stat.title} title={stat.title} value={stat.value} helper={stat.helper} />
+          <StatCard key={stat.title} title={stat.title} value={stat.value} helper={stat.helper} color={stat.color} />
         ))}
       </div>
 

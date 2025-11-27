@@ -1,23 +1,25 @@
 import { memo, type ReactNode } from 'react';
-import { GlassCard } from './ui/GlassCard';
+
+export type StatCardColor = 'emerald' | 'blue' | 'red' | 'purple' | 'amber' | 'cyan';
 
 interface StatCardProps {
   title: string;
   value: ReactNode;
   helper?: string;
   icon?: ReactNode;
+  color?: StatCardColor;
 }
 
-function StatCard({ title, value, helper, icon }: StatCardProps) {
+function StatCard({ title, value, helper, icon, color = 'purple' }: StatCardProps) {
   return (
-    <GlassCard className="stat-card">
-      <div className="stat-card__header">
-        <p className="stat-card__title">{title}</p>
-        {icon && <span className="stat-card__icon">{icon}</span>}
+    <div className={`stat-card-new stat-card-new--${color}`}>
+      <div className="stat-card-new__header">
+        <p className="stat-card-new__title">{title}</p>
+        {icon && <span className={`stat-card-new__icon stat-card-new__icon--${color}`}>{icon}</span>}
       </div>
-      <p className="stat-card__value">{value}</p>
-      {helper && <p className="stat-card__helper">{helper}</p>}
-    </GlassCard>
+      <p className="stat-card-new__value">{value}</p>
+      {helper && <p className="stat-card-new__helper">{helper}</p>}
+    </div>
   );
 }
 

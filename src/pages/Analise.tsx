@@ -100,10 +100,10 @@ export default function Analise() {
   const roiMedio = totalInvestido > 0 ? (totalLucro / totalInvestido) * 100 : 0;
 
   const stats = [
-    { title: 'Apostas Filtradas', value: totalApostas.toString(), helper: 'Total de apostas' },
-    { title: 'Investimento Filtrado', value: formatCurrency(totalInvestido), helper: 'Total investido' },
-    { title: 'Lucro Filtrado', value: formatCurrency(totalLucro), helper: 'Lucro/prejuízo total' },
-    { title: 'ROI Filtrado', value: formatPercent(roiMedio), helper: 'Retorno sobre investimento' }
+    { title: 'Apostas Filtradas', value: totalApostas.toString(), helper: 'Total de apostas', color: 'blue' as const },
+    { title: 'Investimento Filtrado', value: formatCurrency(totalInvestido), helper: 'Total investido', color: 'purple' as const },
+    { title: 'Lucro Filtrado', value: formatCurrency(totalLucro), helper: 'Lucro/prejuízo total', color: 'emerald' as const },
+    { title: 'ROI Filtrado', value: formatPercent(roiMedio), helper: 'Retorno sobre investimento', color: 'amber' as const }
   ];
 
   return (
@@ -129,7 +129,7 @@ export default function Analise() {
       ) : (
         <div className="stat-grid">
           {stats.map((stat) => (
-            <StatCard key={stat.title} title={stat.title} value={stat.value} helper={stat.helper} />
+            <StatCard key={stat.title} title={stat.title} value={stat.value} helper={stat.helper} color={stat.color} />
           ))}
         </div>
       )}

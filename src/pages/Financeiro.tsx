@@ -507,31 +507,36 @@ export default function Financeiro() {
           title='Total Depositado' 
           value={formatCurrency(statsData.totalDepositado)} 
           helper={`${statsData.totalDepositos} ${statsData.totalDepositos === 1 ? 'depósito' : 'depósitos'}`} 
-          icon={<Wallet size={20} />} 
+          icon={<Wallet size={20} />}
+          color="emerald"
         />
         <StatCard 
           title='Total Sacado' 
           value={formatCurrency(statsData.totalSacado)} 
           helper={`${statsData.totalSaques} ${statsData.totalSaques === 1 ? 'saque' : 'saques'}`} 
-          icon={<Wallet size={20} />} 
+          icon={<Wallet size={20} />}
+          color="red"
         />
         <StatCard 
           title='Resultado de Apostas' 
           value={formatCurrency(statsData.resultadoApostas)} 
           helper={`${statsData.apostasConcluidas} ${statsData.apostasConcluidas === 1 ? 'aposta concluída' : 'apostas concluídas'}`} 
-          icon={<Wallet size={20} />} 
+          icon={<Wallet size={20} />}
+          color="blue"
         />
         <StatCard 
           title='Apostas Pendentes' 
           value={formatCurrency(statsData.valorApostasPendentes)} 
           helper={`${statsData.apostasPendentes} ${statsData.apostasPendentes === 1 ? 'aposta' : 'apostas'} aguardando resultado`} 
-          icon={<Wallet size={20} />} 
+          icon={<Wallet size={20} />}
+          color="amber"
         />
         <StatCard 
           title='Saldo Atual' 
           value={formatCurrency(statsData.saldoAtual)} 
           helper='Saldo total ajustado' 
-          icon={<Wallet size={20} />} 
+          icon={<Wallet size={20} />}
+          color="purple"
         />
       </div>
 

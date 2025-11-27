@@ -123,25 +123,29 @@ export default function Bancas() {
         title: 'Total de Visualizações',
         value: formatNumber(totalViews),
         helper: '+0% em relação ao mês passado',
-        icon: <Eye size={20} />
+        icon: <Eye size={20} />,
+        color: 'blue' as const
       },
       {
         title: 'Visitantes Únicos',
         value: formatNumber(totalVisitors),
         helper: '+0% em relação ao mês passado',
-        icon: <Eye size={20} />
+        icon: <Eye size={20} />,
+        color: 'emerald' as const
       },
       {
         title: 'Bancas Ativas',
         value: String(activeBancas),
         helper: `de ${String(bancas.length)}`,
-        icon: <LineChart size={20} />
+        icon: <LineChart size={20} />,
+        color: 'purple' as const
       },
       {
         title: 'Taxa de Conversão',
         value: conversion,
         helper: 'visitantes únicos / visualizações',
-        icon: <LineChart size={20} />
+        icon: <LineChart size={20} />,
+        color: 'amber' as const
       }
     ];
   }, [bancas]);
@@ -233,7 +237,7 @@ export default function Bancas() {
 
       <div className="stat-grid">
         {summaryCards.map((stat) => (
-          <StatCard key={stat.title} title={stat.title} value={stat.value} helper={stat.helper} icon={stat.icon} />
+          <StatCard key={stat.title} title={stat.title} value={stat.value} helper={stat.helper} icon={stat.icon} color={stat.color} />
         ))}
       </div>
 
