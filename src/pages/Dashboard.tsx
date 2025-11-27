@@ -571,7 +571,7 @@ export default function Dashboard() {
 
         {/* Charts Grid */}
         <div className="dashboard-new-charts-grid">
-          <div className="dashboard-new-chart-card dashboard-new-chart-card--large">
+          <div className="dashboard-new-chart-card dashboard-new-chart-card--full-width">
             <div className="dashboard-new-chart-header">
               <div>
                 <h3 className="dashboard-new-chart-title">Evolução do Lucro</h3>
@@ -634,7 +634,7 @@ export default function Dashboard() {
               </div>
             </div>
             
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height={250}>
               {evolucaoBancaChart.length > 0 ? (
                 <LineChart data={evolucaoBancaChart} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.2} />

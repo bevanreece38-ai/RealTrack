@@ -439,6 +439,10 @@
   }
 }
 
+.dashboard-new-chart-card--full-width {
+  grid-column: 1 / -1;
+}
+
 .dashboard-new-chart-header {
   display: flex;
   justify-content: space-between;
