@@ -242,7 +242,7 @@ export default function Perfil() {
     return (
       <div>
         <PageHeader title="Meu Perfil" subtitle="Gerencie suas informações pessoais e configurações da conta" />
-        <div className="card fade-up card-hover">
+        <div className="card" className="fade-up card-hover">
           <p>Carregando...</p>
         </div>
       </div>
@@ -253,7 +253,7 @@ export default function Perfil() {
     return (
       <div>
         <PageHeader title="Meu Perfil" subtitle="Gerencie suas informações pessoais e configurações da conta" />
-        <div className="card fade-up card-hover">
+        <div className="card" className="fade-up card-hover">
           <p style={{ color: 'var(--color-danger)' }}>{error || 'Erro ao carregar perfil'}</p>
         </div>
       </div>
@@ -265,7 +265,7 @@ export default function Perfil() {
       <PageHeader title="Meu Perfil" subtitle="Gerencie suas informações pessoais e configurações da conta" />
 
       {error && (
-        <div className="card fade-up card-hover" style={{ marginBottom: 0, background: 'var(--color-bg-danger)', borderColor: 'var(--color-border-danger)' }}>
+        <div className="card" className="fade-up card-hover" style={{ marginBottom: 0, background: 'var(--color-bg-danger)', borderColor: 'var(--color-border-danger)' }}>
           <p style={{ color: 'var(--color-danger-dark)', margin: 0 }}>{error}</p>
         </div>
       )}
@@ -381,7 +381,7 @@ export default function Perfil() {
 
       {/* Grid: Informações Pessoais | Estatísticas da Conta */}
       <div className="grid-2" style={{ marginBottom: 0, alignItems: 'stretch' }}>
-        <div className="card fade-up card-hover" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+        <div className="card" className="fade-up card-hover" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
           <div style={{
             background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.10) 0%, rgba(59, 130, 246, 0.10) 100%)',
             borderRadius: '16px',
@@ -526,7 +526,7 @@ export default function Perfil() {
           </div>
         </div>
 
-        <div className="card fade-up card-hover" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+        <div className="card" className="fade-up card-hover" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
           <div style={{
             background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.10) 0%, rgba(59, 130, 246, 0.10) 100%)',
             borderRadius: '16px',
@@ -671,7 +671,7 @@ export default function Perfil() {
 
       {/* Grid: Alterar Senha | Integração com Telegram */}
       <div className="grid-2" style={{ marginBottom: 0, alignItems: 'stretch' }}>
-        <div className="card fade-up card-hover" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+        <div className="card" className="fade-up card-hover" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
           <div style={{
             background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.10) 0%, rgba(59, 130, 246, 0.10) 100%)',
             borderRadius: '16px',
@@ -850,7 +850,7 @@ export default function Perfil() {
           </div>
         </div>
 
-        <div className="card fade-up card-hover" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+        <div className="card" className="fade-up card-hover" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
           <div style={{
             background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(59, 130, 246, 0.15) 100%)',
             borderRadius: '16px',

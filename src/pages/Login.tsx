@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, Eye, EyeOff, Target, ChevronRight } from 'lucide-react';
+import { Mail, Lock } from 'lucide-react';
 import api from '../lib/api';
 import { type ApiError } from '../types/api';
 
@@ -12,9 +12,9 @@ export default function Login() {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [focusedField, setFocusedField] = useState<'email' | 'senha' | null>(null);
   const emailInputRef = useRef<HTMLInputElement>(null);
   const passwordInputRef = useRef<HTMLInputElement>(null);
 
@@ -89,209 +89,540 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-950 via-slate-950 to-slate-950 flex flex-col lg:flex-row relative overflow-hidden">
-      {/* Decorative Elements */}
-      <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/5 rounded-full blur-3xl" />
-      <div className="absolute bottom-0 left-0 w-96 h-96 bg-emerald-600/5 rounded-full blur-3xl" />
-      
-      {/* Left Panel - Hero */}
-      <div className="lg:w-1/2 p-8 lg:p-16 flex flex-col justify-between relative z-10">
-        {/* Logo & Title */}
-        <div>
-          <div className="flex items-center gap-3 mb-16">
-            <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/30">
-              <Target className="text-white" size={24} strokeWidth={2.5} />
-            </div>
-            <div>
-              <div className="text-white text-xl">Real Comando</div>
-              <div className="text-emerald-400 text-xs tracking-wider">MANAGEMENT</div>
-            </div>
-          </div>
-
-          <div className="max-w-xl">
-            <h1 className="text-white text-5xl lg:text-6xl mb-6 leading-tight">
-              Domine o jogo das
-              <span className="block text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-400 mt-2">
-                apostas esportivas
-              </span>
-            </h1>
-            <p className="text-slate-400 text-lg leading-relaxed">
-              Plataforma completa de análise, gestão e otimização de resultados. Transforme dados em lucros consistentes.
-            </p>
-          </div>
-        </div>
-
-        {/* Bottom Section */}
-        <div className="hidden lg:block">
-          <div className="grid grid-cols-3 gap-6 pt-8 border-t border-slate-800/50">
-            <div>
-              <div className="text-emerald-400 text-2xl mb-1">15.7k+</div>
-              <div className="text-slate-500 text-sm">Apostadores</div>
-            </div>
-            <div>
-              <div className="text-emerald-400 text-2xl mb-1">87%</div>
-              <div className="text-slate-500 text-sm">Taxa de Sucesso</div>
-            </div>
-            <div>
-              <div className="text-emerald-400 text-2xl mb-1">R$ 24M</div>
-              <div className="text-slate-500 text-sm">Volume Total</div>
-            </div>
-          </div>
-        </div>
+    <div style={{ 
+      minHeight: '100vh', 
+      display: 'flex',
+      position: 'relative',
+      overflow: 'hidden',
+      background: '#0a0e1a'
+    }}>
+      {/* Background com estrelas e montanhas */}
+      <div style={{
+        position: 'absolute',
+        inset: 0,
+        background: `
+          radial-gradient(ellipse at 20% 30%, rgba(139, 92, 246, 0.15) 0%, transparent 50%),
+          radial-gradient(ellipse at 80% 70%, rgba(168, 85, 247, 0.1) 0%, transparent 50%),
+          linear-gradient(135deg, #0a0e1a 0%, #1a1f2e 25%, #0f1419 50%, #1a1f2e 75%, #0a0e1a 100%)
+        `,
+        backgroundAttachment: 'fixed'
+      }}>
+        {/* Estrelas */}
+        <div style={{
+          position: 'absolute',
+          inset: 0,
+          backgroundImage: `
+            radial-gradient(2px 2px at 20% 30%, white, transparent),
+            radial-gradient(2px 2px at 60% 70%, white, transparent),
+            radial-gradient(1px 1px at 50% 50%, white, transparent),
+            radial-gradient(1px 1px at 80% 10%, white, transparent),
+            radial-gradient(2px 2px at 90% 40%, white, transparent),
+            radial-gradient(1px 1px at 33% 60%, white, transparent),
+            radial-gradient(1px 1px at 10% 80%, white, transparent),
+            radial-gradient(2px 2px at 40% 20%, white, transparent),
+            radial-gradient(1px 1px at 70% 50%, white, transparent),
+            radial-gradient(1px 1px at 15% 40%, white, transparent)
+          `,
+          backgroundRepeat: 'repeat',
+          backgroundSize: '200% 200%',
+          opacity: 0.6,
+          animation: 'twinkle 8s ease-in-out infinite alternate'
+        }} />
+        
+        {/* Montanhas */}
+        <div style={{
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          height: '40%',
+          background: `
+            linear-gradient(to top, 
+              #1a1f2e 0%, 
+              #0f1419 30%, 
+              #0a0e1a 60%,
+              transparent 100%
+            )
+          `,
+          clipPath: 'polygon(0% 100%, 0% 60%, 20% 50%, 40% 55%, 60% 45%, 80% 50%, 100% 55%, 100% 100%)'
+        }} />
+        <div style={{
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          height: '35%',
+          background: `
+            linear-gradient(to top, 
+              #0f1419 0%, 
+              #0a0e1a 40%,
+              transparent 100%
+            )
+          `,
+          clipPath: 'polygon(0% 100%, 0% 70%, 15% 65%, 35% 70%, 55% 60%, 75% 65%, 100% 70%, 100% 100%)',
+          opacity: 0.8
+        }} />
       </div>
 
-      {/* Right Panel - Login Form */}
-      <div className="lg:w-1/2 flex items-center justify-center p-8 relative z-10">
-        <div className="w-full max-w-md">
-          {/* Background Card Effect */}
-          <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent rounded-3xl blur-3xl" />
+      {/* Conteúdo do Login */}
+      <div style={{
+        position: 'relative',
+        zIndex: 10,
+        width: '100%',
+        maxWidth: '480px',
+        padding: '32px 32px 40px',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        margin: '0 auto'
+      }}>
+        {/* Título */}
+        <div style={{ marginBottom: '32px', textAlign: 'center' }}>
+          <h1 style={{ 
+            margin: '0 0 12px', 
+            fontSize: '2.25rem', 
+            fontWeight: 700,
+            color: 'var(--color-text-white-dark)',
+            fontFamily: 'Inter, system-ui, sans-serif',
+            letterSpacing: '-0.02em'
+          }}>
+            Real Comando
+            <span style={{
+              display: 'inline-block',
+              width: '8px',
+              height: '8px',
+              borderRadius: '50%',
+              background: 'conic-gradient(from 180deg, #22d3ee, #6366f1, #ec4899, #22d3ee)',
+              marginLeft: '8px',
+              boxShadow: '0 0 16px rgba(129, 140, 248, 0.8)'
+            }} />
+          </h1>
+          <p style={{ 
+            margin: 0, 
+            color: 'rgba(255, 255, 255, 0.7)',
+            fontSize: '1rem',
+            fontWeight: 400
+          }}>
+            Faça login para acessar seu dashboard
+          </p>
+        </div>
+
+        {/* Efeito de vidro opaco ao redor do formulário */}
+        <div style={{
+          position: 'relative',
+          padding: '22px 0 26px 0',
+          marginTop: '-4px',
+          marginBottom: '-4px'
+        }}>
+          <div style={{
+            position: 'absolute',
+            inset: 0,
+            background: 'radial-gradient(circle at top, rgba(56,189,248,0.1), transparent 55%), rgba(15,23,42,0.88)',
+            backdropFilter: 'blur(26px) saturate(200%)',
+            WebkitBackdropFilter: 'blur(26px) saturate(200%)',
+            borderRadius: '26px',
+            border: '1px solid rgba(148, 163, 184, 0.45)',
+            boxShadow: '0 24px 80px rgba(15, 23, 42, 0.95), 0 0 0 1px rgba(15,23,42,0.8)',
+            zIndex: -1
+          }} />
           
-          {/* Login Card */}
-          <div className="relative bg-slate-900/90 backdrop-blur-2xl border border-slate-800/50 rounded-2xl p-8 lg:p-10 shadow-2xl">
-            {/* Header */}
-            <div className="mb-8">
-              <h2 className="text-white text-2xl mb-2">Acessar conta</h2>
-              <p className="text-slate-400">Faça login para continuar</p>
-            </div>
-
-            {/* Form */}
-            <form onSubmit={handleSubmit} className="space-y-5">
-              {/* Email */}
-              <div>
-                <label htmlFor="email" className="block text-slate-300 mb-2.5 text-sm">
-                  Endereço de e-mail
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
-                    <Mail className="text-slate-500" size={18} />
-                  </div>
-                  <input
-                    ref={emailInputRef}
-                    id="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="voce@exemplo.com"
-                    className="w-full bg-slate-950/50 border border-slate-700/50 text-white rounded-xl pl-11 pr-4 py-3.5 text-sm placeholder:text-slate-600 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20 transition-all"
-                    required
-                    autoComplete="email"
-                  />
-                </div>
-              </div>
-
-              {/* Password */}
-              <div>
-                <label htmlFor="password" className="block text-slate-300 mb-2.5 text-sm">
-                  Senha
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
-                    <Lock className="text-slate-500" size={18} />
-                  </div>
-                  <input
-                    ref={passwordInputRef}
-                    id="password"
-                    type={showPassword ? 'text' : 'password'}
-                    value={senha}
-                    onChange={(e) => setSenha(e.target.value)}
-                    placeholder="••••••••••"
-                    className="w-full bg-slate-950/50 border border-slate-700/50 text-white rounded-xl pl-11 pr-11 py-3.5 text-sm placeholder:text-slate-600 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20 transition-all"
-                    required
-                    autoComplete="current-password"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-0 flex items-center pr-4 text-slate-500 hover:text-slate-300 transition-colors"
+          {/* Formulário */}
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px', position: 'relative', zIndex: 1, padding: '0 16px' }}>
+          {loading && (
+            <div
+              style={{
+                position: 'fixed',
+                inset: 0,
+                background: '#000000',
+                animation: 'rc-screen-close 0.35s ease-out forwards',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 999,
+                pointerEvents: 'auto'
+              }}
+            >
+              <div
+                style={{
+                  padding: '18px 26px',
+                  borderRadius: '18px',
+                  background: 'linear-gradient(145deg, #020617, #020617)',
+                  boxShadow: '0 18px 50px rgba(0,0,0,0.85), 0 0 0 1px rgba(30,64,175,0.6)',
+                  border: '1px solid rgba(59,130,246,0.6)',
+                  minWidth: '240px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: 12
+                }}
+              >
+                <div
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: '999px',
+                    border: '3px solid rgba(59,130,246,0.25)',
+                    borderTopColor: 'rgba(59,130,246,1)',
+                    animation: 'rc-spin 0.9s linear infinite',
+                    boxShadow: '0 0 18px rgba(59,130,246,0.8)'
+                  }}
+                />
+                <div style={{ textAlign: 'center' }}>
+                  <p
+                    style={{
+                      margin: 0,
+                      fontSize: '0.9rem',
+                      fontWeight: 700,
+                      letterSpacing: '0.15em',
+                      textTransform: 'uppercase',
+                      color: 'rgba(248,250,252,0.96)'
+                    }}
                   >
-                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
+                    Autenticando
+                  </p>
+                  <p
+                    style={{
+                      margin: '4px 0 0',
+                      fontSize: '0.8rem',
+                      color: 'rgba(148,163,184,0.96)'
+                    }}
+                  >
+                    Validando seus dados com segurança…
+                  </p>
                 </div>
-                <Link 
-                  to="/recuperar-senha" 
-                  className="text-emerald-400 hover:text-emerald-300 text-sm transition-colors mt-2 inline-block"
-                >
-                  Esqueceu a senha?
-                </Link>
-              </div>
-
-              {/* Error Message */}
-              {error && (
-                <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm">
-                  {error}
-                </div>
-              )}
-
-              {/* Remember & Forgot */}
-              <div className="flex items-center justify-between pt-1">
-                <label className="flex items-center gap-2 cursor-pointer group">
-                  <input
-                    type="checkbox"
-                    className="w-4 h-4 rounded bg-slate-950 border-slate-700 text-emerald-500 focus:ring-emerald-500 focus:ring-offset-0 cursor-pointer"
-                  />
-                  <span className="text-slate-400 text-sm group-hover:text-slate-300 transition-colors">
-                    Lembrar-me
-                  </span>
-                </label>
-              </div>
-
-              {/* Submit Button */}
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 disabled:from-slate-600 disabled:to-slate-700 text-white py-4 rounded-xl transition-all shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40 flex items-center justify-center gap-2 group mt-7 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <span>{loading ? 'Entrando...' : 'Entrar agora'}</span>
-                {!loading && <ChevronRight size={18} className="group-hover:translate-x-0.5 transition-transform" />}
-              </button>
-            </form>
-
-            {/* Divider */}
-            <div className="relative my-7">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-slate-800"></div>
-              </div>
-              <div className="relative flex justify-center">
-                <span className="px-4 bg-slate-900 text-slate-600 text-xs uppercase tracking-wider">
-                  Novo aqui?
-                </span>
               </div>
             </div>
-
-            {/* Sign Up Link */}
-            <div className="text-center">
-              <Link 
-                to="/cadastro" 
-                className="inline-flex items-center justify-center gap-2 text-slate-300 hover:text-emerald-400 transition-colors group"
-              >
-                <span className="text-sm">Criar uma conta gratuita</span>
-                <ChevronRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
-              </Link>
+          )}
+          {/* Campo Email */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <label style={{ 
+              fontSize: '0.9rem', 
+              fontWeight: 600,
+              color: 'var(--color-text-white-dark)'
+            }}>
+              Email
+            </label>
+            <div style={{ position: 'relative' }}>
+              <Mail 
+                size={20} 
+                style={{ 
+                  position: 'absolute', 
+                  left: '16px', 
+                  top: '50%', 
+                  transform: 'translateY(-50%)',
+                  color: focusedField === 'email' ? '#a78bfa' : 'rgba(255, 255, 255, 0.6)',
+                  pointerEvents: 'none',
+                  transition: 'color 0.2s',
+                  zIndex: 1
+                }} 
+              />
+              <input
+                ref={emailInputRef}
+                type="email"
+                value={email}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  // Forçar estilos após mudança
+                  setTimeout(() => {
+                    if (emailInputRef.current) {
+                      emailInputRef.current.style.setProperty('background-color', '#020617', 'important');
+                      emailInputRef.current.style.setProperty('background', '#020617', 'important');
+                    }
+                  }, 10);
+                }}
+                placeholder="seu@email.com"
+                required
+                autoComplete="email"
+                onFocus={() => {
+                  setFocusedField('email');
+                  // Forçar estilos ao focar
+                  setTimeout(() => {
+                    if (emailInputRef.current) {
+                      emailInputRef.current.style.setProperty('background-color', '#020617', 'important');
+                      emailInputRef.current.style.setProperty('background', '#020617', 'important');
+                    }
+                  }, 10);
+                }}
+                onBlur={() => {
+                  setFocusedField(null);
+                  // Forçar estilos ao perder foco
+                  setTimeout(() => {
+                    if (emailInputRef.current) {
+                      emailInputRef.current.style.setProperty('background-color', '#020617', 'important');
+                      emailInputRef.current.style.setProperty('background', '#020617', 'important');
+                    }
+                  }, 10);
+                }}
+                style={{
+                  width: '100%',
+                  padding: '14px 14px 14px 48px',
+                  border: focusedField === 'email' 
+                    ? '1px solid #8b5cf6' 
+                    : '1px solid rgba(148, 163, 184, 0.5)',
+                  borderRadius: '12px',
+                  fontSize: '0.95rem',
+                  background: '#020617',
+                  backgroundColor: '#020617',
+                  color: '#e5e7eb',
+                  outline: 'none',
+                  transition: 'all 0.3s ease',
+                  boxShadow: focusedField === 'email'
+                    ? '0 0 0 3px rgba(129, 140, 248, 0.25), 0 0 20px rgba(129, 140, 248, 0.35)'
+                    : 'none'
+                }}
+              />
             </div>
           </div>
 
-          {/* Trust Badge */}
-          <div className="mt-6 text-center">
-            <p className="text-slate-600 text-xs flex items-center justify-center gap-2">
-              <svg className="w-4 h-4 text-emerald-500" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
-              </svg>
-              Seus dados estão protegidos com criptografia de ponta
-            </p>
+          {/* Campo Senha */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <label style={{ 
+              fontSize: '0.9rem', 
+              fontWeight: 600,
+              color: 'var(--color-text-white-dark)'
+            }}>
+              Senha
+            </label>
+            <div style={{ position: 'relative' }}>
+              <Lock 
+                size={20} 
+                style={{ 
+                  position: 'absolute', 
+                  left: '16px', 
+                  top: '50%', 
+                  transform: 'translateY(-50%)',
+                  color: focusedField === 'senha' ? '#a78bfa' : 'rgba(255, 255, 255, 0.6)',
+                  pointerEvents: 'none',
+                  transition: 'color 0.2s',
+                  zIndex: 1
+                }} 
+              />
+              <input
+                ref={passwordInputRef}
+                type="password"
+                value={senha}
+                onChange={(e) => {
+                  setSenha(e.target.value);
+                  // Forçar estilos após mudança
+                  setTimeout(() => {
+                    if (passwordInputRef.current) {
+                      passwordInputRef.current.style.setProperty('background-color', '#020617', 'important');
+                      passwordInputRef.current.style.setProperty('background', '#020617', 'important');
+                    }
+                  }, 10);
+                }}
+                placeholder="••••••••"
+                required
+                autoComplete="current-password"
+                onFocus={() => {
+                  setFocusedField('senha');
+                  // Forçar estilos ao focar
+                  setTimeout(() => {
+                    if (passwordInputRef.current) {
+                      passwordInputRef.current.style.setProperty('background-color', '#020617', 'important');
+                      passwordInputRef.current.style.setProperty('background', '#020617', 'important');
+                    }
+                  }, 10);
+                }}
+                onBlur={() => {
+                  setFocusedField(null);
+                  // Forçar estilos ao perder foco
+                  setTimeout(() => {
+                    if (passwordInputRef.current) {
+                      passwordInputRef.current.style.setProperty('background-color', '#020617', 'important');
+                      passwordInputRef.current.style.setProperty('background', '#020617', 'important');
+                    }
+                  }, 10);
+                }}
+                style={{
+                  width: '100%',
+                  padding: '14px 14px 14px 48px',
+                  border: focusedField === 'senha' 
+                    ? '1px solid #8b5cf6' 
+                    : '1px solid rgba(148, 163, 184, 0.5)',
+                  borderRadius: '12px',
+                  fontSize: '0.95rem',
+                  background: '#020617',
+                  backgroundColor: '#020617',
+                  color: '#e5e7eb',
+                  outline: 'none',
+                  transition: 'all 0.3s ease',
+                  boxShadow: focusedField === 'senha'
+                    ? '0 0 0 3px rgba(129, 140, 248, 0.25), 0 0 20px rgba(129, 140, 248, 0.35)'
+                    : 'none'
+                }}
+              />
+            </div>
+            <Link 
+              to="/recuperar-senha" 
+              style={{ 
+                color: 'rgba(255, 255, 255, 0.7)',
+                fontSize: '0.85rem',
+                textDecoration: 'none',
+                transition: 'color 0.2s',
+                fontWeight: 400,
+                alignSelf: 'flex-end',
+                marginTop: '-4px'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.color = '#a78bfa'}
+              onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)'}
+            >
+              Esqueci minha senha
+            </Link>
           </div>
+
+          {/* Mensagem de Erro */}
+          {error && (
+            <div style={{
+              padding: '12px 16px',
+              background: 'rgba(239, 68, 68, 0.15)',
+              border: '1px solid rgba(239, 68, 68, 0.3)',
+              borderRadius: '12px',
+              color: '#f87171',
+              fontSize: '0.9rem'
+            }}>
+              {error}
+            </div>
+          )}
+
+          {/* Botão Entrar */}
+          <button 
+            type="submit" 
+            disabled={loading} 
+            style={{ 
+              width: '100%', 
+              padding: '15px',
+              background: loading 
+                ? 'rgba(15, 23, 42, 0.8)' 
+                : 'linear-gradient(135deg, #22d3ee 0%, #6366f1 40%, #ec4899 80%)',
+              backgroundSize: '180% 100%',
+              color: 'var(--color-text-white-dark)',
+              border: 'none',
+              borderRadius: '999px',
+              fontSize: '1rem',
+              fontWeight: 600,
+              cursor: loading ? 'not-allowed' : 'pointer',
+              transition: 'all 0.25s ease',
+              marginTop: '8px',
+              boxShadow: loading 
+                ? 'none' 
+                : '0 12px 35px rgba(37, 99, 235, 0.55)',
+              position: 'relative',
+              overflow: 'hidden'
+            }}
+            onMouseEnter={(e) => {
+              if (!loading) {
+                e.currentTarget.style.backgroundPosition = '100% 0';
+                e.currentTarget.style.transform = 'translateY(-1px) scale(1.01)';
+                e.currentTarget.style.boxShadow = '0 18px 40px rgba(37, 99, 235, 0.7)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!loading) {
+                e.currentTarget.style.backgroundPosition = '0% 0';
+                e.currentTarget.style.transform = 'translateY(0) scale(1)';
+                e.currentTarget.style.boxShadow = '0 12px 35px rgba(37, 99, 235, 0.55)';
+              }
+            }}
+          >
+            {loading ? 'Entrando...' : 'Entrar'}
+          </button>
+
+          {/* Link Cadastro */}
+          <div style={{ textAlign: 'center', marginTop: '8px' }}>
+            <Link 
+              to="/cadastro" 
+              style={{ 
+                color: 'rgba(255, 255, 255, 0.7)',
+                fontSize: '0.9rem',
+                textDecoration: 'none',
+                transition: 'color 0.2s',
+                fontWeight: 400
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.color = '#a78bfa'}
+              onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)'}
+            >
+              Ainda não tenho uma conta
+            </Link>
+          </div>
+        </form>
         </div>
       </div>
 
-      {/* Loading Overlay */}
-      {loading && (
-        <div className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 max-w-sm mx-auto text-center">
-            <div className="w-16 h-16 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-white font-semibold">Autenticando</p>
-            <p className="text-slate-400 text-sm mt-1">Validando seus dados com segurança...</p>
-          </div>
-        </div>
-      )}
+      {/* Estilos específicos para inputs da página de login */}
+      <style>{`
+        @keyframes twinkle {
+          0% { opacity: 0.4; }
+          100% { opacity: 0.8; }
+        }
+        @keyframes rc-spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        @keyframes rc-screen-close {
+          0% { opacity: 0; }
+          100% { opacity: 1; }
+        }
+        
+        /* Garantir que os inputs na página de login sempre tenham fundo escuro */
+        input[type="email"],
+        input[type="password"] {
+          background: #020617 !important;
+          background-color: #020617 !important;
+          color: #ffffff !important;
+          -webkit-text-fill-color: #ffffff !important;
+          caret-color: #ffffff !important;
+        }
+        
+        input[type="email"]::placeholder,
+        input[type="password"]::placeholder {
+          color: rgba(255, 255, 255, 0.5) !important;
+          opacity: 1 !important;
+        }
+        
+        /* Estilos para autofill do navegador - mais agressivo */
+        input[type="email"]:-webkit-autofill,
+        input[type="email"]:-webkit-autofill:hover,
+        input[type="email"]:-webkit-autofill:focus,
+        input[type="email"]:-webkit-autofill:active,
+        input[type="email"]:-webkit-autofill:visited,
+        input[type="password"]:-webkit-autofill,
+        input[type="password"]:-webkit-autofill:hover,
+        input[type="password"]:-webkit-autofill:focus,
+        input[type="password"]:-webkit-autofill:active,
+        input[type="password"]:-webkit-autofill:visited {
+          -webkit-box-shadow: 0 0 0 1000px #020617 inset !important;
+          -webkit-text-fill-color: #ffffff !important;
+          background: #020617 !important;
+          background-color: #020617 !important;
+          background-image: none !important;
+          color: #ffffff !important;
+          caret-color: #ffffff !important;
+          transition: background-color 5000s ease-in-out 0s, background 5000s ease-in-out 0s !important;
+          -webkit-transition: background-color 5000s ease-in-out 0s, background 5000s ease-in-out 0s !important;
+        }
+        
+        /* Para outros navegadores (Firefox, etc) */
+        input[type="email"]:-moz-autofill,
+        input[type="email"]:-moz-autofill:hover,
+        input[type="email"]:-moz-autofill:focus,
+        input[type="password"]:-moz-autofill,
+        input[type="password"]:-moz-autofill:hover,
+        input[type="password"]:-moz-autofill:focus {
+          background: #020617 !important;
+          background-color: #020617 !important;
+          background-image: none !important;
+          color: #ffffff !important;
+        }
+        
+        /* Forçar estilos mesmo quando o navegador tenta mudar */
+        input[type="email"]:not(:placeholder-shown),
+        input[type="password"]:not(:placeholder-shown) {
+          background: #020617 !important;
+          background-color: #020617 !important;
+          color: #ffffff !important;
+        }
+      `}</style>
     </div>
   );
 }
