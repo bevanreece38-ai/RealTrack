@@ -165,7 +165,7 @@
 
 /* Content */
 .dashboard-new-content {
-  padding: 2rem;
+  padding: 0; /* Padding movido para .layout-new-body para consistência */
 }
 
 /* Hero Stats */

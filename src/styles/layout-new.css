@@ -857,7 +857,7 @@
 
 .layout-new-body {
   min-height: 100%;
-  padding: 0;
+  padding: 2rem; /* Mesmo padding do dashboard-new-content para consistência */
 }
 
 /* Dark theme adjustments */
