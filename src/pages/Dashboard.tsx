@@ -634,7 +634,7 @@ export default function Dashboard() {
               </div>
             </div>
             
-            <ResponsiveContainer width="100%" height={250}>
+            <ResponsiveContainer width="100%" height={200}>
               {evolucaoBancaChart.length > 0 ? (
                 <LineChart data={evolucaoBancaChart} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.2} />
