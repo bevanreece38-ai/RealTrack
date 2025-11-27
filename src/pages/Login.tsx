@@ -99,7 +99,7 @@ export default function Login() {
           <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent rounded-3xl blur-3xl" />
           
           {/* Login Card */}
-          <div className="relative bg-slate-900/90 backdrop-blur-2xl border border-slate-800/50 rounded-2xl p-8 lg:p-10 shadow-2xl">
+          <div className="relative bg-slate-950/95 backdrop-blur-2xl border border-slate-800/60 rounded-2xl p-8 lg:p-10 shadow-2xl">
             {/* Header */}
             <div className="mb-8">
               <h2 className="text-white text-2xl mb-2">Acessar conta</h2>
