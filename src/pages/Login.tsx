@@ -130,7 +130,9 @@ export default function Login() {
                       backgroundColor: '#000000 !important', 
                       WebkitTextFillColor: '#ffffff !important',
                       WebkitBoxShadow: '0 0 0 1000px #000000 inset !important',
-                      boxShadow: 'inset 0 0 0 1000px #000000 !important'
+                      boxShadow: 'inset 0 0 0 1000px #000000 !important',
+                      transition: 'background-color 5000s ease-in-out 0s',
+                      transitionDelay: '5000s'
                     }}
                     required
                     autoComplete="email"
@@ -160,7 +162,9 @@ export default function Login() {
                       backgroundColor: '#000000 !important', 
                       WebkitTextFillColor: '#ffffff !important',
                       WebkitBoxShadow: '0 0 0 1000px #000000 inset !important',
-                      boxShadow: 'inset 0 0 0 1000px #000000 !important'
+                      boxShadow: 'inset 0 0 0 1000px #000000 !important',
+                      transition: 'background-color 5000s ease-in-out 0s',
+                      transitionDelay: '5000s'
                     }}
                     required
                     autoComplete="current-password"
