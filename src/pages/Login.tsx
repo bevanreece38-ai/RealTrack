@@ -75,7 +75,7 @@ export default function Login() {
 
         {/* Bottom Section */}
         <div className="hidden lg:block">
-          <div className="grid grid-cols-3 gap-6 pt-8 border-t border-slate-800/50">
+          <div className="grid grid-cols-3 gap-6 pb-8 border-b border-slate-800/50">
             <div>
               <div className="text-emerald-400 text-2xl mb-1">15.7k+</div>
               <div className="text-slate-500 text-sm">Apostadores</div>
