@@ -11,9 +11,6 @@
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   border-bottom: 1px solid rgba(51, 65, 85, 0.5); /* slate-800 */
-  position: sticky;
-  top: 0;
-  z-index: 10;
 }
 
 .dashboard-new-header-content {
