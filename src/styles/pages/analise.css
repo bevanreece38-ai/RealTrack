@@ -17,16 +17,37 @@
 }
 
 /* Card de gráfico - estilo igual ao Dashboard */
-.analise-page .chart-card,
-.analise-page .glass-card {
-  background: rgba(51, 65, 85, 0.5); /* slate-800/50 */
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(71, 85, 105, 0.5);
-  border-radius: 1rem;
-  padding: 1.5rem;
+/* Removido .glass-card para evitar conflitos - apenas .chart-card */
+.analise-page .chart-card {
+  background: rgba(51, 65, 85, 0.5) !important; /* slate-800/50 */
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  border: 1px solid rgba(71, 85, 105, 0.5) !important;
+  border-radius: 1rem !important;
+  padding: 1.5rem !important;
   min-height: 300px;
-  transition: all 0.2s;
+  transition: all 0.2s !important;
+  box-shadow: none !important;
+}
+
+/* Garantir que não haja conflito com estilos globais de glass-card.chart-card */
+.analise-page .glass-card.chart-card {
+  background: rgba(51, 65, 85, 0.5) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  border: 1px solid rgba(71, 85, 105, 0.5) !important;
+  border-radius: 1rem !important;
+  padding: 1.5rem !important;
+  box-shadow: none !important;
+}
+
+[data-theme='dark'] .analise-page .chart-card,
+[data-theme='dark'] .analise-page .glass-card.chart-card {
+  background: rgba(51, 65, 85, 0.5) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  border: 1px solid rgba(71, 85, 105, 0.5) !important;
+  box-shadow: none !important;
 }
 
 .analise-page .chart-card__header {
