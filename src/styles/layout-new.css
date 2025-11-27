@@ -96,11 +96,26 @@
   display: flex;
   flex-direction: column;
   transition: width 0.3s ease;
+  overflow-x: hidden;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+
+.layout-new-sidebar::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
 }
 
 .layout-new-sidebar.collapsed {
   width: 5rem;
-  overflow: hidden;
+  overflow: hidden !important;
+}
+
+.layout-new-sidebar.collapsed * {
+  overflow: hidden !important;
+}
+
+.layout-new-sidebar.collapsed .layout-new-nav {
+  overflow-y: hidden !important;
 }
 
 .layout-new-sidebar.collapsed .layout-new-brand {
