@@ -753,11 +753,16 @@ export default function Dashboard() {
                       onClick={() => setExpandedSport(expandedSport === esporte.esporte ? null : esporte.esporte)}
                     >
                       <div className="dashboard-new-sport-header">
-                        <div className="dashboard-new-sport-info">
-                          <h4 className="dashboard-new-sport-name">{esporte.esporte || 'Outros'}</h4>
-                          <p className="dashboard-new-sport-count">{esporte.apostas || 0} apostas</p>
+                        <div className="dashboard-new-sport-main">
+                          <div className="dashboard-new-sport-icon">
+                            ⚽
+                          </div>
+                          <div className="dashboard-new-sport-info">
+                            <h4 className="dashboard-new-sport-name">{esporte.esporte || 'Outros'}</h4>
+                            <p className="dashboard-new-sport-subtitle">{esporte.apostas || 0} apostas</p>
+                          </div>
                         </div>
-                        <div className="dashboard-new-sport-stats">
+                        <div className="dashboard-new-sport-metrics">
                           <div className="dashboard-new-sport-roi">
                             <span className={`dashboard-new-sport-roi-value ${esporte.roi >= 0 ? 'positive' : 'negative'}`}>
                               {formatPercent(esporte.roi)}
@@ -778,32 +783,30 @@ export default function Dashboard() {
                       
                       {expandedSport === esporte.esporte && (
                         <div className="dashboard-new-sport-details">
-                          <div className="dashboard-new-sport-detail-row">
-                            <div className="dashboard-new-sport-detail-item">
-                              <p className="dashboard-new-sport-detail-label">Investimento</p>
-                              <p className="dashboard-new-sport-detail-value">{formatCurrency(esporte.stakeMedia * esporte.apostas)}</p>
+                          <div className="dashboard-new-sport-stats-grid">
+                            <div className="dashboard-new-sport-stat">
+                              <p className="dashboard-new-sport-stat-label">Total Investido</p>
+                              <p className="dashboard-new-sport-stat-value">{formatCurrency(esporte.stakeMedia * esporte.apostas)}</p>
                             </div>
-                            <div className="dashboard-new-sport-detail-item">
-                              <p className="dashboard-new-sport-detail-label">Taxa de Acerto</p>
-                              <p className="dashboard-new-sport-detail-value">{formatPercent(esporte.aproveitamento)}</p>
+                            <div className="dashboard-new-sport-stat">
+                              <p className="dashboard-new-sport-stat-label">Taxa de Acerto</p>
+                              <p className="dashboard-new-sport-stat-value">{formatPercent(esporte.aproveitamento)}</p>
                             </div>
-                            <div className="dashboard-new-sport-detail-item">
-                              <p className="dashboard-new-sport-detail-label">Stake Médio</p>
-                              <p className="dashboard-new-sport-detail-value">{formatCurrency(esporte.stakeMedia)}</p>
+                            <div className="dashboard-new-sport-stat">
+                              <p className="dashboard-new-sport-stat-label">Stake Médio</p>
+                              <p className="dashboard-new-sport-stat-value">{formatCurrency(esporte.stakeMedia)}</p>
                             </div>
-                          </div>
-                          <div className="dashboard-new-sport-detail-row">
-                            <div className="dashboard-new-sport-detail-item">
-                              <p className="dashboard-new-sport-detail-label">Apostas Ganhas</p>
-                              <p className="dashboard-new-sport-detail-value positive">{esporte.ganhas}</p>
+                            <div className="dashboard-new-sport-stat">
+                              <p className="dashboard-new-sport-stat-label">Apostas Ganhas</p>
+                              <p className="dashboard-new-sport-stat-value positive">{esporte.ganhas}</p>
                             </div>
-                            <div className="dashboard-new-sport-detail-item">
-                              <p className="dashboard-new-sport-detail-label">Apostas Perdidas</p>
-                              <p className="dashboard-new-sport-detail-value negative">{esporte.apostas - esporte.ganhas}</p>
+                            <div className="dashboard-new-sport-stat">
+                              <p className="dashboard-new-sport-stat-label">Apostas Perdidas</p>
+                              <p className="dashboard-new-sport-stat-value negative">{esporte.apostas - esporte.ganhas}</p>
                             </div>
-                            <div className="dashboard-new-sport-detail-item">
-                              <p className="dashboard-new-sport-detail-label">Lucro Médio</p>
-                              <p className={`dashboard-new-sport-detail-value ${esporte.lucro / esporte.apostas >= 0 ? 'positive' : 'negative'}`}>
+                            <div className="dashboard-new-sport-stat">
+                              <p className="dashboard-new-sport-stat-label">Lucro Médio</p>
+                              <p className={`dashboard-new-sport-stat-value ${esporte.lucro / esporte.apostas >= 0 ? 'positive' : 'negative'}`}>
                                 {formatCurrency(esporte.lucro / esporte.apostas)}
                               </p>
                             </div>
