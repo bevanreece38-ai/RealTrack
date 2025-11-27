@@ -3,7 +3,6 @@ import { Filter, Plus, Wallet, Pencil, Trash2 } from 'lucide-react';
 import PageHeader from '../components/PageHeader';
 import StatCard from '../components/StatCard';
 import EmptyState from '../components/EmptyState';
-import { GlassCard } from '../components/ui/GlassCard';
 import Modal from '../components/Modal';
 import FilterPopover from '../components/FilterPopover';
 import DateInput from '../components/DateInput';
@@ -541,7 +540,7 @@ export default function Financeiro() {
         />
       </div>
 
-      <GlassCard style={{ marginBottom: 24 }}>
+      <div className="card" style={{ marginBottom: 24 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
           <h3 style={{ marginTop: 0 }}>Gerenciar Transações Financeiras</h3>
           {transacoes.length > 0 && (
@@ -632,9 +631,9 @@ export default function Financeiro() {
             </table>
           </div>
         )}
-      </GlassCard>
+      </div>
 
-      <GlassCard>
+      <div className="card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
           <h3 style={{ marginTop: 0 }}>Saldo Ajustado por Casa</h3>
           {Object.keys(statsData.porCasa).length > 0 && (
@@ -693,7 +692,7 @@ export default function Financeiro() {
         ) : (
           <EmptyState title='Nada encontrado' description='Nenhum saldo encontrado para as casas filtradas.' />
         )}
-      </GlassCard>
+      </div>
 
       <Modal
         isOpen={modalOpen}

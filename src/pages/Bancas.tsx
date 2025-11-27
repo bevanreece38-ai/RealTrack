@@ -2,7 +2,6 @@ import { Copy, Eye, LineChart, Pencil, Share2, Trash2, AlertTriangle } from 'luc
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import PageHeader from '../components/PageHeader';
 import StatCard from '../components/StatCard';
-import { GlassCard } from '../components/ui/GlassCard';
 import Toggle from '../components/Toggle';
 import Modal from '../components/Modal';
 import api from '../lib/api';
@@ -243,14 +242,14 @@ export default function Bancas() {
       </div>
 
       {!loadingBancas && fetchError && (
-        <GlassCard>
+        <div className="card">
           <h3 style={{ margin: 0 }}>Bancas Compartilhadas</h3>
           <p className="card-desc" style={{ marginTop: 12 }}>{fetchError}</p>
-        </GlassCard>
+        </div>
       )}
 
       {bancas.length > 0 ? (
-        <GlassCard>
+        <div className="card">
           <h3 style={{ margin: '0 0 16px' }}>Bancas Compartilhadas</h3>
 
           <div style={{ overflowX: 'auto' }}>
@@ -329,16 +328,16 @@ export default function Bancas() {
               </tbody>
             </table>
           </div>
-        </GlassCard>
+        </div>
       ) : (
         !loadingBancas && !fetchError && (
-          <GlassCard>
+          <div className="card">
             <h3 style={{ margin: '0 0 16px' }}>Bancas Compartilhadas</h3>
             <EmptyState
               title="Nenhuma banca cadastrada"
               description="Crie uma nova banca para começar a registrar suas estatísticas."
             />
-          </GlassCard>
+          </div>
         )
       )}
 

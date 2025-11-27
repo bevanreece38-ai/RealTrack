@@ -7,7 +7,6 @@ import EmptyState from '../components/EmptyState';
 import Modal from '../components/Modal';
 import FilterPopover from '../components/FilterPopover';
 import DateInput from '../components/DateInput';
-import { GlassCard } from '../components/ui/GlassCard';
 import { CASAS_APOSTAS } from '../constants/casasApostas';
 import { STATUS_APOSTAS } from '../constants/statusApostas';
 import { ESPORTES } from '../constants/esportes';
@@ -1338,7 +1337,7 @@ export default function Atualizar() {
         ))}
       </div>
 
-      <GlassCard>
+      <div className="card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h3 style={{ marginTop: 0 }}>Apostas</h3>
           <div style={{ display: 'flex', gap: 8 }}>
@@ -1474,7 +1473,7 @@ export default function Atualizar() {
             </table>
           </div>
         )}
-      </GlassCard>
+      </div>
 
       <Modal isOpen={modalOpen} onClose={handleCloseModal} title={editingAposta ? "Editar Aposta" : "Nova Aposta"}>
         {formNotice && (

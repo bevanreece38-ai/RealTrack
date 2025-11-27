@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react';
 import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid } from 'recharts';
 import PageHeader from '../components/PageHeader';
 import StatCard from '../components/StatCard';
-import { GlassCard } from '../components/ui/GlassCard';
 import { chartTheme } from '../utils/chartTheme';
 import { formatCurrency, formatPercent } from '../utils/formatters';
 import EmptyState from '../components/ui/EmptyState';
@@ -272,7 +271,7 @@ export default function Analise() {
       </div>
 
       <div className="grid-2">
-        <GlassCard>
+        <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
             <h3 style={{ marginTop: 0 }}>Comparação de Bookmakers</h3>
             {comparacaoBookmakers.length > 0 && (
@@ -321,11 +320,11 @@ export default function Analise() {
           ) : (
             <EmptyState title="Sem dados" description="Adicione apostas para visualizar comparações." />
           )}
-        </GlassCard>
-        <GlassCard>
+        </div>
+        <div className="card">
           <h3 style={{ marginTop: 0 }}>Histórico de Apostas</h3>
           <EmptyState title="Sem resultados" description="Nenhuma aposta encontrada para os filtros selecionados." />
-        </GlassCard>
+        </div>
       </div>
     </div>
   );

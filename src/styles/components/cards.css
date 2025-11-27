@@ -145,41 +145,7 @@
 }
 
 /* ============================================
-   GLASS CARD - Card com efeito glass
-   Estilo igual ao dashboard-new-chart-card
-   Sobrescreve glass.css para manter consistência
+   GLASS CARD - REMOVIDO
+   Estilos movidos para .card em index.css
    ============================================ */
-
-.glass-card {
-  background: rgba(51, 65, 85, 0.5) !important; /* slate-800/50 */
-  backdrop-filter: blur(8px) !important;
-  -webkit-backdrop-filter: blur(8px) !important;
-  border: 1px solid rgba(71, 85, 105, 0.5) !important;
-  border-radius: 1rem !important;
-  padding: 1.5rem !important;
-  transition: all 0.2s !important;
-  position: relative;
-  box-shadow: none !important;
-}
-
-[data-theme='dark'] .glass-card {
-  background: rgba(51, 65, 85, 0.5) !important;
-  border: 1px solid rgba(71, 85, 105, 0.5) !important;
-  box-shadow: none !important;
-}
-
-[data-theme='dark'] .glass-card::before {
-  display: none !important;
-}
-
-.glass-card:hover {
-  transform: none !important;
-  box-shadow: none !important;
-  border-color: rgba(71, 85, 105, 0.7) !important;
-}
-
-[data-theme='light'] .glass-card {
-  background: rgba(241, 245, 249, 0.8) !important;
-  border-color: rgba(148, 163, 184, 0.3) !important;
-}
 

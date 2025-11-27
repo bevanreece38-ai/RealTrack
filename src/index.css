@@ -1298,69 +1298,10 @@ button {
   font-size: 0.85rem;
 }
 
-.glass-card.chart-card {
-  position: relative;
-  overflow: hidden;
-  border-radius: 24px;
-  padding: 24px;
-  min-height: 320px;
-  border: 1px solid var(--color-border-card);
-  background: var(--color-bg-surface);
-  box-shadow: var(--color-shadow-md);
-  transition: transform 0.25s ease, box-shadow 0.25s ease;
-}
-
+/* Estilos de glass-card.chart-card removidos - usar .card ou .chart-card */
 /* Títulos de seções/abas em cards (funcionam bem em light e dark) */
-.glass-card h3,
 .chart-card h3 {
   color: var(--text);
-}
-
-.glass-card.chart-card::before {
-  display: none;
-}
-
-.glass-card.chart-card::after {
-  display: none;
-}
-
-.glass-card.chart-card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--color-shadow-lg);
-}
-
-[data-theme='dark'] .glass-card.chart-card {
-  background: var(--color-bg-card-dark) !important;
-  backdrop-filter: blur(40px) saturate(200%) !important;
-  -webkit-backdrop-filter: blur(40px) saturate(200%) !important;
-  border: 1px solid var(--color-border-card-dark) !important;
-  box-shadow: var(--color-shadow-glass-card-dark) !important;
-  position: relative;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-[data-theme='dark'] .glass-card.chart-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(139, 92, 246, 0.5), transparent);
-  opacity: 0;
-  transition: opacity 0.3s ease;
-  z-index: 1;
-}
-
-[data-theme='dark'] .glass-card.chart-card:hover::before {
-  opacity: 1;
-}
-
-[data-theme='dark'] .glass-card.chart-card:hover {
-  background: var(--color-bg-hover-dark-alt) !important;
-  border-color: var(--color-border-nav-icon-active-dark) !important;
-  box-shadow: var(--color-shadow-glass-card-hover-dark) !important;
-  transform: translateY(-4px);
 }
 
 .grid-2,
@@ -1401,15 +1342,13 @@ th {
 /* Forçar cor escura para células da tabela no modo light */
 td,
 table td,
-.card table td,
-.glass-card table td {
+.card table td {
   color: var(--color-text-primary) !important;
 }
 
 [data-theme='dark'] td,
 [data-theme='dark'] table td,
-[data-theme='dark'] .card table td,
-[data-theme='dark'] .glass-card table td {
+[data-theme='dark'] .card table td {
   color: var(--color-text-primary-dark) !important;
 }
 

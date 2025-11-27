@@ -21,7 +21,6 @@ import {
 } from 'lucide-react';
 import PageHeader from '../components/PageHeader';
 import Modal from '../components/Modal';
-import { GlassCard } from '../components/ui/GlassCard';
 import api from '../lib/api';
 import { type ApiProfileResponse, type ApiError } from '../types/api';
 import '../styles/animations.css';
@@ -243,9 +242,9 @@ export default function Perfil() {
     return (
       <div>
         <PageHeader title="Meu Perfil" subtitle="Gerencie suas informações pessoais e configurações da conta" />
-        <GlassCard className="fade-up card-hover">
+        <div className="card" className="fade-up card-hover">
           <p>Carregando...</p>
-        </GlassCard>
+        </div>
       </div>
     );
   }
@@ -254,9 +253,9 @@ export default function Perfil() {
     return (
       <div>
         <PageHeader title="Meu Perfil" subtitle="Gerencie suas informações pessoais e configurações da conta" />
-        <GlassCard className="fade-up card-hover">
+        <div className="card" className="fade-up card-hover">
           <p style={{ color: 'var(--color-danger)' }}>{error || 'Erro ao carregar perfil'}</p>
-        </GlassCard>
+        </div>
       </div>
     );
   }
@@ -266,13 +265,13 @@ export default function Perfil() {
       <PageHeader title="Meu Perfil" subtitle="Gerencie suas informações pessoais e configurações da conta" />
 
       {error && (
-        <GlassCard className="fade-up card-hover" style={{ marginBottom: 0, background: 'var(--color-bg-danger)', borderColor: 'var(--color-border-danger)' }}>
+        <div className="card" className="fade-up card-hover" style={{ marginBottom: 0, background: 'var(--color-bg-danger)', borderColor: 'var(--color-border-danger)' }}>
           <p style={{ color: 'var(--color-danger-dark)', margin: 0 }}>{error}</p>
-        </GlassCard>
+        </div>
       )}
 
       {/* Seção: Plano Atual - Destaque Superior */}
-      <GlassCard className="fade-up card-hover" style={{ marginBottom: 0 }}>
+      <div className="card fade-up card-hover" style={{ marginBottom: 0 }}>
         <div style={{
           background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(59, 130, 246, 0.15) 100%)',
           borderRadius: '16px',
@@ -378,11 +377,11 @@ export default function Perfil() {
             </div>
           </div>
         </div>
-      </GlassCard>
+      </div>
 
       {/* Grid: Informações Pessoais | Estatísticas da Conta */}
       <div className="grid-2" style={{ marginBottom: 0, alignItems: 'stretch' }}>
-        <GlassCard className="fade-up card-hover" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+        <div className="card" className="fade-up card-hover" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
           <div style={{
             background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.10) 0%, rgba(59, 130, 246, 0.10) 100%)',
             borderRadius: '16px',
@@ -525,9 +524,9 @@ export default function Perfil() {
             </button>
             </div>
           </div>
-        </GlassCard>
+        </div>
 
-        <GlassCard className="fade-up card-hover" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+        <div className="card" className="fade-up card-hover" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
           <div style={{
             background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.10) 0%, rgba(59, 130, 246, 0.10) 100%)',
             borderRadius: '16px',
@@ -667,12 +666,12 @@ export default function Perfil() {
               </div>
             </div>
           </div>
-        </GlassCard>
+        </div>
       </div>
 
       {/* Grid: Alterar Senha | Integração com Telegram */}
       <div className="grid-2" style={{ marginBottom: 0, alignItems: 'stretch' }}>
-        <GlassCard className="fade-up card-hover" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+        <div className="card" className="fade-up card-hover" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
           <div style={{
             background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.10) 0%, rgba(59, 130, 246, 0.10) 100%)',
             borderRadius: '16px',
@@ -849,9 +848,9 @@ export default function Perfil() {
               </button>
             </div>
           </div>
-        </GlassCard>
+        </div>
 
-        <GlassCard className="fade-up card-hover" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+        <div className="card" className="fade-up card-hover" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
           <div style={{
             background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(59, 130, 246, 0.15) 100%)',
             borderRadius: '16px',
@@ -1037,11 +1036,11 @@ export default function Perfil() {
             </button>
             </div>
           </div>
-        </GlassCard>
+        </div>
       </div>
 
       {/* Seção: Zona de Perigo - Isolada Inferior */}
-      <GlassCard className="fade-up card-hover" style={{ marginBottom: 0 }}>
+      <div className="card fade-up card-hover" style={{ marginBottom: 0 }}>
         <div style={{ 
           background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(220, 38, 38, 0.15) 100%)',
             borderRadius: '16px',
@@ -1157,7 +1156,7 @@ export default function Perfil() {
         </button>
       </div>
           </div>
-        </GlassCard>
+        </div>
 
       <Modal
         isOpen={resetModalOpen}

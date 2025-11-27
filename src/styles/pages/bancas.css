@@ -3,16 +3,7 @@
    ============================================ */
 
 /* Tabela de bancas compartilhadas - estilo igual ao Dashboard */
-.bancas-page .glass-card {
-  background: rgba(51, 65, 85, 0.5); /* slate-800/50 */
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(71, 85, 105, 0.5);
-  border-radius: 1rem;
-  padding: 1.5rem;
-  margin-bottom: 1.5rem;
-  transition: all 0.2s;
-}
+/* Estilos movidos para .card em index.css */
 
 .bancas-page table {
   width: 100%;

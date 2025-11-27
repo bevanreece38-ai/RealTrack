@@ -3,8 +3,7 @@
    ============================================ */
 
 /* Card de apostas - estilo igual ao Dashboard */
-.atualizar-page .apostas-card,
-.atualizar-page .glass-card {
+.atualizar-page .apostas-card {
   background: rgba(51, 65, 85, 0.5); /* slate-800/50 */
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
