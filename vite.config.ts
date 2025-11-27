@@ -1,7 +1,5 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import tailwindcss from '@tailwindcss/postcss'
-import autoprefixer from 'autoprefixer'
 
 // Plugin para injetar timestamp e version no HTML
 const injectBuildInfo = () => {
@@ -35,14 +33,6 @@ const injectBuildInfo = () => {
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), injectBuildInfo()],
-  css: {
-    postcss: {
-      plugins: [
-        tailwindcss,
-        autoprefixer,
-      ],
-    },
-  },
   build: {
     // Limpar o diretório de output antes de cada build
     emptyOutDir: true,
