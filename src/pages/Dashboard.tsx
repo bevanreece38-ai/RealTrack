@@ -621,7 +621,33 @@ export default function Dashboard() {
               </div>
             </div>
             
-            <ResponsiveContainer width="100%" height={300}>
+            {/* Summary Cards */}
+            <div className="dashboard-new-summary-cards">
+              <div className="dashboard-new-summary-card">
+                <div className="dashboard-new-summary-header">
+                  <p className="dashboard-new-summary-label">Total Acumulado</p>
+                  <div className="dashboard-new-summary-trend">
+                    <TrendingUp size={16} />
+                    <span>{formatPercent(crescimentoPercentual)}</span>
+                  </div>
+                </div>
+                <h3 className="dashboard-new-summary-value">{formatCurrency(metricas.lucroTotal)}</h3>
+              </div>
+              
+              <div className="dashboard-new-summary-card">
+                <p className="dashboard-new-summary-label">Melhor Dia</p>
+                <h3 className="dashboard-new-summary-value">{formatCurrency(melhorDia.valor)}</h3>
+                <p className="dashboard-new-summary-date">{melhorDia.data}</p>
+              </div>
+              
+              <div className="dashboard-new-summary-card">
+                <p className="dashboard-new-summary-label">Média Diária</p>
+                <h3 className="dashboard-new-summary-value">{formatCurrency(mediaDiaria)}</h3>
+                <p className="dashboard-new-summary-period">Últimos {periodoGrafico === '365' ? '1 ano' : `${periodoGrafico} dias`}</p>
+              </div>
+            </div>
+            
+            <ResponsiveContainer width="100%" height={200}>
               {evolucaoBancaChart.length > 0 ? (
                 <LineChart data={evolucaoBancaChart} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.2} />
@@ -763,54 +789,6 @@ export default function Dashboard() {
               </button>
             </div>
           )}
-        </div>
-        
-        {/* Finance Summary Grid - Igual ao Grid Principal Rosa */}
-        <div className="dashboard-new-hero-stats">
-          {/* Total Acumulado Card */}
-          <div className="dashboard-new-hero-card dashboard-new-hero-card--green">
-            <div className="dashboard-new-hero-card-header">
-              <div className="dashboard-new-hero-card-icon dashboard-new-hero-card-icon--green">
-                <span style={{ fontSize: '1.5rem' }}>💰</span>
-              </div>
-              <span className={`dashboard-new-hero-card-badge dashboard-new-hero-card-badge--${roiStatusColor}`}>
-                {roiStatus}
-              </span>
-            </div>
-            <p className="dashboard-new-hero-card-label">Total Acumulado</p>
-            <h3 className="dashboard-new-hero-card-value">{formatCurrency(metricas.lucroTotal)}</h3>
-            <p className="dashboard-new-hero-card-subtitle">Lucro total</p>
-          </div>
-
-          {/* Melhor Dia Card */}
-          <div className="dashboard-new-hero-card dashboard-new-hero-card--blue">
-            <div className="dashboard-new-hero-card-header">
-              <div className="dashboard-new-hero-card-icon dashboard-new-hero-card-icon--blue">
-                <span style={{ fontSize: '1.5rem' }}>📈</span>
-              </div>
-              <span className="dashboard-new-hero-card-badge dashboard-new-hero-card-badge--blue">
-                {formatPercent(crescimentoPercentual)}
-              </span>
-            </div>
-            <p className="dashboard-new-hero-card-label">Melhor Dia</p>
-            <h3 className="dashboard-new-hero-card-value">{formatCurrency(melhorDia.valor)}</h3>
-            <p className="dashboard-new-hero-card-subtitle">{melhorDia.data}</p>
-          </div>
-
-          {/* Média Diária Card */}
-          <div className="dashboard-new-hero-card dashboard-new-hero-card--purple">
-            <div className="dashboard-new-hero-card-header">
-              <div className="dashboard-new-hero-card-icon dashboard-new-hero-card-icon--purple">
-                <span style={{ fontSize: '1.5rem' }}>📊</span>
-              </div>
-              <span className="dashboard-new-hero-card-badge dashboard-new-hero-card-badge--purple">
-                {periodoGrafico === '365' ? '1 ano' : `${periodoGrafico} dias`}
-              </span>
-            </div>
-            <p className="dashboard-new-hero-card-label">Média Diária</p>
-            <h3 className="dashboard-new-hero-card-value">{formatCurrency(mediaDiaria)}</h3>
-            <p className="dashboard-new-hero-card-subtitle">Média por dia</p>
-          </div>
         </div>
         
         {/* Layout Lado a Lado: Por Esporte e Por Casa de Apostas */}

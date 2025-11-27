@@ -610,7 +610,7 @@
 .dashboard-new-performance-card {
   padding: 1.5rem;
   height: auto;
-  min-height: 500px;
+  min-height: 400px;
   overflow-y: hidden;
 }
 
