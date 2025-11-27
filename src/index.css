@@ -1337,6 +1337,10 @@ button {
   }
 }
 
+.mb-6 {
+  margin-bottom: 1.5rem !important;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
