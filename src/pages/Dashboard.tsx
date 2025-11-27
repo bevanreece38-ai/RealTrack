@@ -96,6 +96,17 @@ export default function Dashboard() {
   const [resumoPorEsporte, setResumoPorEsporte] = useState<ResumoEsporteItem[]>([]);
   const [resumoPorCasa, setResumoPorCasa] = useState<ResumoCasaItem[]>([]);
   const [periodoGrafico, setPeriodoGrafico] = useState('7');
+  
+  // Mock data for recent performance
+  const [apostasRecentes] = useState([
+    { id: 1, evento: 'Flamengo vs Palmeiras', odd: '2.10', status: 'GANHOU', lucro: 11.00 },
+    { id: 2, evento: 'Corinthians vs São Paulo', odd: '1.85', status: 'PERDEU', lucro: -10.00 },
+    { id: 3, evento: 'Atlético-MG vs Cruzeiro', odd: '2.25', status: 'GANHOU', lucro: 12.50 },
+    { id: 4, evento: 'Vasco da Gama vs Botafogo', odd: '1.95', status: 'GANHOU', lucro: 9.50 },
+    { id: 5, evento: 'Grêmio vs Internacional', odd: '2.00', status: 'PERDEU', lucro: -10.00 },
+    { id: 6, evento: 'Fluminense vs Santos', odd: '1.75', status: 'GANHOU', lucro: 7.50 },
+    { id: 7, evento: 'Palmeiras vs Corinthians', odd: '2.15', status: 'GANHOU', lucro: 11.50 }
+  ]);
 
   const buildParams = useCallback((): Partial<DashboardFilters> => {
     const params: Partial<DashboardFilters> = {};
@@ -571,7 +582,7 @@ export default function Dashboard() {
 
         {/* Charts Grid */}
         <div className="dashboard-new-charts-grid">
-          <div className="dashboard-new-chart-card dashboard-new-chart-card--full-width">
+          <div className="dashboard-new-chart-card dashboard-new-chart-card--large">
             <div className="dashboard-new-chart-header">
               <div>
                 <h3 className="dashboard-new-chart-title">Evolução do Lucro</h3>
@@ -682,6 +693,43 @@ export default function Dashboard() {
                 </div>
               )}
             </ResponsiveContainer>
+          </div>
+          
+          <div className="dashboard-new-chart-card">
+            <div className="dashboard-new-chart-header">
+              <div>
+                <h3 className="dashboard-new-chart-title">Performance Recente</h3>
+                <p className="dashboard-new-chart-subtitle">Últimas 7 apostas</p>
+              </div>
+              <TrendingUp size={20} className="dashboard-new-trending-icon" />
+            </div>
+            
+            <div className="dashboard-new-recent-performance">
+              {apostasRecentes && apostasRecentes.length > 0 ? (
+                <div className="dashboard-new-recent-list">
+                  {apostasRecentes.slice(0, 7).map((aposta, index) => (
+                    <div key={aposta.id || index} className="dashboard-new-recent-item">
+                      <div className="dashboard-new-recent-status">
+                        <div className={`dashboard-new-recent-indicator ${aposta.status === 'GANHOU' ? 'win' : 'loss'}`}></div>
+                      </div>
+                      <div className="dashboard-new-recent-info">
+                        <p className="dashboard-new-recent-event">{aposta.evento || 'Evento'}</p>
+                        <p className="dashboard-new-recent-odd">Odd: {aposta.odd || '-'}</p>
+                      </div>
+                      <div className="dashboard-new-recent-result">
+                        <p className={`dashboard-new-recent-value ${aposta.status === 'GANHOU' ? 'positive' : 'negative'}`}>
+                          {aposta.status === 'GANHOU' ? '+' : '-'}{formatCurrency(aposta.lucro || 0)}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="dashboard-new-empty-state">
+                  <p className="dashboard-new-empty-text">Nenhuma aposta recente</p>
+                </div>
+              )}
+            </div>
           </div>
           
           {SHOW_RANKING_TIPSTERS && (

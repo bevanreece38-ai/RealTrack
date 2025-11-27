@@ -596,6 +596,109 @@
   transition: all 0.2s;
 }
 
+/* Performance Recente Styles */
+.dashboard-new-trending-icon {
+  color: #10b981; /* emerald-500 */
+}
+
+.dashboard-new-recent-performance {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.dashboard-new-recent-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.dashboard-new-recent-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: rgba(30, 41, 59, 0.5); /* slate-900/50 */
+  border-radius: 0.5rem;
+  border: 1px solid rgba(71, 85, 105, 0.3);
+  transition: all 0.2s;
+}
+
+.dashboard-new-recent-item:hover {
+  background: rgba(30, 41, 59, 0.8);
+  border-color: rgba(71, 85, 105, 0.5);
+}
+
+.dashboard-new-recent-status {
+  flex-shrink: 0;
+}
+
+.dashboard-new-recent-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.dashboard-new-recent-indicator.win {
+  background: #10b981; /* emerald-500 */
+}
+
+.dashboard-new-recent-indicator.loss {
+  background: #ef4444; /* red-500 */
+}
+
+.dashboard-new-recent-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.dashboard-new-recent-event {
+  color: white;
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin: 0 0 0.25rem 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dashboard-new-recent-odd {
+  color: #64748b; /* slate-500 */
+  font-size: 0.75rem;
+  margin: 0;
+}
+
+.dashboard-new-recent-result {
+  flex-shrink: 0;
+  text-align: right;
+}
+
+.dashboard-new-recent-value {
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.dashboard-new-recent-value.positive {
+  color: #10b981; /* emerald-500 */
+}
+
+.dashboard-new-recent-value.negative {
+  color: #ef4444; /* red-500 */
+}
+
+.dashboard-new-empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+}
+
+.dashboard-new-empty-text {
+  color: #64748b; /* slate-500 */
+  font-size: 0.875rem;
+  margin: 0;
+}
+
 .dashboard-new-period-select:focus {
   outline: none;
   border-color: #9333ea;
