@@ -6,6 +6,7 @@ import DateInput from '../components/DateInput';
 import { CASAS_APOSTAS } from '../constants/casasApostas';
 import { STATUS_APOSTAS } from '../constants/statusApostas';
 import api from '../lib/api';
+import { AuthManager } from '../lib/auth';
 import { useTipsters } from '../hooks/useTipsters';
 import { formatCurrency, formatPercent, getFirstName } from '../utils/formatters';
 import type { ApiProfileResponse } from '../types/api';
@@ -72,6 +73,19 @@ interface DashboardResponse {
 const SHOW_RANKING_TIPSTERS = false;
 
 export default function Dashboard() {
+  // Verificar autenticação no início
+  useEffect(() => {
+    console.log('Verificando autenticação...');
+    const token = AuthManager.getAccessToken();
+    console.log('Token presente:', !!token);
+    console.log('Token válido:', AuthManager.isTokenValid());
+    if (!token || !AuthManager.isTokenValid()) {
+      console.error('Usuário não autenticado ou token expirado');
+      // Redirecionar para login se não estiver autenticado
+      window.location.href = '/login';
+    }
+  }, []);
+
   const [filtersOpen, setFiltersOpen] = useState(false);
   const { tipsters } = useTipsters();
   const [profile, setProfile] = useState<ApiProfileResponse | null>(null);
@@ -183,21 +197,30 @@ export default function Dashboard() {
 
   useEffect(() => {
     const fetchProfile = async () => {
+      console.log('Iniciando busca de perfil...');
       try {
+        console.log('Fazendo requisição para /perfil');
         const { data } = await api.get<ApiProfileResponse>('/perfil');
+        console.log('Dados do perfil recebidos:', data);
         setProfile(data);
       } catch (error) {
+        console.error('Erro ao buscar perfil:', error);
         console.warn('Não foi possível carregar perfil do usuário.', error);
+        // Em caso de erro, definir perfil null para mostrar estado de erro
+        setProfile(null);
       }
     };
     void fetchProfile();
 
     const handleProfileUpdated = (event: Event) => {
+      console.log('Evento profile-updated recebido');
       const customEvent = event as CustomEvent<ApiProfileResponse | undefined>;
       const updatedProfile = customEvent.detail;
       if (updatedProfile) {
+        console.log('Perfil atualizado via evento:', updatedProfile);
         setProfile(updatedProfile);
       } else {
+        console.log('Recarregando perfil via evento');
         void fetchProfile();
       }
     };
