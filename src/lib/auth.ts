@@ -102,7 +102,7 @@ export class AuthManager {
 
   private static clearServerSideTokens(): void {
     // Limpa cookies httpOnly via backend
-    fetch('/api/auth/logout', {
+    fetch(`${import.meta.env.VITE_API_URL}/auth/logout`, {
       method: 'POST',
       credentials: 'include',
     }).catch(console.error);
