@@ -11,10 +11,10 @@ const injectBuildInfo = () => {
   return {
     name: 'inject-build-info',
     transformIndexHtml(html: string) {
-      // Adiciona meta tags de build info e cache control logo após <head>
+      // Adiciona meta tags de build info logo após <head>
       let modifiedHtml = html.replace(
         '<head>',
-        `<head>\n    <meta name="build-timestamp" content="${timestamp}" />\n    <meta name="build-hash" content="${buildHash}" />\n    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />\n    <meta http-equiv="Pragma" content="no-cache" />\n    <meta http-equiv="Expires" content="0" />`
+        `<head>\n    <meta name="build-timestamp" content="${timestamp}" />\n    <meta name="build-hash" content="${buildHash}" />`
       )
       
       // Para desenvolvimento: adiciona query string ao script de desenvolvimento
