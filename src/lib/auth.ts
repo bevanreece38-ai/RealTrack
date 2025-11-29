@@ -174,7 +174,7 @@ export class AuthManager {
   static async refreshToken(): Promise<boolean> {
     if (import.meta.env.PROD) {
       try {
-        const response = await fetch('/api/auth/refresh', {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/refresh`, {
           method: 'POST',
           credentials: 'include',
           headers: {
@@ -197,7 +197,7 @@ export class AuthManager {
       if (!refreshToken) return false;
 
       try {
-        const response = await fetch('/api/auth/refresh', {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/refresh`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
