@@ -178,15 +178,12 @@ export default function TelegramEdit() {
     if (!telegramReady) return;
 
     const authenticateTelegram = async () => {
-      console.log('=== AUTENTICANDO TELEGRAM ===');
-      
       const telegramWebApp = window.Telegram?.WebApp;
       if (telegramWebApp?.initData) {
         try {
           const { data } = await api.post<{ token?: string }>('/auth/telegram', {
             initData: telegramWebApp.initData
           });
-          console.log('✅ Autenticação bem-sucedida');
           if (typeof data.token === 'string') {
             localStorage.setItem('token', data.token);
             setAuthenticated(true);

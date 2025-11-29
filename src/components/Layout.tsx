@@ -245,7 +245,6 @@ export default function Layout() {
   const fetchProfile = useCallback(async () => {
     try {
       const { data } = await api.get<ApiProfileResponse>('/perfil');
-      console.log('Perfil carregado:', data);
       setProfile(data);
     } catch (error) {
       console.error('Erro ao carregar perfil do usuário:', error);
