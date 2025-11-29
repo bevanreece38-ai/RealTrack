@@ -5,7 +5,7 @@ import api from '../lib/api';
 import { type ApiError } from '../types/api';
 
 interface LoginResponse {
-  token: string;
+  success: boolean;
 }
 
 export default function Login() {
@@ -28,12 +28,8 @@ export default function Login() {
     try {
       const { data } = await api.post<LoginResponse>('/auth/login', { email, senha });
       
-      if (data.token) {
-        if (lembrarMe) {
-          localStorage.setItem('token', data.token);
-        } else {
-          sessionStorage.setItem('token', data.token);
-        }
+      if (data.success) {
+        // Cookies are set automatically by the backend
         void navigate('/dashboard');
       }
     } catch (err) {

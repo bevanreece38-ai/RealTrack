@@ -25,12 +25,14 @@ export class AuthManager {
    */
   static setTokens(tokens: AuthTokens): void {
     if (import.meta.env.PROD) {
-      // Em produção, usa httpOnly cookies via server-side
-      // Isso requer endpoint HTTP-only do backend
-      this.setServerSideTokens(tokens);
+      // Em produção, cookies são definidos diretamente pelo backend
+      // Não precisa fazer nada no frontend
+      console.log('Tokens managed by backend via httpOnly cookies');
     } else {
-      // Fallback para desenvolvimento
-      this.setDevelopmentTokens(tokens);
+      // Em desenvolvimento, fallback para localStorage
+      localStorage.setItem(this.ACCESS_TOKEN_KEY, tokens.accessToken);
+      localStorage.setItem(this.REFRESH_TOKEN_KEY, tokens.refreshToken);
+      localStorage.setItem(this.EXPIRES_KEY, tokens.expiresAt.toString());
     }
   }
 
@@ -92,19 +94,6 @@ export class AuthManager {
   /**
    * Implementação server-side (httpOnly cookies)
    */
-  private static setServerSideTokens(tokens: AuthTokens): void {
-    // Envia tokens para backend definir como httpOnly cookies
-    // Isso requer endpoint POST /auth/set-cookies
-    fetch('/api/auth/set-cookies', {
-      method: 'POST',
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(tokens),
-    }).catch(console.error);
-  }
-
   private static getServerSideToken(): string | null {
     // Token é enviado automaticamente via httpOnly cookie
     // Não acessível via JavaScript (segurança!)
@@ -122,12 +111,6 @@ export class AuthManager {
   /**
    * Fallback para desenvolvimento (localStorage)
    */
-  private static setDevelopmentTokens(tokens: AuthTokens): void {
-    localStorage.setItem(this.ACCESS_TOKEN_KEY, tokens.accessToken);
-    localStorage.setItem(this.REFRESH_TOKEN_KEY, tokens.refreshToken);
-    localStorage.setItem(this.EXPIRES_KEY, tokens.expiresAt.toString());
-  }
-
   private static getDevelopmentToken(): string | null {
     const token = localStorage.getItem(this.ACCESS_TOKEN_KEY);
     if (!token) return null;
@@ -183,8 +166,7 @@ export class AuthManager {
         });
 
         if (response.ok) {
-          const tokens = await response.json();
-          this.setTokens(tokens);
+          // Backend sets new cookies automatically
           return true;
         }
       } catch (error) {
