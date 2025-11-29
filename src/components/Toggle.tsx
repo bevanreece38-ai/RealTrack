@@ -1,8 +1,15 @@
 interface ToggleProps {
   checked?: boolean;
+  onClick?: () => void;
 }
 
-export default function Toggle({ checked = false }: ToggleProps) {
-  return <div className={`toggle ${checked ? 'active' : ''}`} />;
+export default function Toggle({ checked = false, onClick }: ToggleProps) {
+  return (
+    <button
+      type="button"
+      className={`toggle ${checked ? 'active' : ''}`}
+      onClick={onClick}
+    />
+  );
 }
 
