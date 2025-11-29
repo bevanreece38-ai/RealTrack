@@ -134,15 +134,19 @@ export default function Dashboard() {
   }, [filters.status, filters.tipster, filters.casa, filters.dataInicio, filters.dataFim]);
 
   const fetchApostasRecentes = useCallback(async () => {
+    console.log('Iniciando busca de apostas recentes...');
     setLoadingApostasRecentes(true);
     try {
+      console.log('Fazendo requisição para /apostas/recentes');
       const { data } = await api.get('/apostas/recentes');
-      setApostasRecentes(data);
+      console.log('Dados recebidos:', data);
+      setApostasRecentes(data || []);
     } catch (error) {
       console.error('Erro ao buscar apostas recentes:', error);
       // Em caso de erro, mantém o array vazio
       setApostasRecentes([]);
     } finally {
+      console.log('Finalizando busca de apostas recentes');
       setLoadingApostasRecentes(false);
     }
   }, []);
@@ -175,7 +179,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     void fetchApostasRecentes();
-  }, [fetchApostasRecentes]);
+  }, []);
 
   useEffect(() => {
     const fetchProfile = async () => {

@@ -47,7 +47,7 @@ const getCacheKey = (config: InternalAxiosRequestConfig): string => {
 const shouldCache = (url: string | undefined, method: string | undefined): boolean => {
   if (!url || method?.toUpperCase() !== 'GET') return false;
   // Endpoints que não devem ser cacheados (dados dinâmicos)
-  const noCacheEndpoints = ['/analise/dashboard', '/analise/performance'];
+  const noCacheEndpoints = ['/analise/dashboard', '/analise/performance', '/apostas/recentes'];
   return !noCacheEndpoints.some(endpoint => url.includes(endpoint));
 };
 
