@@ -244,6 +244,11 @@ export default function Layout() {
   }, [fetchConsumoPlano]);
 
   const fetchProfile = useCallback(async () => {
+    // Só carregar perfil se usuário estiver autenticado
+    if (!AuthManager.isTokenValid()) {
+      return;
+    }
+
     try {
       const { data } = await api.get<ApiProfileResponse>('/perfil');
       setProfile(data);

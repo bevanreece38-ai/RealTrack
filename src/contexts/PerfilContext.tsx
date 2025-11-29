@@ -1,5 +1,7 @@
-import { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
+import type { ReactNode } from 'react';
 import api from '../lib/api';
+import { AuthManager } from '../lib/auth';
 
 export interface Perfil {
   id: string;
@@ -40,16 +42,15 @@ export const PerfilProvider = ({ children }: { children: ReactNode }) => {
 
   // Memoizar função para evitar re-criação e re-renders desnecessários
   const atualizarPerfil = useCallback(async () => {
+    // Só carregar perfil se usuário estiver autenticado
+    if (!AuthManager.isTokenValid()) {
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     setErro(null);
     try {
-      // Verificar se há token antes de fazer requisição
-      const token = localStorage.getItem('token');
-      if (!token) {
-        setLoading(false);
-        return;
-      }
-      
       const { data } = await api.get<Perfil>('/perfil');
       setPerfil(data);
     } catch (err: unknown) {
@@ -65,8 +66,8 @@ export const PerfilProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   useEffect(() => {
-    // Só carregar perfil se estiver em uma rota que precisa (não em /telegram/*)
-    if (!window.location.pathname.startsWith('/telegram/')) {
+    // Só carregar perfil se estiver autenticado e não estiver em /telegram/*
+    if (AuthManager.isTokenValid() && !window.location.pathname.startsWith('/telegram/')) {
       void atualizarPerfil();
     } else {
       setLoading(false);
