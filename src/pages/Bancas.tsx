@@ -204,6 +204,27 @@ export default function Bancas() {
     setEditForm((prev) => ({ ...prev, [field]: value }));
   };
 
+  const handleTogglePadrao = async (banca: Banco) => {
+    try {
+      // Update local state optimistically
+      setBancas(prev => prev.map(b => 
+        b.id === banca.id ? { ...b, padrao: !b.padrao } : b
+      ));
+      
+      // Make API call to update the bank
+      await api.put(`/bancas/${banca.id}`, {
+        ePadrao: !banca.padrao
+      });
+      
+      // Refresh data to ensure consistency
+      await fetchBancas();
+    } catch (error) {
+      console.error('Não foi possível atualizar o status padrão da banca:', error);
+      // Revert the change if API call fails
+      await fetchBancas();
+    }
+  };
+
   const handleToggleStatus = async (banca: Banco) => {
     try {
       // Update local state optimistically
@@ -282,8 +303,7 @@ export default function Bancas() {
                   <th>Banca</th>
                   <th>Desc</th>
                   <th>Status</th>
-                  <th>Visualizações</th>
-                  <th>Visitantes Únicos</th>
+                  <th>Padrão</th>
                   <th>Última Visualização</th>
                   <th>Criado em</th>
                   <th>Ações</th>
@@ -306,12 +326,11 @@ export default function Bancas() {
                       />
                     </td>
                     <td>
-                      {banca.visualizacoes}
-                      <p className="card-desc" style={{ margin: 0 }}>
-                        Hoje: 0
-                      </p>
+                      <Toggle 
+                        checked={banca.padrao} 
+                        onClick={() => void handleTogglePadrao(banca)}
+                      />
                     </td>
-                    <td>{banca.visitantes}</td>
                     <td>{banca.ultimaVisualizacao}</td>
                     <td>{banca.criadoEm}</td>
                     <td>
