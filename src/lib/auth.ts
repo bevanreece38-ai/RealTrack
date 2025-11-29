@@ -113,7 +113,7 @@ export class AuthManager {
 
   private static clearServerSideTokens(): void {
     // Limpa cookies httpOnly via backend
-    fetch('/api/auth/clear-cookies', {
+    fetch('/api/auth/logout', {
       method: 'POST',
       credentials: 'include',
     }).catch(console.error);
