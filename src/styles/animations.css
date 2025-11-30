@@ -1,0 +1,50 @@
+/* ======== ANIMAÇÕES DE ENTRADA ======== */
+.fade-up {
+  opacity: 0;
+  transform: translateY(20px);
+  animation: fadeUp 0.8s ease forwards;
+}
+
+/* atraso progressivo automático */
+.fade-up:nth-child(1) { animation-delay: 0.1s; }
+.fade-up:nth-child(2) { animation-delay: 0.2s; }
+.fade-up:nth-child(3) { animation-delay: 0.3s; }
+.fade-up:nth-child(4) { animation-delay: 0.4s; }
+.fade-up:nth-child(5) { animation-delay: 0.5s; }
+.fade-up:nth-child(6) { animation-delay: 0.6s; }
+
+@keyframes fadeUp {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ======== EFEITO DE PRESS NOS BOTÕES ======== */
+.btn-press {
+  transition: transform 0.2s ease;
+}
+
+.btn-press:active {
+  transform: scale(0.96);
+}
+
+/* ======== HOVER NOS CARDS ======== */
+.card-hover {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card-hover:hover {
+  transform: translateY(-4px);
+}
+
+/* ======== HOVER NOS INPUTS ======== */
+.input-focus {
+  transition: background 0.25s, box-shadow 0.25s;
+}
+
+.input-focus:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(76, 125, 255, 0.5);
+}
+

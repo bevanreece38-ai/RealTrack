@@ -1,0 +1,59 @@
+/* ============================================
+   GLASS - Estilos base para efeito glassmorphism
+   ============================================ */
+
+.glass {
+  background: var(--color-bg-glass) !important;
+  backdrop-filter: blur(40px) saturate(200%) !important;
+  -webkit-backdrop-filter: blur(40px) saturate(200%) !important;
+  border-radius: 20px;
+  border: 1px solid var(--color-border-card) !important;
+  box-shadow: var(--color-shadow-md-dark) !important;
+  padding: 20px;
+  transition: 0.3s ease;
+  position: relative;
+  isolation: isolate;
+}
+
+/* ============================================
+   GLASS CARD - Estilos padronizados
+   NOTA: Os estilos principais e padronizados estão em cards.css
+   Este arquivo mantém apenas compatibilidade básica.
+   cards.css é carregado depois e sobrescreve estilos conflitantes.
+   ============================================ */
+
+/* Removidos estilos duplicados - ver cards.css para estilos padronizados */
+
+.glass-button {
+  background: var(--color-bg-glass-button);
+  color: var(--color-text-white);
+  padding: 12px 20px;
+  border-radius: 18px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  box-shadow: var(--color-shadow-glass-button);
+  transition: 0.25s ease;
+}
+
+.glass-button:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--color-shadow-glass-button-hover);
+}
+
+.grid {
+  display: grid;
+  gap: 1.5rem; /* Mesmo espaçamento do Dashboard */
+}
+
+.grid-2 {
+  grid-template-columns: repeat(2, 1fr);
+  align-items: stretch;
+  gap: 1.5rem; /* Mesmo espaçamento do Dashboard */
+}
+
+.grid-3 {
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem; /* Mesmo espaçamento do Dashboard */
+}
+

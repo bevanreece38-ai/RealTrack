@@ -1,0 +1,165 @@
+/* ============================================
+   PÁGINA FINANCEIRO - Todos os estilos de grid/card
+   ============================================ */
+
+/* Card de transações - estilo igual ao Dashboard */
+.financeiro-page .transactions-card {
+  background: rgba(51, 65, 85, 0.5); /* slate-800/50 */
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(71, 85, 105, 0.5);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  transition: all 0.2s;
+}
+
+.financeiro-page .transactions-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.financeiro-page .transactions-card__title {
+  color: white;
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.financeiro-page .transactions-card__actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* Tabela de transações */
+.financeiro-page table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.financeiro-page table th,
+.financeiro-page table td {
+  padding: 12px 16px;
+  text-align: left;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.financeiro-page table th {
+  color: #94a3b8;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.financeiro-page table td {
+  color: #e2e8f0;
+  font-size: 0.875rem;
+}
+
+.financeiro-page table tbody tr:hover {
+  background: rgba(51, 65, 85, 0.3);
+}
+
+/* Badges de tipo */
+.financeiro-page .badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.financeiro-page .badge--deposito {
+  background: rgba(16, 185, 129, 0.1);
+  color: #34d399;
+}
+
+.financeiro-page .badge--saque {
+  background: rgba(239, 68, 68, 0.1);
+  color: #f87171;
+}
+
+/* Card de saldo por casa */
+.financeiro-page .saldo-casa-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.financeiro-page .saldo-casa-card {
+  background: rgba(51, 65, 85, 0.5); /* slate-800/50 */
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(71, 85, 105, 0.5);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  transition: all 0.2s;
+}
+
+.financeiro-page .saldo-casa-card:hover {
+  border-color: rgba(71, 85, 105, 0.7);
+}
+
+.financeiro-page .saldo-casa-card__name {
+  color: #94a3b8;
+  font-size: 0.75rem;
+  font-weight: 500;
+  margin: 0 0 8px 0;
+  text-transform: uppercase;
+}
+
+.financeiro-page .saldo-casa-card__value {
+  color: white;
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.financeiro-page .saldo-casa-card__value--positive {
+  color: #34d399;
+}
+
+.financeiro-page .saldo-casa-card__value--negative {
+  color: #f87171;
+}
+
+/* Light theme */
+[data-theme='light'] .financeiro-page table th {
+  color: #64748b;
+}
+
+[data-theme='light'] .financeiro-page table td {
+  color: #1e293b;
+}
+
+[data-theme='light'] .financeiro-page table tbody tr:hover {
+  background: rgba(241, 245, 249, 0.5);
+}
+
+[data-theme='light'] .financeiro-page .transactions-card__title {
+  color: #1e293b;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .financeiro-page .saldo-casa-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .financeiro-page table {
+    display: block;
+    overflow-x: auto;
+  }
+}
+
+@media (max-width: 480px) {
+  .financeiro-page .saldo-casa-grid {
+    grid-template-columns: 1fr;
+  }
+}
+

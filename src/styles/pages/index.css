@@ -1,0 +1,10 @@
+/* ============================================
+   ESTILOS DE PÁGINAS - Index
+   Importa todos os estilos específicos de cada página
+   ============================================ */
+
+@import './bancas.css';
+@import './financeiro.css';
+@import './analise.css';
+@import './atualizar.css';
+

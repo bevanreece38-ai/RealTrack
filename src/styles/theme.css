@@ -1,0 +1,72 @@
+:root {
+  --bg-primary: var(--color-bg-primary);
+  --bg-secondary: var(--color-bg-secondary);
+  /* Cor secundária fixa (roxo neon) - não muda com a cor da banca */
+  --color-secondary: var(--color-secondary);
+  --color-secondary-light: var(--color-secondary-light);
+  /* Vidro */
+  --glass-bg: var(--color-bg-glass-card);
+  --glass-border: var(--color-border-card);
+  /* Texto */
+  --text-primary: var(--color-text-primary);
+  --text-secondary: var(--color-text-secondary);
+  /* Sombras */
+  --shadow-1: var(--color-shadow-md);
+  --shadow-2: var(--color-shadow-lg);
+  --glow-primary: var(--color-shadow-button-primary);
+  --glow-secondary: var(--color-shadow-glass-card);
+}
+
+/* Variáveis para o modo dark: aplicadas quando o atributo data-theme='dark' está no elemento raiz */
+:root[data-theme='dark'],
+[data-theme='dark'] {
+  --bg-primary: var(--color-bg-primary-dark);
+  --bg-secondary: var(--color-bg-secondary-dark);
+  /* Cor secundária fixa (roxo neon) - não muda com a cor da banca */
+  --color-secondary: var(--color-secondary-dark);
+  --color-secondary-light: var(--color-secondary-light-dark);
+  /* Vidro */
+  --glass-bg: var(--color-bg-glass-dark);
+  --glass-border: var(--color-border-card-dark);
+  /* Texto */
+  --text-primary: var(--color-text-primary-dark);
+  --text-secondary: var(--color-text-secondary-dark);
+  /* Sombras */
+  --shadow-1: var(--color-shadow-md-dark);
+  --shadow-2: var(--color-shadow-lg-dark);
+  --glow-primary: var(--color-shadow-button-primary-dark);
+  --glow-secondary: var(--color-shadow-glass-card-dark);
+}
+
+body {
+  /* Background fixo - não deve mudar com a cor da banca */
+  background-color: var(--bg-primary) !important;
+  color: var(--text-primary);
+  font-family: 'Inter', sans-serif;
+}
+
+/* Garantir que o background não mude no modo dark */
+[data-theme='dark'] body {
+  background: 
+    radial-gradient(ellipse at top, rgba(255, 255, 255, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at bottom right, rgba(255, 255, 255, 0.05) 0%, transparent 50%),
+    linear-gradient(135deg, var(--color-bg-primary-dark) 0%, #1a1a1a 25%, #0d0d0d 50%, #1a1a1a 75%, var(--color-bg-primary-dark) 100%) !important;
+  background-attachment: fixed !important;
+  background-color: var(--color-bg-primary-dark) !important;
+  position: relative;
+}
+
+[data-theme='dark'] body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.04) 0%, transparent 50%),
+    radial-gradient(circle at 80% 70%, rgba(255, 255, 255, 0.03) 0%, transparent 50%);
+  pointer-events: none;
+  z-index: 0;
+}
+

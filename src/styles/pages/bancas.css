@@ -1,0 +1,123 @@
+/* ============================================
+   PÁGINA BANCAS - Todos os estilos de grid/card
+   ============================================ */
+
+/* Tabela de bancas compartilhadas - estilo igual ao Dashboard */
+/* Estilos movidos para .card em index.css */
+
+.bancas-page table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.bancas-page table th,
+.bancas-page table td {
+  padding: 12px 16px;
+  text-align: left;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.bancas-page table th {
+  color: #94a3b8;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.bancas-page table td {
+  color: #e2e8f0;
+  font-size: 0.875rem;
+}
+
+.bancas-page table tbody tr:hover {
+  background: rgba(51, 65, 85, 0.3);
+}
+
+/* Ações da tabela */
+.bancas-page .action-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.bancas-page .action-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.bancas-page .action-btn:hover {
+  background: rgba(51, 65, 85, 0.5);
+  color: white;
+  border-color: rgba(71, 85, 105, 0.7);
+}
+
+.bancas-page .action-btn--danger:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: #f87171;
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
+/* Modal de estatísticas */
+.bancas-page .stats-modal-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.bancas-page .stats-modal-card {
+  background: rgba(51, 65, 85, 0.5);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.bancas-page .stats-modal-card__title {
+  color: #94a3b8;
+  font-size: 0.75rem;
+  font-weight: 500;
+  margin: 0 0 8px 0;
+  text-transform: uppercase;
+}
+
+.bancas-page .stats-modal-card__value {
+  color: white;
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+/* Light theme */
+[data-theme='light'] .bancas-page table th {
+  color: #64748b;
+}
+
+[data-theme='light'] .bancas-page table td {
+  color: #1e293b;
+}
+
+[data-theme='light'] .bancas-page table tbody tr:hover {
+  background: rgba(241, 245, 249, 0.5);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .bancas-page .stats-modal-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .bancas-page table {
+    display: block;
+    overflow-x: auto;
+  }
+}
+
