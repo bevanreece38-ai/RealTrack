@@ -115,8 +115,7 @@ export default function Atualizar() {
   const [retornoManual, setRetornoManual] = useState(false);
   const [betsExpanded, setBetsExpanded] = useState(false);
 
-  const isDev = import.meta.env.DEV;
-
+  
   const normalizeOptionalString = (value: string) => {
     const trimmed = value.trim();
     return trimmed === '' ? undefined : trimmed;
@@ -1341,8 +1340,7 @@ export default function Atualizar() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h3 style={{ marginTop: 0 }}>Apostas</h3>
           <div style={{ display: 'flex', gap: 8 }}>
-            {isDev && (
-              <button
+            <button
                 type="button"
                 className="btn ghost"
                 onClick={() => {
@@ -1352,7 +1350,6 @@ export default function Atualizar() {
               >
                 Gerar testes
               </button>
-            )}
             <button
               type="button"
               className="btn ghost"
