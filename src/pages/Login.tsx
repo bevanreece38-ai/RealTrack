@@ -2,10 +2,14 @@ import { useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, Target, ChevronRight } from 'lucide-react';
 import api from '../lib/api';
+import { AuthManager } from '../lib/auth';
 import { type ApiError } from '../types/api';
 
 interface LoginResponse {
   success: boolean;
+  token?: string;
+  refreshToken?: string;
+  expiresAt?: number;
 }
 
 export default function Login() {
@@ -29,13 +33,18 @@ export default function Login() {
       console.log('🔐 [LOGIN] Enviando requisição de login...');
       const response = await api.post<LoginResponse>('/auth/login', { email, senha });
       console.log('✅ [LOGIN] Resposta recebida:', response.data);
-      console.log('🍪 [LOGIN] Headers da resposta:', response.headers);
-      console.log('🍪 [LOGIN] Set-Cookie:', response.headers['set-cookie']);
-      console.log('🍪 [LOGIN] Todos os cookies do documento:', document.cookie);
       
       if (response.data.success) {
-        console.log('✅ [LOGIN] Login bem-sucedido, redirecionando...');
-        // Cookies are set automatically by the backend
+        // Salvar tokens no localStorage
+        if (response.data.token && response.data.refreshToken && response.data.expiresAt) {
+          AuthManager.setTokens({
+            accessToken: response.data.token,
+            refreshToken: response.data.refreshToken,
+            expiresAt: response.data.expiresAt
+          });
+          console.log('✅ [LOGIN] Tokens salvos, redirecionando...');
+        }
+        
         void navigate('/dashboard');
       }
     } catch (err) {
