@@ -145,15 +145,18 @@ export class AuthManager {
           const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
           const response = await fetch(`${apiUrl}/perfil`, {
             method: 'GET',
-            credentials: 'include', // Incluir cookies httpOnly
+            credentials: 'include', // ESSENCIAL: Incluir cookies httpOnly
             headers: {
               'Content-Type': 'application/json',
             },
+            // Não enviar cache para sempre pegar status atualizado
+            cache: 'no-cache',
           });
           
           if (response.ok) {
             setIsAuthenticated(true);
           } else {
+            console.warn('Autenticação falhou:', response.status, await response.text().catch(() => 'No response body'));
             setIsAuthenticated(false);
           }
         } catch (error) {
