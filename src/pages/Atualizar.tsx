@@ -1022,6 +1022,18 @@ ${limitReachedMessage}`);
     }
   };
 
+  const handleOpenUploadModal = () => {
+    ocrCancelledRef.current = false;
+    uploadAbortControllerRef.current?.abort();
+    uploadAbortControllerRef.current = null;
+    setSelectedFile(null);
+    setUploadPreview(null);
+    setOcrText('');
+    setUploading(false);
+    setOcrExtracting(false);
+    setUploadModalOpen(true);
+  };
+
   // Função para fechar modal de upload
   const handleCloseUploadModal = () => {
     setUploadModalOpen(false);
@@ -1285,6 +1297,13 @@ ${limitReachedMessage}`);
               {activeFilterCount > 0 && (
                 <span className={filterCountClass}>{activeFilterCount}</span>
               )}
+            </button>
+            <button
+              type="button"
+              className={buttonVariants.ghost}
+              onClick={handleOpenUploadModal}
+            >
+              <Upload size={16} /> Upload Bilhete
             </button>
             <button
               type="button"
