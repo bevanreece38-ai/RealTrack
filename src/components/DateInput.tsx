@@ -1,5 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import DatePicker from './DatePicker';
+import { cn } from './ui/utils';
+
+const FILTER_CONTEXT_SELECTOR = '[data-filter-context="true"], [class*="filter"]';
 
 interface DateInputProps {
   value: string;
@@ -11,14 +14,14 @@ interface DateInputProps {
   onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void;
 }
 
-export default function DateInput({ 
-  value, 
-  onChange, 
+export default function DateInput({
+  value,
+  onChange,
   placeholder = 'dd/mm/aaaa',
   className = '',
   style,
   onFocus,
-  onBlur
+  onBlur,
 }: DateInputProps) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -29,9 +32,7 @@ export default function DateInput({
   useEffect(() => {
     const checkFilterContext = () => {
       if (containerRef.current) {
-        const filterParent = containerRef.current.closest(
-          '.filters-popover-content, .filters-popover-body, .filters-panel, [class*="filter"]'
-        );
+        const filterParent = containerRef.current.closest(FILTER_CONTEXT_SELECTOR);
         setIsInFilter(!!filterParent);
       }
     };
@@ -83,18 +84,18 @@ export default function DateInput({
   };
 
   return (
-    <div ref={containerRef} style={{ position: 'relative', width: '100%' }}>
+    <div ref={containerRef} className="relative w-full">
       <input
         type="text"
         value={formatDisplayValue(value)}
         placeholder={placeholder}
         readOnly
         onClick={handleInputClick}
-        className={className}
-        style={{
-          ...style,
-          cursor: 'pointer'
-        }}
+        className={cn(
+          'w-full cursor-pointer rounded-2xl border border-border/50 bg-background px-4 py-3 text-sm text-foreground placeholder:text-foreground-muted transition focus-visible:border-brand-emerald focus-visible:ring-2 focus-visible:ring-brand-emerald/30',
+          className
+        )}
+        style={style}
         onFocus={onFocus}
         onBlur={onBlur}
       />

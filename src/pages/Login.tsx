@@ -1,16 +1,39 @@
 import { useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, Eye, EyeOff, Target, ChevronRight } from 'lucide-react';
-import api from '../lib/api';
+import { Mail, Lock, Eye, EyeOff, ChevronRight } from 'lucide-react';
+import { authService } from '../services/api';
 import { AuthManager } from '../lib/auth';
 import { type ApiError } from '../types/api';
 
-interface LoginResponse {
-  success: boolean;
-  token?: string;
-  refreshToken?: string;
-  expiresAt?: number;
-}
+const heroStats = [
+  { value: '24/7', label: 'Bot Suporte' },
+  { value: '90%', label: 'Taxa de Sucesso' },
+  { value: '5+', label: 'Usuários Ativos' }
+];
+
+const BrandMark = () => (
+  <div
+    className="relative flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500/25 to-emerald-400/40 shadow-[0_15px_35px_rgba(6,78,59,0.35)]"
+    aria-hidden="true"
+  >
+    <span className="pointer-events-none absolute h-12 w-12 rounded-full border-2 border-emerald-200/45" />
+    <span className="pointer-events-none absolute h-8 w-8 rounded-full border-2 border-emerald-200/45" />
+    <span className="pointer-events-none absolute h-5 w-5 rounded-full border-2 border-emerald-400/80" />
+    <span className="pointer-events-none absolute h-3 w-3 rounded-full bg-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.9)]" />
+  </div>
+);
+
+const inputClass =
+  'w-full rounded-2xl border border-white/10 bg-white/90 py-3.5 pl-11 pr-4 text-sm text-slate-900 placeholder:text-slate-500 transition focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-400/30';
+
+const fieldLabelClass = 'text-sm font-medium text-slate-300';
+const fieldWrapperClass = 'flex flex-col gap-2.5';
+const formCardClass =
+  'relative z-10 w-full rounded-[32px] border border-white/10 bg-[rgba(6,19,27,0.9)] p-8 shadow-[0_30px_60px_rgba(2,6,23,0.35)] backdrop-blur-2xl lg:p-10';
+const primaryButtonClass =
+  'mt-7 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 py-4 text-base font-semibold text-white shadow-[0_0_30px_rgba(16,185,129,0.35)] transition hover:from-emerald-600 hover:to-emerald-700 disabled:cursor-not-allowed disabled:opacity-80';
+const checkboxClass =
+  'h-4 w-4 rounded border border-white/15 bg-transparent text-emerald-400 focus:ring-emerald-400 focus:ring-offset-0';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -30,15 +53,15 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const response = await api.post<LoginResponse>('/auth/login', { email, senha });
+      const response = await authService.login(email, senha);
       
-      if (response.data.success) {
+      if (response.success) {
         // Salvar tokens no localStorage
-        if (response.data.token && response.data.refreshToken && response.data.expiresAt) {
+        if (response.token && response.refreshToken && response.expiresAt) {
           AuthManager.setTokens({
-            accessToken: response.data.token,
-            refreshToken: response.data.refreshToken,
-            expiresAt: response.data.expiresAt
+            accessToken: response.token,
+            refreshToken: response.refreshToken,
+            expiresAt: response.expiresAt
           });
         }
         
@@ -54,82 +77,73 @@ export default function Login() {
   };
 
   return (
-    <div className="login-page w-screen h-screen bg-gradient-to-br from-emerald-950 via-slate-950 to-slate-950 flex flex-col lg:flex-row relative overflow-hidden" style={{ transform: 'scale(1.05)', transformOrigin: 'top left', width: '100vw', height: '100vh', overflow: 'hidden', position: 'fixed', top: '0', left: '0' }}>
-      {/* Decorative Elements */}
-      <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/5 rounded-full blur-3xl" />
-      <div className="absolute bottom-0 left-0 w-96 h-96 bg-emerald-600/5 rounded-full blur-3xl" />
-      
+    <div className="login-page relative flex min-h-screen w-full flex-col overflow-hidden bg-[#010806] text-slate-100 lg:flex-row">
+      <div className="pointer-events-none absolute -right-24 -top-24 h-[28rem] w-[28rem] rounded-full bg-emerald-500/30 blur-[180px]" aria-hidden="true" />
+      <div className="pointer-events-none absolute -bottom-16 -left-16 h-[26rem] w-[26rem] rounded-full bg-emerald-600/20 blur-[180px]" aria-hidden="true" />
+
       {/* Left Panel - Hero */}
-      <div className="lg:w-1/2 p-8 lg:p-16 flex flex-col justify-between relative z-10">
-        {/* Logo & Title */}
-        <div className="pt-20">
-          <div className="flex items-center gap-3 mb-16">
-            <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/30">
-              <Target className="text-white" size={24} strokeWidth={2.5} />
-            </div>
+      <div className="relative z-10 flex flex-col justify-between px-6 py-12 sm:px-10 lg:w-1/2 lg:px-16 lg:py-16">
+        <div className="pt-6 lg:pt-10">
+          <div className="mb-16 flex items-center gap-4">
+            <BrandMark />
             <div>
-              <div className="text-white text-xl">Real Comando</div>
-              <div className="text-emerald-400 text-xs tracking-wider">Planilha Esportiva</div>
+              <p className="text-xl font-semibold text-white">Real Comando</p>
+              <p className="text-[0.65rem] uppercase tracking-[0.3em] text-emerald-300">Planilha Esportiva</p>
             </div>
           </div>
 
-          <div className="max-w-xl pt-10">
-            <h1 className="text-white text-5xl lg:text-6xl mb-6 leading-tight">
+          <div className="max-w-xl space-y-6">
+            <p className="text-[0.65rem] font-semibold uppercase tracking-[0.4em] text-emerald-300">
+              Plataforma oficial
+            </p>
+            <h1 className="text-4xl font-semibold leading-tight text-white lg:text-6xl">
               Domine o jogo das
-              <span className="block text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-400 mt-2">
+              <span className="mt-2 block bg-gradient-to-r from-emerald-300 to-teal-300 bg-clip-text text-transparent">
                 apostas esportivas
               </span>
             </h1>
-            <p className="text-slate-400 text-lg leading-relaxed">
-              Plataforma completa de análise, gestão e otimização de resultados.
+            <p className="text-lg leading-relaxed text-slate-300">
+              Plataforma completa de análise, gestão e otimização de resultados para potencializar seus ganhos.
             </p>
           </div>
         </div>
 
-        {/* Bottom Section */}
-        <div className="hidden lg:block">
-          <div className="grid grid-cols-3 gap-6 pb-8 border-b border-slate-800/50">
-            <div>
-              <div className="text-emerald-400 text-2xl mb-1">24/7</div>
-              <div className="text-slate-500 text-sm">Bot Suporte</div>
+        <div className="hidden gap-6 pt-16 text-slate-400 lg:grid lg:grid-cols-3">
+          {heroStats.map((stat) => (
+            <div
+              key={stat.label}
+              className="rounded-3xl border border-white/5 bg-white/5 p-4 backdrop-blur-xl"
+            >
+              <span className="text-2xl font-semibold text-emerald-300">{stat.value}</span>
+              <span className="block text-sm text-slate-300">{stat.label}</span>
             </div>
-            <div>
-              <div className="text-emerald-400 text-2xl mb-1">90%</div>
-              <div className="text-slate-500 text-sm">Taxa de Sucesso</div>
-            </div>
-            <div>
-              <div className="text-emerald-400 text-2xl mb-1">5+</div>
-              <div className="text-slate-500 text-sm">Usuários Ativos</div>
-            </div>
-          </div>
+          ))}
         </div>
       </div>
 
       {/* Right Panel - Login Form */}
-      <div className="lg:w-1/2 flex items-center justify-center p-8 relative z-10">
-        <div className="w-full max-w-md">
-          {/* Background Card Effect */}
-          <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent rounded-3xl blur-3xl" />
-          
-          {/* Login Card */}
-          <div className="relative bg-slate-900/90 backdrop-blur-2xl border border-slate-800/50 rounded-2xl p-8 lg:p-10 shadow-2xl">
-            {/* Header */}
+      <div className="relative z-10 flex w-full items-center justify-center px-6 py-12 sm:px-10 lg:w-1/2 lg:px-16 lg:py-16">
+        <div className="relative w-full max-w-md">
+          <div
+            className="pointer-events-none absolute -inset-4 rounded-[32px] bg-gradient-to-br from-emerald-400/15 via-transparent to-transparent blur-3xl"
+            aria-hidden="true"
+          />
+
+          <div className={formCardClass}>
             <div className="mb-8">
-              <h2 className="text-white text-2xl mb-2">Acessar conta</h2>
+              <h2 className="mb-2 text-2xl text-white">Acessar conta</h2>
               <p className="text-slate-400">Faça login para continuar</p>
             </div>
 
-            {/* Form */}
-            <form onSubmit={handleSubmit} className="space-y-5">
-              {/* Email */}
-              <div>
-                <label htmlFor="email" className="block text-slate-300 mb-2.5 text-sm">
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className={fieldWrapperClass}>
+                <label htmlFor="email" className={fieldLabelClass}>
                   Endereço de e-mail
                 </label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
-                    <Mail className="text-slate-500" size={18} />
-                  </div>
+                  <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-slate-500">
+                    <Mail size={18} />
+                  </span>
                   <input
                     ref={emailInputRef}
                     id="email"
@@ -137,31 +151,21 @@ export default function Login() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="voce@exemplo.com"
-                    className="w-full bg-black border border-slate-700/50 text-white rounded-xl pl-11 pr-4 py-3.5 text-sm placeholder:text-slate-600 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20 transition-all"
-                    style={{ 
-                      color: '#ffffff !important', 
-                      backgroundColor: '#000000 !important', 
-                      WebkitTextFillColor: '#ffffff !important',
-                      WebkitBoxShadow: '0 0 0 1000px #000000 inset !important',
-                      boxShadow: 'inset 0 0 0 1000px #000000 !important',
-                      transition: 'background-color 5000s ease-in-out 0s',
-                      transitionDelay: '5000s'
-                    }}
+                    className={inputClass}
                     required
                     autoComplete="email"
                   />
                 </div>
               </div>
 
-              {/* Password */}
-              <div>
-                <label htmlFor="password" className="block text-slate-300 mb-2.5 text-sm">
+              <div className={fieldWrapperClass}>
+                <label htmlFor="password" className={fieldLabelClass}>
                   Senha
                 </label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
-                    <Lock className="text-slate-500" size={18} />
-                  </div>
+                  <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-slate-500">
+                    <Lock size={18} />
+                  </span>
                   <input
                     ref={passwordInputRef}
                     id="password"
@@ -169,101 +173,71 @@ export default function Login() {
                     value={senha}
                     onChange={(e) => setSenha(e.target.value)}
                     placeholder="••••••••••"
-                    className="w-full bg-black border border-slate-700/50 text-white rounded-xl pl-11 pr-11 py-3.5 text-sm placeholder:text-slate-600 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20 transition-all"
-                    style={{ 
-                      color: '#ffffff !important', 
-                      backgroundColor: '#000000 !important', 
-                      WebkitTextFillColor: '#ffffff !important',
-                      WebkitBoxShadow: '0 0 0 1000px #000000 inset !important',
-                      boxShadow: 'inset 0 0 0 1000px #000000 !important',
-                      transition: 'background-color 5000s ease-in-out 0s',
-                      transitionDelay: '5000s'
-                    }}
+                    className={`${inputClass} pr-11`}
                     required
                     autoComplete="current-password"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-0 flex items-center pr-4 text-slate-500 hover:text-slate-300 transition-colors"
+                    className="absolute inset-y-0 right-0 flex items-center pr-4 text-slate-500 transition hover:text-slate-300"
                   >
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 </div>
               </div>
 
-              {/* Remember & Forgot */}
-              <div className="flex items-center justify-between pt-1">
-                <label className="flex items-center gap-2 cursor-pointer group">
+              <div className="flex items-center justify-between pt-1 text-sm">
+                <label className="group flex cursor-pointer items-center gap-2 text-slate-400">
                   <input
                     type="checkbox"
                     checked={lembrarMe}
                     onChange={(e) => setLembrarMe(e.target.checked)}
-                    className="w-4 h-4 rounded bg-slate-950 border-slate-700 text-emerald-500 focus:ring-emerald-500 focus:ring-offset-0 cursor-pointer"
+                    className={checkboxClass}
                   />
-                  <span className="text-slate-400 text-sm group-hover:text-slate-300 transition-colors">
-                    Lembrar-me
-                  </span>
+                  <span className="transition group-hover:text-slate-200">Lembrar-me</span>
                 </label>
-                <Link 
-                  to="/recuperar-senha" 
-                  className="text-emerald-400 hover:text-emerald-300 text-sm transition-colors"
-                >
+                <Link to="/recuperar-senha" className="font-medium text-emerald-400 transition hover:text-emerald-200">
                   Esqueceu a senha?
                 </Link>
               </div>
 
-              {/* Error Message */}
               {error && (
-                <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm">
+                <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400" role="alert">
                   {error}
                 </div>
               )}
 
-              {/* Submit Button */}
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 disabled:from-slate-600 disabled:to-slate-700 text-white py-4 rounded-xl transition-all shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40 disabled:shadow-none flex items-center justify-center gap-2 group mt-7 disabled:cursor-not-allowed"
-              >
+              <button type="submit" disabled={loading} className={`${primaryButtonClass} group`}>
                 <span>{loading ? 'Entrando...' : 'Entrar agora'}</span>
-                <ChevronRight size={18} className="group-hover:translate-x-0.5 transition-transform" />
+                <ChevronRight size={18} className="transition-transform group-hover:translate-x-0.5" />
               </button>
             </form>
 
-            {/* Divider */}
-            <div className="relative my-7">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-slate-800"></div>
-              </div>
-              <div className="relative flex justify-center">
-                <span className="px-4 bg-slate-900 text-slate-600 text-xs uppercase tracking-wider">
-                  Novo aqui?
-                </span>
-              </div>
+            <div className="relative my-7 flex items-center">
+              <div className="h-px w-full bg-slate-800" />
+              <span className="absolute bg-[rgba(6,19,27,0.95)] px-4 text-xs font-semibold uppercase tracking-[0.3em] text-slate-600">
+                Novo aqui?
+              </span>
             </div>
 
-            {/* Sign Up Link */}
             <div className="text-center">
-              <Link 
-                to="/cadastro" 
-                className="inline-flex items-center justify-center gap-2 text-slate-300 hover:text-emerald-400 transition-colors group"
+              <Link
+                to="/cadastro"
+                className="group inline-flex items-center justify-center gap-2 text-sm text-slate-300 transition hover:text-emerald-400"
               >
-                <span className="text-sm">Criar uma conta gratuita</span>
-                <ChevronRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
+                <span>Criar uma conta gratuita</span>
+                <ChevronRight size={16} className="transition-transform group-hover:translate-x-0.5" />
               </Link>
             </div>
           </div>
 
-          {/* Trust Badge */}
-          <div className="mt-6 text-center">
-            <p className="text-slate-600 text-xs flex items-center justify-center gap-2">
-              <svg className="w-4 h-4 text-emerald-500" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
-              </svg>
-              Seus dados estão protegidos com criptografia de ponta
-            </p>
-          </div>
+          <p className="mt-6 flex items-center justify-center gap-2 text-center text-xs text-slate-600">
+            <svg className="h-4 w-4 text-emerald-500" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+              <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+            </svg>
+            Seus dados estão protegidos com criptografia de ponta
+          </p>
         </div>
       </div>
     </div>

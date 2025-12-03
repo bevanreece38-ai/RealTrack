@@ -1,4 +1,5 @@
 export interface AnaliseFilters {
+  bancaId: string;
   status: string;
   tipster: string;
   casa: string;

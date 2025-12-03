@@ -24,8 +24,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   });
 
   useEffect(() => {
-    // Aplica o tema ao documento
-    document.documentElement.setAttribute('data-theme', theme);
+    const root = document.documentElement;
+    root.classList.toggle('dark', theme === 'dark');
     localStorage.setItem('theme', theme);
   }, [theme]);
 

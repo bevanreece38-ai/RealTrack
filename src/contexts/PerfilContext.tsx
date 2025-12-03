@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import type { ReactNode } from 'react';
-import api from '../lib/api';
+import { perfilService } from '../services/api';
 import { AuthManager } from '../lib/auth';
 
 export interface Perfil {
@@ -18,6 +18,7 @@ export interface Perfil {
     preco: number;
     limiteApostasDiarias: number;
   };
+  fotoPerfil?: string | null;
 }
 
 interface PerfilContextType {
@@ -51,7 +52,7 @@ export const PerfilProvider = ({ children }: { children: ReactNode }) => {
     setLoading(true);
     setErro(null);
     try {
-      const { data } = await api.get<Perfil>('/perfil');
+      const data = await perfilService.get();
       setPerfil(data);
     } catch (err: unknown) {
       // Não mostrar erro se for 401 (não autenticado) - isso é normal em algumas páginas

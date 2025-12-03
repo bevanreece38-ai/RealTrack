@@ -1,39 +1,86 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Crown, 
-  Zap, 
-  Infinity as InfinityIcon, 
-  ArrowRight, 
-  User, 
-  Mail, 
-  Lock, 
-  Copy, 
-  CheckCircle2, 
-  Calendar, 
-  RefreshCw, 
-  Shield, 
-  Bot, 
+import {
   AlertTriangle,
+  ArrowRight,
+  Bot,
+  Calendar,
+  CheckCircle2,
+  Copy,
+  Crown,
+  Gift,
+  Infinity as InfinityIcon,
+  Lock,
+  Mail,
+  MessageCircle,
+  RefreshCw,
+  Shield,
+  Star,
   Trash2,
+  User,
   X,
-  MessageCircle
+  type LucideIcon,
 } from 'lucide-react';
 import PageHeader from '../components/PageHeader';
 import Modal from '../components/Modal';
-import api from '../lib/api';
-import { type ApiProfileResponse, type ApiError } from '../types/api';
-import '../styles/animations.css';
+import { perfilService } from '../services/api';
+import { type ApiProfileResponse } from '../types/api';
 import { formatCurrency as formatCurrencyUtil, formatDate as formatDateUtil } from '../utils/formatters';
+import { cn } from '../components/ui/utils';
 
-interface ResetAccountResponse {
-  deleted: {
-    bancas: number;
-    apostas: number;
-    transacoes: number;
-  };
-}
+const sectionCardClass =
+  'rounded-lg border border-white/5 bg-[#0f2d29] p-6 text-white shadow-[0_25px_45px_rgba(0,0,0,0.25)] backdrop-blur-sm';
+const dashboardCardShellClass =
+  'rounded-lg border border-white/5 bg-[#0f2d29] p-6 text-white shadow-[0_25px_45px_rgba(0,0,0,0.25)] backdrop-blur-sm';
+const heroCardClass =
+  'relative overflow-hidden rounded-lg border border-white/5 bg-bank-hero p-6 text-white shadow-[0_25px_45px_rgba(0,0,0,0.3)] backdrop-blur-sm';
+const gradientCardClass = dashboardCardShellClass;
+const panelClass = 'rounded-2xl border border-white/10 bg-white/5 px-4 py-4 text-white';
+const labelClass = 'text-2xs uppercase tracking-[0.3em] text-white/60';
+const inputClass =
+  'w-full rounded-2xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm text-white placeholder:text-white/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-emerald/30';
+const iconBadgeClass =
+  'flex h-14 w-14 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-brand-emerald';
+const planIconBadgeBaseClass =
+  'flex h-14 w-14 items-center justify-center rounded-3xl border border-white/15 shadow-[0_8px_30px_rgba(0,0,0,0.35)]';
+const gradientTitleClass = 'text-3xl font-semibold text-white';
+const primaryButtonClass =
+  'inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-brand-emerald/40 bg-brand-emerald/10 px-5 py-2.5 text-sm font-semibold text-brand-emerald transition hover:bg-brand-emerald/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-emerald/30';
+const neutralButtonClass =
+  'inline-flex items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition hover:border-brand-emerald/40 hover:text-brand-emerald focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-emerald/30';
+const dangerButtonClass =
+  'inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-rose-500/30 bg-rose-500/10 px-5 py-2.5 text-sm font-semibold text-rose-200 transition hover:bg-rose-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400/40';
 
+const PLAN_VISUALS: Record<string, { Icon: LucideIcon; badgeClass: string; iconClass: string }> = {
+  gratuito: {
+    Icon: Gift,
+    badgeClass: 'bg-gradient-to-br from-[#012f28] via-[#024639] to-[#05604e]',
+    iconClass: 'text-[#4df7d4]',
+  },
+  amador: {
+    Icon: Star,
+    badgeClass: 'bg-gradient-to-br from-[#0d1f60] via-[#122b83] to-[#1b3aa7]',
+    iconClass: 'text-[#9fc0ff]',
+  },
+  profissional: {
+    Icon: Crown,
+    badgeClass: 'bg-gradient-to-br from-[#2d0042] via-[#440a68] to-[#5e138f]',
+    iconClass: 'text-[#d8b5ff]',
+  },
+  default: {
+    Icon: Crown,
+    badgeClass: 'bg-gradient-to-br from-[#0a2d28] via-[#0f3b36] to-[#124542]',
+    iconClass: 'text-white',
+  },
+};
+
+const getPlanVisual = (planName?: string) => {
+  if (!planName) {
+    return PLAN_VISUALS.default;
+  }
+  const key = planName.trim().toLowerCase();
+  return PLAN_VISUALS[key] ?? PLAN_VISUALS.default;
+};
 
 export default function Perfil() {
   const [profile, setProfile] = useState<ApiProfileResponse | null>(null);
@@ -42,12 +89,15 @@ export default function Perfil() {
   const [updating, setUpdating] = useState(false);
   const [updateForm, setUpdateForm] = useState({
     nomeCompleto: '',
-    email: ''
+    email: '',
+    fotoPerfil: '',
   });
+  const [fotoPreview, setFotoPreview] = useState<string | null>(null);
+  const [fotoFile, setFotoFile] = useState<File | null>(null);
   const [passwordForm, setPasswordForm] = useState({
     senhaAtual: '',
     novaSenha: '',
-    confirmarSenha: ''
+    confirmarSenha: '',
   });
   const [passwordError, setPasswordError] = useState('');
   const [changingPassword, setChangingPassword] = useState(false);
@@ -64,56 +114,58 @@ export default function Perfil() {
   const fetchProfile = async () => {
     try {
       setLoading(true);
-      const { data } = await api.get<ApiProfileResponse>('/perfil');
+      const data = await perfilService.getProfile();
       setProfile(data);
       setUpdateForm({
         nomeCompleto: data.nomeCompleto,
-        email: data.email
+        email: data.email,
+        fotoPerfil: data.fotoPerfil ?? '',
       });
+      setFotoPreview(data.fotoPerfil ?? null);
     } catch (err) {
-      const apiError = err as ApiError;
-      const errorMessage = apiError.response?.data?.error;
-      setError(typeof errorMessage === 'string' ? errorMessage : 'Erro ao carregar perfil');
+      console.error('Erro ao carregar perfil:', err);
+      setError('Erro ao carregar perfil');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleUpdateProfile = async (e?: React.FormEvent) => {
-    if (e) {
-      e.preventDefault();
+  const handleUpdateProfile = async (event?: React.FormEvent) => {
+    if (event) {
+      event.preventDefault();
     }
+
     try {
       setUpdating(true);
       setError('');
-      const { data } = await api.put<ApiProfileResponse>('/perfil', updateForm);
+      let fotoPerfil: string | File | undefined = updateForm.fotoPerfil;
+      if (fotoFile) {
+        fotoPerfil = fotoFile;
+      }
+      const data = await perfilService.updateProfile({
+        ...updateForm,
+        fotoPerfil,
+      });
       setProfile(data);
-      
-      // Atualizar o formulário com os novos dados
       setUpdateForm({
         nomeCompleto: data.nomeCompleto,
-        email: data.email
+        email: data.email,
       });
-      
-      // Disparar evento customizado para atualizar o Layout e outras partes do site
       window.dispatchEvent(new CustomEvent('profile-updated', { detail: data }));
-      
       alert('Perfil atualizado com sucesso!');
     } catch (err) {
-      const apiError = err as ApiError;
-      const errorMessage = apiError.response?.data?.error;
-      setError(typeof errorMessage === 'string' ? errorMessage : 'Erro ao atualizar perfil');
+      console.error('Erro ao atualizar perfil:', err);
+      setError('Erro ao atualizar perfil');
     } finally {
       setUpdating(false);
     }
   };
 
-  const handleChangePassword = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleChangePassword = async (event: React.FormEvent) => {
+    event.preventDefault();
     setPasswordError('');
     setPasswordSuccess(false);
 
-    // Validações
     if (!passwordForm.senhaAtual || !passwordForm.novaSenha || !passwordForm.confirmarSenha) {
       setPasswordError('Todos os campos são obrigatórios');
       return;
@@ -131,26 +183,18 @@ export default function Perfil() {
 
     try {
       setChangingPassword(true);
-      await api.put('/perfil/senha', {
+      await perfilService.changePassword({
         senhaAtual: passwordForm.senhaAtual,
-        novaSenha: passwordForm.novaSenha
+        novaSenha: passwordForm.novaSenha,
+        confirmarSenha: passwordForm.confirmarSenha,
       });
-      
+
       setPasswordSuccess(true);
-      setPasswordForm({
-        senhaAtual: '',
-        novaSenha: '',
-        confirmarSenha: ''
-      });
-      
-      // Limpar mensagem de sucesso após 3 segundos
-      setTimeout(() => {
-        setPasswordSuccess(false);
-      }, 3000);
+      setPasswordForm({ senhaAtual: '', novaSenha: '', confirmarSenha: '' });
+      setTimeout(() => setPasswordSuccess(false), 3000);
     } catch (err) {
-      const apiError = err as ApiError;
-      const errorMessage = apiError.response?.data?.error;
-      setPasswordError(typeof errorMessage === 'string' ? errorMessage : 'Erro ao alterar senha');
+      console.error('Erro ao alterar senha:', err);
+      setPasswordError('Erro ao alterar senha');
     } finally {
       setChangingPassword(false);
     }
@@ -160,90 +204,66 @@ export default function Perfil() {
     try {
       setResetting(true);
       setResetError('');
-      const { data } = await api.delete<ResetAccountResponse>('/perfil/reset');
-      
-      alert(`Conta resetada com sucesso!\n\nDados removidos:\n- ${data.deleted.bancas} bancas\n- ${data.deleted.apostas} apostas\n- ${data.deleted.transacoes} transações`);
-      
+      const data = await perfilService.resetAccount();
+      alert(
+        `Conta resetada com sucesso!\n\nDados removidos:\n- ${data.deleted.bancas} bancas\n- ${data.deleted.apostas} apostas\n- ${data.deleted.transacoes} transações`
+      );
       setResetModalOpen(false);
-      // Redirecionar para o dashboard após reset
       void navigate('/dashboard');
-      // Recarregar a página para atualizar os dados
       window.location.reload();
     } catch (err) {
-      const apiError = err as ApiError;
-      const errorMessage = apiError.response?.data?.error;
-      setResetError(typeof errorMessage === 'string' ? errorMessage : 'Erro ao resetar conta');
+      console.error('Erro ao resetar conta:', err);
+      setResetError('Erro ao resetar conta');
     } finally {
       setResetting(false);
     }
   };
 
-
-  const formatDate = (dateString: string) => {
-    return formatDateUtil(dateString);
-  };
-
-  const formatCurrency = (value: number) => {
-    return formatCurrencyUtil(value);
-  };
-
   const copyToClipboard = (text: string) => {
-    void navigator.clipboard.writeText(text).then(() => {
-      alert('ID copiado para a área de transferência!');
-    }).catch(() => {
-      alert('Erro ao copiar ID');
-    });
+    void navigator.clipboard
+      .writeText(text)
+      .then(() => alert('ID copiado para a área de transferência!'))
+      .catch(() => alert('Erro ao copiar ID'));
   };
 
   const handleLinkTelegram = () => {
     if (!profile) return;
-    
-    // Nome do bot do Telegram (pode ser configurado via variável de ambiente)
     const envBot: unknown = import.meta.env.VITE_TELEGRAM_BOT_USERNAME;
     const botUsername = typeof envBot === 'string' ? envBot : 'RealComando_bot';
     const telegramUrl = `https://t.me/${botUsername}?start=${profile.id}`;
-    
-    // Abre o bot do Telegram em uma nova aba
     window.open(telegramUrl, '_blank');
   };
 
   const handleUnlinkTelegram = async () => {
     if (!profile) return;
-    
-    if (!confirm('Tem certeza que deseja desvincular sua conta do Telegram?')) {
+    if (!window.confirm('Tem certeza que deseja desvincular sua conta do Telegram?')) {
       return;
     }
 
     try {
-      const { data } = await api.put<ApiProfileResponse>('/perfil/telegram', { telegramId: null });
+      const data = await perfilService.updateTelegram(null);
       setProfile(data);
       alert('Telegram desvinculado com sucesso!');
     } catch (err) {
-      const apiError = err as ApiError;
-      const errorMessage = apiError.response?.data?.error;
-      alert(typeof errorMessage === 'string' ? errorMessage : 'Erro ao desvincular Telegram');
+      console.error('Erro ao desvincular Telegram:', err);
+      alert('Erro ao desvincular Telegram');
     }
   };
 
   const handleOpenSupportBot = () => {
     if (!profile) return;
-    
-    // Nome do bot de suporte do Telegram (pode ser configurado via variável de ambiente)
     const envSupportBot: unknown = import.meta.env.VITE_TELEGRAM_SUPPORT_BOT_USERNAME;
     const supportBotUsername = typeof envSupportBot === 'string' ? envSupportBot : 'RealComandoSuporte_bot';
-    // Enviar o userId como parâmetro para o bot reconhecer a conta vinculada
     const telegramUrl = `https://t.me/${supportBotUsername}?start=support_${profile.id}`;
-    
-    // Abre o bot de suporte do Telegram em uma nova aba
     window.open(telegramUrl, '_blank');
   };
 
   if (loading) {
     return (
-      <div>
+      <div className="space-y-6 text-white">
         <PageHeader title="Meu Perfil" subtitle="Gerencie suas informações pessoais e configurações da conta" />
-        <div className="card" className="fade-up card-hover">
-          <p>Carregando...</p>
+        <div className={sectionCardClass}>
+          <p className="text-sm text-white/60">Carregando...</p>
         </div>
       </div>
     );
@@ -251,1041 +271,410 @@ export default function Perfil() {
 
   if (!profile) {
     return (
-      <div>
+      <div className="space-y-6 text-white">
         <PageHeader title="Meu Perfil" subtitle="Gerencie suas informações pessoais e configurações da conta" />
-        <div className="card" className="fade-up card-hover">
-          <p style={{ color: 'var(--color-danger)' }}>{error || 'Erro ao carregar perfil'}</p>
+        <div className={sectionCardClass}>
+          <p className="text-sm text-danger">{error || 'Erro ao carregar perfil'}</p>
         </div>
       </div>
     );
   }
 
+  const planVisual = getPlanVisual(profile.plano?.nome);
+  const PlanIcon = planVisual.Icon;
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+    <div className="space-y-8 text-white">
       <PageHeader title="Meu Perfil" subtitle="Gerencie suas informações pessoais e configurações da conta" />
 
       {error && (
-        <div className="card" className="fade-up card-hover" style={{ marginBottom: 0, background: 'var(--color-bg-danger)', borderColor: 'var(--color-border-danger)' }}>
-          <p style={{ color: 'var(--color-danger-dark)', margin: 0 }}>{error}</p>
-        </div>
+        <div className={cn(sectionCardClass, 'border-danger/40 bg-danger/5 text-sm text-danger')}>{error}</div>
       )}
 
-      {/* Seção: Plano Atual - Destaque Superior */}
-      <div className="card fade-up card-hover" style={{ marginBottom: 0 }}>
-        <div style={{
-          background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(59, 130, 246, 0.15) 100%)',
-          borderRadius: '16px',
-          padding: '24px',
-          border: '1px solid rgba(139, 92, 246, 0.2)',
-          position: 'relative',
-          overflow: 'hidden'
-        }}>
-          {/* Decorative elements */}
-          <div style={{
-            position: 'absolute',
-            top: '-50px',
-            right: '-50px',
-            width: '150px',
-            height: '150px',
-            background: 'radial-gradient(circle, rgba(139, 92, 246, 0.1) 0%, transparent 70%)',
-            borderRadius: '50%'
-          }} />
-          <div style={{
-            position: 'absolute',
-            bottom: '-30px',
-            left: '-30px',
-            width: '100px',
-            height: '100px',
-            background: 'radial-gradient(circle, rgba(59, 130, 246, 0.1) 0%, transparent 70%)',
-            borderRadius: '50%'
-          }} />
-          
-          <div style={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '24px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-              <div style={{
-                width: '56px',
-                height: '56px',
-                borderRadius: '14px',
-                background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.3) 0%, rgba(59, 130, 246, 0.3) 100%)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                border: '1px solid rgba(139, 92, 246, 0.3)'
-              }}>
-                {profile.plano.nome.toLowerCase() === 'gratuito' ? (
-                  <Zap size={28} style={{ color: 'var(--color-primary)' }} />
-                ) : (
-                  <Crown size={28} style={{ color: 'var(--color-primary)' }} />
-                )}
-              </div>
-              <div>
-                <h3 style={{ margin: 0, fontSize: '0.875rem', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                  Plano Atual
-                </h3>
-                <p style={{ 
-                  fontSize: '2.5rem', 
-                  fontWeight: 800, 
-                  margin: '4px 0 0 0',
-                  color: '#8b5cf6',
-                  background: 'linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  backgroundClip: 'text'
-                }}>
-                  {profile.plano.nome}
-                </p>
-              </div>
+      <section className={heroCardClass}>
+        <div className="flex flex-wrap items-center gap-6">
+          <div className="flex items-center gap-4">
+            <div className={cn(planIconBadgeBaseClass, planVisual.badgeClass)}>
+              <PlanIcon className={cn('h-6 w-6', planVisual.iconClass)} />
             </div>
+            <div>
+              <p className={labelClass}>Plano atual</p>
+              <p className={gradientTitleClass}>{profile.plano.nome}</p>
+            </div>
+          </div>
 
-            <div style={{
-              background: 'transparent',
-              borderRadius: '14px',
-              padding: '12px 16px',
-              border: 'none',
-              flex: 1,
-              minWidth: '280px',
-              display: 'flex',
-              justifyContent: 'space-around',
-              alignItems: 'center',
-              gap: '12px'
-            }}>
-              <div style={{ textAlign: 'center' }}>
-                <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Preço Mensal</p>
-                <p style={{ margin: '4px 0 0 0', fontSize: '1.25rem', fontWeight: 700, color: 'var(--text)' }}>
-                  {formatCurrency(profile.plano.preco)}
-                </p>
+          <div className="flex flex-1 justify-center text-center text-white">
+            <div className="flex w-full max-w-3xl items-center justify-between gap-10">
+              <div className="space-y-1">
+                <p className="text-xs uppercase tracking-[0.3em] text-white/60">Preço mensal</p>
+                <p className="text-lg font-semibold text-white">{formatCurrency(profile.plano.preco)}</p>
               </div>
-              <div style={{ textAlign: 'center' }}>
-                <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Limite Diário</p>
-                <p style={{ margin: '4px 0 0 0', fontSize: '1.25rem', fontWeight: 700, color: 'var(--text)' }}>
+              <div className="space-y-1">
+                <p className="text-xs uppercase tracking-[0.3em] text-white/60">Limite diário</p>
+                <p className="text-lg font-semibold text-white">
                   {profile.plano.limiteApostasDiarias === 0 ? (
-                    <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
-                      <InfinityIcon size={18} />
-                      Ilimitado
+                    <span className="inline-flex items-center gap-1 text-white">
+                      <InfinityIcon className="h-4 w-4" /> Ilimitado
                     </span>
                   ) : (
                     `${profile.plano.limiteApostasDiarias} apostas`
                   )}
                 </p>
               </div>
-              <div style={{ textAlign: 'center' }}>
-                <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Renovação</p>
-                <p style={{ margin: '4px 0 0 0', fontSize: '1.25rem', fontWeight: 700, color: 'var(--text)' }}>
-                  {formatDate(new Date().toISOString())}
-                </p>
+              <div className="space-y-1">
+                <p className="text-xs uppercase tracking-[0.3em] text-white/60">Renovação</p>
+                <p className="text-lg font-semibold text-white">{formatDate(new Date().toISOString())}</p>
               </div>
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Grid: Informações Pessoais | Estatísticas da Conta */}
-      <div className="grid-2" style={{ marginBottom: 0, alignItems: 'stretch' }}>
-        <div className="card" className="fade-up card-hover" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-          <div style={{
-            background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.10) 0%, rgba(59, 130, 246, 0.10) 100%)',
-            borderRadius: '16px',
-            padding: '24px',
-            border: '1px solid var(--color-border-card)',
-            position: 'relative',
-            overflow: 'hidden',
-            display: 'flex',
-            flexDirection: 'column',
-            flex: 1
-          }}>
-            {/* Decorative elements */}
-            <div style={{
-              position: 'absolute',
-              top: '-50px',
-              right: '-50px',
-              width: '150px',
-              height: '150px',
-              background: 'radial-gradient(circle, rgba(139, 92, 246, 0.1) 0%, transparent 70%)',
-              borderRadius: '50%'
-            }} />
-            <div style={{
-              position: 'absolute',
-              bottom: '-30px',
-              left: '-30px',
-              width: '100px',
-              height: '100px',
-              background: 'radial-gradient(circle, rgba(59, 130, 246, 0.1) 0%, transparent 70%)',
-              borderRadius: '50%'
-            }} />
-            
-            <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', flex: 1 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
-                <div style={{
-                  width: '48px',
-                  height: '48px',
-                  borderRadius: '12px',
-                  background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.3) 0%, rgba(59, 130, 246, 0.3) 100%)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  border: '1px solid rgba(139, 92, 246, 0.3)'
-                }}>
-                  <User size={24} style={{ color: 'var(--color-primary)' }} />
-                </div>
-                <div>
-                  <h3 style={{ margin: 0, fontSize: '0.875rem', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                    Informações Pessoais
-                  </h3>
-                  <p style={{ 
-                    fontSize: '2rem', 
-                    fontWeight: 800, 
-                    margin: '4px 0 0 0',
-                    color: '#8b5cf6',
-                    background: 'linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%)',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                    backgroundClip: 'text'
-                  }}>
-                    {profile.nomeCompleto || 'Perfil'}
-                  </p>
-                </div>
+      <section className="grid gap-6 lg:grid-cols-2">
+        <div className={gradientCardClass}>
+          <div className="flex items-center gap-4">
+            <div className={iconBadgeClass}>
+              {fotoPreview ? (
+                <img src={fotoPreview} alt="Foto de perfil" className="h-12 w-12 rounded-full object-cover" />
+              ) : (
+                <User className="h-5 w-5" />
+              )}
+            </div>
+            <div>
+              <p className={labelClass}>Informações pessoais</p>
+              <p className={gradientTitleClass}>{profile.nomeCompleto || 'Perfil'}</p>
+            </div>
+          </div>
+
+          <div className="mt-6 space-y-5">
+            <form className="space-y-4" onSubmit={(event) => void handleUpdateProfile(event)}>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-white">Apelido</label>
+                <input
+                  type="text"
+                  className={inputClass}
+                  value={updateForm.nomeCompleto}
+                  onChange={(event) => setUpdateForm((prev) => ({ ...prev, nomeCompleto: event.target.value }))}
+                />
               </div>
-
-              <div style={{
-                background: 'var(--perfil-panel-bg)',
-                backdropFilter: 'blur(10px) saturate(180%)',
-                WebkitBackdropFilter: 'blur(10px) saturate(180%)',
-                borderRadius: '12px',
-                padding: '16px',
-                marginBottom: '20px',
-                border: '1px solid var(--perfil-panel-border)'
-              }}>
-                <form className="filters-panel" style={{ gridTemplateColumns: '1fr', gap: '16px' }} onSubmit={(e) => { e.preventDefault(); void handleUpdateProfile(); }}>
-                  <div className="field" style={{ marginBottom: 0 }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.875rem', color: 'var(--muted)' }}>
-                      <User size={14} />
-                      Apelido
-                    </label>
-              <input
-                type="text"
-                      className="input-focus"
-                value={updateForm.nomeCompleto}
-                onChange={(e) => setUpdateForm((prev) => ({ ...prev, nomeCompleto: e.target.value }))}
-                      style={{ 
-                        paddingLeft: '12px'
-                      }}
-              />
-            </div>
-                  <div className="field" style={{ marginBottom: 0 }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.875rem', color: 'var(--muted)' }}>
-                      <Mail size={14} />
-                      Email
-                    </label>
-              <input
-                type="email"
-                      className="input-focus"
-                value={updateForm.email}
-                onChange={(e) => setUpdateForm((prev) => ({ ...prev, email: e.target.value }))}
-                      style={{ 
-                        paddingLeft: '12px'
-                      }}
-              />
-            </div>
-                </form>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-white">Email</label>
+                <input
+                  type="email"
+                  className={inputClass}
+                  value={updateForm.email}
+                  onChange={(event) => setUpdateForm((prev) => ({ ...prev, email: event.target.value }))}
+                />
               </div>
-
-            <button
-                type="button"
-                onClick={(e) => { e.preventDefault(); void handleUpdateProfile(); }}
-                className="btn primary btn-press" 
-                style={{ 
-                  width: '100%',
-                  marginTop: 'auto',
-                  background: 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-light) 100%)',
-                  border: 'none',
-                  color: 'white',
-                  padding: '14px 24px',
-                  fontSize: '1rem',
-                  fontWeight: 600,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  transition: 'all 0.3s ease',
-                  boxShadow: '0 4px 12px rgba(139, 92, 246, 0.3)'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                  e.currentTarget.style.boxShadow = '0 6px 16px rgba(139, 92, 246, 0.4)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(139, 92, 246, 0.3)';
-                }}
-              disabled={updating}
-            >
-              {updating ? 'Salvando...' : 'Salvar Alterações'}
-                <ArrowRight size={18} />
-            </button>
-            </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-white">Foto de perfil</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className={inputClass}
+                  onChange={e => {
+                    const file = e.target.files?.[0] || null;
+                    setFotoFile(file);
+                    if (file) {
+                      setFotoPreview(URL.createObjectURL(file));
+                    }
+                  }}
+                />
+                {fotoPreview && (
+                  <img src={fotoPreview} alt="Preview" className="mt-2 h-16 w-16 rounded-full object-cover" />
+                )}
+              </div>
+              <button type="submit" className={primaryButtonClass} disabled={updating}>
+                {updating ? 'Salvando...' : 'Salvar alterações'}
+                <ArrowRight className="h-4 w-4" />
+              </button>
+            </form>
           </div>
         </div>
 
-        <div className="card" className="fade-up card-hover" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-          <div style={{
-            background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.10) 0%, rgba(59, 130, 246, 0.10) 100%)',
-            borderRadius: '16px',
-            padding: '24px',
-            border: '1px solid var(--color-border-card)',
-            position: 'relative',
-            overflow: 'hidden',
-            display: 'flex',
-            flexDirection: 'column',
-            flex: 1
-          }}>
-            {/* Decorative elements */}
-            <div style={{
-              position: 'absolute',
-              top: '-50px',
-              right: '-50px',
-              width: '150px',
-              height: '150px',
-              background: 'radial-gradient(circle, rgba(139, 92, 246, 0.1) 0%, transparent 70%)',
-              borderRadius: '50%'
-            }} />
-            <div style={{
-              position: 'absolute',
-              bottom: '-30px',
-              left: '-30px',
-              width: '100px',
-              height: '100px',
-              background: 'radial-gradient(circle, rgba(59, 130, 246, 0.1) 0%, transparent 70%)',
-              borderRadius: '50%'
-            }} />
-            
-            <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', flex: 1 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
-                <div style={{
-                  width: '48px',
-                  height: '48px',
-                  borderRadius: '12px',
-                  background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.3) 0%, rgba(59, 130, 246, 0.3) 100%)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  border: '1px solid rgba(139, 92, 246, 0.3)'
-                }}>
-                  <Shield size={24} style={{ color: 'var(--color-primary)' }} />
-                </div>
-                <div>
-                  <h3 style={{ margin: 0, fontSize: '0.875rem', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                    Estatísticas da Conta
-                  </h3>
-                  <p style={{ 
-                    fontSize: '2rem', 
-                    fontWeight: 800, 
-                    margin: '4px 0 0 0',
-                    color: '#8b5cf6',
-                    background: 'linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%)',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                    backgroundClip: 'text',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px'
-                  }}>
-                    Ativo
-                    <span className="status-pulse" style={{
-                      display: 'inline-block',
-                      width: '12px',
-                      height: '12px',
-                      borderRadius: '50%',
-                      background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
-                      verticalAlign: 'middle',
-                      marginLeft: '1px',
-                      position: 'relative',
-                      top: '3px',
-                    }} />
-                  </p>
-                </div>
-              </div>
-
-              <div style={{
-                background: 'var(--perfil-panel-bg)',
-                backdropFilter: 'blur(10px) saturate(180%)',
-                WebkitBackdropFilter: 'blur(10px) saturate(180%)',
-                borderRadius: '12px',
-                padding: '16px',
-                marginBottom: '20px',
-                border: '1px solid var(--perfil-panel-border)'
-              }}>
-                <div className="field" style={{ marginBottom: '16px' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.875rem', color: 'var(--muted)', marginBottom: '8px' }}>
-                    <Shield size={14} />
-                    ID da Conta
-                  </label>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <input
-                      type="text"
-                      className="input-focus"
-                      value={profile.id}
-                      readOnly
-                      style={{ 
-                        paddingLeft: '12px',
-                        flex: 1
-                      }}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => copyToClipboard(profile.id)}
-                      className="btn secondary btn-press"
-                      style={{
-                        padding: '12px',
-                        minWidth: '48px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}
-                      title="Copiar ID"
-                    >
-                      <Copy size={16} />
-            </button>
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderTop: '1px solid var(--perfil-panel-divider)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Calendar size={16} style={{ color: 'var(--muted)' }} />
-                    <span style={{ fontSize: '0.875rem', color: 'var(--muted)' }}>Membro desde</span>
-                  </div>
-                  <b style={{ fontSize: '0.875rem', color: 'var(--text)' }}>{formatDate(profile.membroDesde)}</b>
-                </div>
-
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderTop: '1px solid var(--perfil-panel-divider)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <RefreshCw size={16} style={{ color: 'var(--muted)' }} />
-                    <span style={{ fontSize: '0.875rem', color: 'var(--muted)' }}>Última atualização</span>
-                  </div>
-                  <b style={{ fontSize: '0.875rem', color: 'var(--text)' }}>{formatDate(profile.updatedAt)}</b>
-                </div>
+        <div className={gradientCardClass}>
+          <div className="flex items-center gap-4">
+            <div className={iconBadgeClass}>
+              <Shield className="h-5 w-5" />
+            </div>
+            <div>
+              <p className={labelClass}>Estatísticas da conta</p>
+              <div className="flex items-center gap-2">
+                <p className={gradientTitleClass}>Ativo</p>
+                <span className="h-3 w-3 rounded-full bg-brand-emerald shadow-[0_0_12px_rgba(16,185,129,0.8)]" />
               </div>
             </div>
           </div>
-        </div>
-      </div>
 
-      {/* Grid: Alterar Senha | Integração com Telegram */}
-      <div className="grid-2" style={{ marginBottom: 0, alignItems: 'stretch' }}>
-        <div className="card" className="fade-up card-hover" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-          <div style={{
-            background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.10) 0%, rgba(59, 130, 246, 0.10) 100%)',
-            borderRadius: '16px',
-            padding: '24px',
-            border: '1px solid var(--color-border-card)',
-            position: 'relative',
-            overflow: 'hidden',
-            display: 'flex',
-            flexDirection: 'column',
-            flex: 1
-          }}>
-            {/* Decorative elements */}
-            <div style={{
-              position: 'absolute',
-              top: '-50px',
-              right: '-50px',
-              width: '150px',
-              height: '150px',
-              background: 'radial-gradient(circle, rgba(139, 92, 246, 0.1) 0%, transparent 70%)',
-              borderRadius: '50%'
-            }} />
-            <div style={{
-              position: 'absolute',
-              bottom: '-30px',
-              left: '-30px',
-              width: '100px',
-              height: '100px',
-              background: 'radial-gradient(circle, rgba(59, 130, 246, 0.1) 0%, transparent 70%)',
-              borderRadius: '50%'
-            }} />
-            
-            <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', flex: 1 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
-                <div style={{
-                  width: '48px',
-                  height: '48px',
-                  borderRadius: '12px',
-                  background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.3) 0%, rgba(59, 130, 246, 0.3) 100%)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  border: '1px solid rgba(139, 92, 246, 0.3)'
-                }}>
-                  <Lock size={24} style={{ color: 'var(--color-primary)' }} />
-                </div>
-                <div>
-                  <h3 style={{ margin: 0, fontSize: '0.875rem', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                    Alterar Senha
-                  </h3>
-                  <p style={{ 
-                    fontSize: '2rem', 
-                    fontWeight: 800, 
-                    margin: '4px 0 0 0',
-                    color: '#8b5cf6',
-                    background: 'linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%)',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                    backgroundClip: 'text'
-                  }}>
-                    Segurança
-                  </p>
-                </div>
+          <div className="mt-6 space-y-5">
+            <div className={panelClass}>
+              <label className="mb-2 flex items-center gap-2 text-sm font-medium text-white">
+                <Shield className="h-4 w-4" /> ID da conta
+              </label>
+              <div className="flex gap-2">
+                <input type="text" readOnly className={inputClass} value={profile.id} />
+                <button type="button" className={neutralButtonClass} onClick={() => copyToClipboard(profile.id)}>
+                  <Copy className="h-4 w-4" />
+                </button>
               </div>
+            </div>
 
+            <div className="grid gap-3">
+              <InfoRow icon={Calendar} label="Membro desde" value={formatDate(profile.membroDesde)} />
+              <InfoRow icon={RefreshCw} label="Última atualização" value={formatDate(profile.updatedAt)} />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="grid gap-6 lg:grid-cols-2">
+        <div className={gradientCardClass}>
+          <div className="flex items-center gap-4">
+            <div className={iconBadgeClass}>
+              <Lock className="h-5 w-5" />
+            </div>
+            <div>
+              <p className={labelClass}>Alterar senha</p>
+              <p className={gradientTitleClass}>Segurança</p>
+            </div>
+          </div>
+
+          <div className="mt-6 space-y-4">
             {passwordError && (
-                <div style={{ 
-                  marginBottom: 16, 
-                  padding: 12, 
-                  background: 'rgba(239, 68, 68, 0.1)', 
-                  border: '1px solid rgba(239, 68, 68, 0.3)', 
-                  borderRadius: 8,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px'
-                }}>
-                  <AlertTriangle size={16} style={{ color: 'var(--color-danger)' }} />
-                  <p style={{ color: 'var(--color-danger)', margin: 0, fontSize: '0.875rem' }}>{passwordError}</p>
+              <div className="flex items-start gap-3 rounded-2xl border border-danger/40 bg-danger/10 p-3 text-sm text-danger">
+                <AlertTriangle className="h-4 w-4" />
+                {passwordError}
               </div>
             )}
             {passwordSuccess && (
-                <div style={{ 
-                  marginBottom: 16, 
-                  padding: 12, 
-                  background: 'rgba(34, 197, 94, 0.1)', 
-                  border: '1px solid rgba(34, 197, 94, 0.3)', 
-                  borderRadius: 8,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px'
-                }}>
-                  <CheckCircle2 size={16} style={{ color: 'var(--color-success)' }} />
-                  <p style={{ color: 'var(--color-success)', margin: 0, fontSize: '0.875rem' }}>Senha alterada com sucesso!</p>
+              <div className="flex items-start gap-3 rounded-2xl border border-brand-emerald/40 bg-brand-emerald/10 p-3 text-sm text-brand-emerald">
+                <CheckCircle2 className="h-4 w-4" />
+                Senha alterada com sucesso!
               </div>
             )}
 
-              <div style={{
-                background: 'var(--perfil-panel-bg)',
-                backdropFilter: 'blur(10px) saturate(180%)',
-                WebkitBackdropFilter: 'blur(10px) saturate(180%)',
-                borderRadius: '12px',
-                padding: '16px',
-                marginBottom: '20px',
-                border: '1px solid var(--perfil-panel-border)'
-              }}>
-                <form className="filters-panel" style={{ gridTemplateColumns: '1fr', gap: '16px' }} onSubmit={handleChangePassword}>
-                  <div className="field" style={{ marginBottom: 0 }}>
-                    <label style={{ fontSize: '0.875rem', color: 'var(--muted)' }}>Senha Atual</label>
+            <form className="space-y-4" onSubmit={handleChangePassword}>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Senha atual</label>
                 <input
                   type="password"
-                      className="input-focus"
+                  className={inputClass}
                   placeholder="••••••"
                   value={passwordForm.senhaAtual}
-                  onChange={(e) => setPasswordForm((prev) => ({ ...prev, senhaAtual: e.target.value }))}
+                  onChange={(event) => setPasswordForm((prev) => ({ ...prev, senhaAtual: event.target.value }))}
                   disabled={changingPassword}
                 />
               </div>
-                  <div className="field" style={{ marginBottom: 0 }}>
-                    <label style={{ fontSize: '0.875rem', color: 'var(--muted)' }}>Nova Senha</label>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Nova senha</label>
                 <input
                   type="password"
-                      className="input-focus"
+                  className={inputClass}
                   placeholder="Nova senha"
                   value={passwordForm.novaSenha}
-                  onChange={(e) => setPasswordForm((prev) => ({ ...prev, novaSenha: e.target.value }))}
+                  onChange={(event) => setPasswordForm((prev) => ({ ...prev, novaSenha: event.target.value }))}
                   disabled={changingPassword}
                 />
               </div>
-                  <div className="field" style={{ marginBottom: 0 }}>
-                    <label style={{ fontSize: '0.875rem', color: 'var(--muted)' }}>Confirmar Nova Senha</label>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Confirmar nova senha</label>
                 <input
                   type="password"
-                      className="input-focus"
+                  className={inputClass}
                   placeholder="Confirme a senha"
                   value={passwordForm.confirmarSenha}
-                  onChange={(e) => setPasswordForm((prev) => ({ ...prev, confirmarSenha: e.target.value }))}
+                  onChange={(event) => setPasswordForm((prev) => ({ ...prev, confirmarSenha: event.target.value }))}
                   disabled={changingPassword}
                 />
               </div>
-                </form>
-              </div>
-
-              <button
-                type="button"
-                onClick={(e) => { e.preventDefault(); void handleChangePassword(e); }}
-                className="btn primary btn-press"
-                style={{ 
-                  width: '100%',
-                  marginTop: 'auto',
-                  background: 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-light) 100%)',
-                  border: 'none',
-                  color: 'white',
-                  padding: '14px 24px',
-                  fontSize: '1rem',
-                  fontWeight: 600,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  transition: 'all 0.3s ease',
-                  boxShadow: '0 4px 12px rgba(139, 92, 246, 0.3)'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                  e.currentTarget.style.boxShadow = '0 6px 16px rgba(139, 92, 246, 0.4)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(139, 92, 246, 0.3)';
-                }}
-                disabled={changingPassword}
-              >
-                {changingPassword ? 'Alterando...' : 'Alterar Senha'}
-                <ArrowRight size={18} />
+              <button type="submit" className={primaryButtonClass} disabled={changingPassword}>
+                {changingPassword ? 'Alterando...' : 'Alterar senha'}
+                <ArrowRight className="h-4 w-4" />
               </button>
-            </div>
+            </form>
           </div>
         </div>
 
-        <div className="card" className="fade-up card-hover" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-          <div style={{
-            background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(59, 130, 246, 0.15) 100%)',
-            borderRadius: '16px',
-            padding: '24px',
-            border: '1px solid rgba(139, 92, 246, 0.2)',
-            position: 'relative',
-            overflow: 'hidden',
-            display: 'flex',
-            flexDirection: 'column',
-            flex: 1
-          }}>
-            {/* Decorative elements */}
-            <div style={{
-              position: 'absolute',
-              top: '-50px',
-              right: '-50px',
-              width: '150px',
-              height: '150px',
-              background: 'radial-gradient(circle, rgba(139, 92, 246, 0.1) 0%, transparent 70%)',
-              borderRadius: '50%'
-            }} />
-            <div style={{
-              position: 'absolute',
-              bottom: '-30px',
-              left: '-30px',
-              width: '100px',
-              height: '100px',
-              background: 'radial-gradient(circle, rgba(59, 130, 246, 0.1) 0%, transparent 70%)',
-              borderRadius: '50%'
-            }} />
-            
-            <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', flex: 1 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
-                <div style={{
-                  width: '48px',
-                  height: '48px',
-                  borderRadius: '12px',
-                  background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.3) 0%, rgba(59, 130, 246, 0.3) 100%)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  border: '1px solid rgba(139, 92, 246, 0.3)'
-                }}>
-                  <Bot size={24} style={{ color: 'var(--color-primary)' }} />
-                </div>
-                <div>
-                  <h3 style={{ margin: 0, fontSize: '0.875rem', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                    Integração com Telegram
-                  </h3>
-                  <p style={{ 
-                    fontSize: '2rem', 
-                    fontWeight: 800, 
-                    margin: '4px 0 0 0',
-                    color: '#8b5cf6',
-                    background: 'linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%)',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                    backgroundClip: 'text'
-                  }}>
-                    Bot
-              </p>
-            </div>
-          </div>
-
-              <div style={{
-                background: 'var(--perfil-panel-bg)',
-                backdropFilter: 'blur(10px) saturate(180%)',
-                WebkitBackdropFilter: 'blur(10px) saturate(180%)',
-                borderRadius: '12px',
-                padding: '16px',
-                marginBottom: '20px',
-                border: '1px solid var(--perfil-panel-border)'
-              }}>
-                <p className="card-desc" style={{ 
-                  color: 'var(--muted)', 
-                  marginBottom: '16px',
-                  lineHeight: 1.5,
-                  fontSize: '0.875rem'
-                }}>
-                  Vincule sua conta ao Telegram para receber notificações e gerenciar suas apostas diretamente pelo bot.
-                </p>
-
-                <button 
-                  type="button"
-                  onClick={profile.telegramId ? handleUnlinkTelegram : handleLinkTelegram}
-                  className="btn secondary btn-press"
-                  style={{ 
-                    width: '100%',
-                    marginBottom: '16px',
-                    background: profile.telegramId 
-                      ? 'linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(220, 38, 38, 0.2) 100%)'
-                      : 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-light) 100%)',
-                    border: profile.telegramId 
-                      ? '1px solid rgba(239, 68, 68, 0.3)'
-                      : 'none',
-                    color: profile.telegramId ? 'var(--color-danger)' : 'white',
-                    padding: '14px 24px',
-                    fontSize: '1rem',
-                    fontWeight: 600,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px',
-                    transition: 'all 0.3s ease',
-                    boxShadow: profile.telegramId 
-                      ? '0 4px 12px rgba(239, 68, 68, 0.2)'
-                      : '0 4px 12px rgba(139, 92, 246, 0.3)'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'translateY(-2px)';
-                    e.currentTarget.style.boxShadow = profile.telegramId 
-                      ? '0 6px 16px rgba(239, 68, 68, 0.3)'
-                      : '0 6px 16px rgba(139, 92, 246, 0.4)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'translateY(0)';
-                    e.currentTarget.style.boxShadow = profile.telegramId 
-                      ? '0 4px 12px rgba(239, 68, 68, 0.2)'
-                      : '0 4px 12px rgba(139, 92, 246, 0.3)';
-                  }}
-                >
-                  {profile.telegramId ? (
-                    <>
-                      <X size={18} />
-                      Desvincular Telegram
-                    </>
-                  ) : (
-                    <>
-                      <Bot size={18} />
-                      Vincular Telegram
-                    </>
-                  )}
-                </button>
-
-                <div className="field" style={{ marginBottom: 0 }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.875rem', color: 'var(--muted)', marginBottom: '8px' }}>
-                    <Bot size={14} />
-                    Telegram ID
-                  </label>
-                  <input
-                    type="text"
-                    className="input-focus"
-                    value={profile.telegramId ?? 'Não vinculado'}
-                    readOnly
-                    style={{
-                      paddingLeft: '12px'
-                    }}
-                  />
-                </div>
-              </div>
-
-            <button 
-                type="button"
-                onClick={handleOpenSupportBot}
-                className="btn secondary btn-press"
-                style={{ 
-                  width: '100%',
-                  marginTop: 'auto',
-                  background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
-                  border: 'none',
-                  color: '#ffffff',
-                  padding: '14px 24px',
-                  fontSize: '1rem',
-                  fontWeight: 600,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  transition: 'all 0.3s ease',
-                  boxShadow: '0 4px 12px rgba(5, 150, 105, 0.3)'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                  e.currentTarget.style.boxShadow = '0 6px 16px rgba(5, 150, 105, 0.4)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(5, 150, 105, 0.3)';
-                }}
-              >
-                <MessageCircle size={18} />
-                Chamar Bot de Suporte
-            </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Seção: Zona de Perigo - Isolada Inferior */}
-      <div className="card fade-up card-hover" style={{ marginBottom: 0 }}>
-        <div style={{ 
-          background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(220, 38, 38, 0.15) 100%)',
-            borderRadius: '16px',
-            padding: '24px',
-            border: '1px solid rgba(239, 68, 68, 0.3)',
-            position: 'relative',
-            overflow: 'hidden',
-            display: 'flex',
-            flexDirection: 'column'
-          }}>
-            {/* Decorative elements */}
-            <div style={{
-              position: 'absolute',
-              top: '-50px',
-              right: '-50px',
-              width: '150px',
-              height: '150px',
-              background: 'radial-gradient(circle, rgba(239, 68, 68, 0.1) 0%, transparent 70%)',
-              borderRadius: '50%'
-            }} />
-            <div style={{
-              position: 'absolute',
-              bottom: '-30px',
-              left: '-30px',
-              width: '100px',
-              height: '100px',
-              background: 'radial-gradient(circle, rgba(220, 38, 38, 0.1) 0%, transparent 70%)',
-              borderRadius: '50%'
-            }} />
-            
-            <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
-                <div style={{
-                  width: '48px',
-                  height: '48px',
-                  borderRadius: '12px',
-                  background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.3) 0%, rgba(220, 38, 38, 0.3) 100%)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  border: '1px solid rgba(239, 68, 68, 0.3)'
-                }}>
-                  <AlertTriangle size={24} style={{ color: 'var(--color-danger)' }} />
-                </div>
-                <div>
-                  <h3 style={{ margin: 0, fontSize: '0.875rem', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                    Zona de Perigo
-                  </h3>
-                  <p style={{ 
-                    fontSize: '2rem', 
-                    fontWeight: 800, 
-                    margin: '4px 0 0 0',
-                    color: '#ef4444',
-                    background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                    backgroundClip: 'text'
-                  }}>
-                    Perigo
-                  </p>
-                </div>
-              </div>
-
-              <div style={{
-                background: 'var(--perfil-panel-bg)',
-                backdropFilter: 'blur(10px) saturate(180%)',
-                WebkitBackdropFilter: 'blur(10px) saturate(180%)',
-                borderRadius: '12px',
-                padding: '16px',
-                marginBottom: '20px',
-                border: '1px solid var(--perfil-panel-border)'
-              }}>
-                <p className="card-desc" style={{ 
-                  color: 'var(--color-danger-darker)', 
-                  marginBottom: 0,
-                  lineHeight: 1.5,
-                  fontSize: '0.875rem'
-                }}>
-                  Ações irreversíveis que afetarão seus dados permanentemente. Use com extrema cautela.
-                </p>
-              </div>
-            
-        <button
-                className="btn btn-press"
-                style={{ 
-                  background: 'linear-gradient(135deg, var(--color-danger) 0%, rgba(220, 38, 38, 1) 100%)',
-                  border: 'none',
-                  color: 'white',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  padding: '14px 24px',
-                  fontWeight: 600,
-                  transition: 'all 0.3s ease',
-                  boxShadow: '0 4px 12px rgba(239, 68, 68, 0.3)',
-                  width: '100%',
-                  fontSize: '1rem',
-                  marginTop: 'auto'
-                }}
-          onClick={() => setResetModalOpen(true)}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                  e.currentTarget.style.boxShadow = '0 6px 16px rgba(239, 68, 68, 0.4)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(239, 68, 68, 0.3)';
-                }}
-              >
-                <Trash2 size={18} />
-          Resetar Todos os Dados
-        </button>
-      </div>
-          </div>
-        </div>
-
-      <Modal
-        isOpen={resetModalOpen}
-        onClose={() => {
-          if (!resetting) {
-            setResetModalOpen(false);
-            setResetError('');
-          }
-        }}
-        title="Confirmar Reset da Conta"
-      >
-        <div style={{ padding: '8px 0' }}>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            marginBottom: '20px',
-            padding: '16px',
-            background: 'rgba(239, 68, 68, 0.1)',
-            borderRadius: '12px',
-            border: '1px solid rgba(239, 68, 68, 0.3)'
-          }}>
-            <div style={{
-              width: '40px',
-              height: '40px',
-              borderRadius: '10px',
-              background: 'rgba(239, 68, 68, 0.2)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              border: '1px solid rgba(239, 68, 68, 0.3)'
-            }}>
-              <AlertTriangle size={24} style={{ color: 'var(--color-danger)' }} />
+        <div className={gradientCardClass}>
+          <div className="flex items-center gap-4">
+            <div className={iconBadgeClass}>
+              <Bot className="h-5 w-5" />
             </div>
             <div>
-              <p style={{ margin: 0, fontWeight: 700, color: 'var(--color-danger)', fontSize: '1rem' }}>
-                ATENÇÃO: Ação Irreversível
-              </p>
-              <p style={{ margin: '4px 0 0 0', fontSize: '0.875rem', color: 'var(--color-danger-darker)' }}>
-                Esta ação não pode ser desfeita
-              </p>
+              <p className={labelClass}>Integração com Telegram</p>
+              <p className={gradientTitleClass}>Bot</p>
             </div>
           </div>
-          
-          <p style={{ marginBottom: 16, lineHeight: 1.6, fontSize: '0.875rem' }}>
-            Esta ação irá deletar <strong>permanentemente</strong>:
-          </p>
-          
-          <div style={{ 
-            marginBottom: 24, 
-            background: 'var(--perfil-panel-bg)',
-            backdropFilter: 'blur(10px) saturate(180%)',
-            WebkitBackdropFilter: 'blur(10px) saturate(180%)',
-            borderRadius: '12px',
-            padding: '16px',
-            border: '1px solid var(--perfil-panel-border)'
-          }}>
-            <ul style={{ margin: 0, paddingLeft: 20, lineHeight: 2 }}>
-              <li style={{ fontSize: '0.875rem' }}>Todas as suas <strong>bancas</strong></li>
-              <li style={{ fontSize: '0.875rem' }}>Todas as suas <strong>apostas</strong></li>
-              <li style={{ fontSize: '0.875rem' }}>Todas as suas <strong>transações financeiras</strong></li>
-          </ul>
-          </div>
-          
-          <p style={{ 
-            marginBottom: 24, 
-            color: 'var(--color-danger)', 
-            fontWeight: 600,
-            fontSize: '0.875rem',
-            textAlign: 'center',
-            padding: '12px',
-            background: 'rgba(239, 68, 68, 0.1)',
-            borderRadius: '8px',
-            border: '1px solid rgba(239, 68, 68, 0.2)'
-          }}>
-            Tem certeza que deseja continuar?
-          </p>
-          
-          {resetError && (
-            <div style={{ 
-              marginBottom: 16, 
-              padding: 12, 
-              background: 'rgba(239, 68, 68, 0.1)', 
-              border: '1px solid rgba(239, 68, 68, 0.3)', 
-              borderRadius: 8,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px'
-            }}>
-              <AlertTriangle size={16} style={{ color: 'var(--color-danger)' }} />
-              <p style={{ color: 'var(--color-danger)', margin: 0, fontSize: '0.875rem' }}>{resetError}</p>
+
+          <div className="mt-6 space-y-5">
+            <div className="space-y-2 text-sm text-white/70">
+              <p>Vincule sua conta para receber notificações e gerenciar apostas direto pelo bot.</p>
             </div>
-          )}
-          
-          <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+
             <button
               type="button"
-              className="btn ghost"
-              onClick={() => {
-                setResetModalOpen(false);
-                setResetError('');
-              }}
-              disabled={resetting}
-              style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+              onClick={profile.telegramId ? handleUnlinkTelegram : handleLinkTelegram}
+              className={cn(
+                primaryButtonClass,
+                'w-full border-0',
+                profile.telegramId && 'border border-danger/40 bg-danger/10 text-danger hocus:bg-danger/15'
+              )}
             >
-              <X size={18} />
-              Cancelar
+              {profile.telegramId ? (
+                <>
+                  <X className="h-4 w-4" /> Desvincular Telegram
+                </>
+              ) : (
+                <>
+                  <Bot className="h-4 w-4" /> Vincular Telegram
+                </>
+              )}
             </button>
-            <button
-              type="button"
-              className="btn"
-              style={{ 
-                background: 'linear-gradient(135deg, var(--color-danger) 0%, rgba(220, 38, 38, 1) 100%)',
-                border: 'none',
-                color: 'white',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px'
-              }}
-              onClick={handleResetAccount}
-              disabled={resetting}
-            >
-              <Trash2 size={18} />
-              {resetting ? 'Resetando...' : 'Sim, Resetar Tudo'}
-            </button>
+
+            <div className={panelClass}>
+              <label className="mb-2 flex items-center gap-2 text-sm font-medium text-white">
+                <MessageCircle className="h-4 w-4" /> Status do bot
+              </label>
+              <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white">
+                <div className="space-y-1">
+                  <p className="font-medium text-white">{profile.telegramId ? 'Conectado' : 'Aguardando vínculo'}</p>
+                  <p className="text-white/60">
+                    {profile.telegramId ? 'Você receberá alertas no Telegram' : 'Clique em Vincular para conectar'}
+                  </p>
+                </div>
+                {profile.telegramUsername && (
+                  <span className="rounded-2xl bg-brand-emerald/10 px-3 py-1 text-xs font-medium text-brand-emerald">
+                    @{profile.telegramUsername}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div className={panelClass}>
+              <label className="mb-2 flex items-center gap-2 text-sm font-medium text-white">
+                <Bot className="h-4 w-4" /> ID no Telegram
+              </label>
+              <div className="flex gap-2">
+                <input type="text" readOnly className={inputClass} value={profile.telegramId ?? 'Não vinculado'} />
+                {profile.telegramId && (
+                  <button
+                    type="button"
+                    className={neutralButtonClass}
+                    onClick={() => copyToClipboard(profile.telegramId!)}
+                  >
+                    <Copy className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className={panelClass}>
+              <label className="mb-2 flex items-center gap-2 text-sm font-medium text-white">
+                <Mail className="h-4 w-4" /> Precisa de ajuda?
+              </label>
+              <p className="text-sm text-white/70">Fale diretamente com o nosso time pelo bot de suporte.</p>
+              <div className="mt-3">
+                <button type="button" className={cn(neutralButtonClass, 'w-full')} onClick={handleOpenSupportBot}>
+                  <MessageCircle className="h-4 w-4" /> Bot de suporte
+                </button>
+              </div>
+            </div>
           </div>
         </div>
-      </Modal>
+      </section>
 
+      <section className={cn(gradientCardClass, 'border-danger/40 bg-danger/5')}>
+        <div className="flex items-center gap-4">
+          <div className={cn(iconBadgeClass, 'border-danger/40 text-danger')}>
+            <Trash2 className="h-5 w-5" />
+          </div>
+          <div>
+            <p className={labelClass}>Zona de risco</p>
+            <p className={gradientTitleClass}>Resetar conta</p>
+          </div>
+        </div>
+
+        <div className="mt-6 space-y-4">
+          <p className="text-sm text-white/70">
+            Esta ação remove todas as bancas, apostas e transações. Utilize apenas se quiser começar do zero.
+          </p>
+          <button type="button" className={dangerButtonClass} onClick={() => setResetModalOpen(true)}>
+            <Trash2 className="h-4 w-4" /> Resetar conta
+          </button>
+          <div className="rounded-2xl border border-danger/20 bg-danger/10 px-4 py-3 text-xs text-danger">
+            <p>Você perderá todo o histórico e não será possível recuperar os dados.</p>
+          </div>
+        </div>
+      </section>
+
+      <Modal isOpen={resetModalOpen} onClose={() => setResetModalOpen(false)} title="Resetar conta" size="sm">
+        <p className="text-sm text-white">
+          Confirme para remover definitivamente todas as suas bancas, apostas e transações. Esta operação não pode ser
+          desfeita.
+        </p>
+        {resetError && (
+          <div className="rounded-2xl border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-danger">{resetError}</div>
+        )}
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <button type="button" className={cn(neutralButtonClass, 'flex-1')} onClick={() => setResetModalOpen(false)}>
+            Cancelar
+          </button>
+          <button
+            type="button"
+            className={cn(dangerButtonClass, 'flex-1')}
+            onClick={handleResetAccount}
+            disabled={resetting}
+          >
+            {resetting ? 'Resetando...' : 'Confirmar reset'}
+          </button>
+        </div>
+      </Modal>
+    </div>
+  );
+}
+
+function formatCurrency(value?: number | null) {
+  if (value === undefined || value === null) {
+    return '—';
+  }
+  return formatCurrencyUtil(value);
+}
+
+function formatDate(value?: string | null) {
+  if (!value) return '—';
+  return formatDateUtil(value);
+}
+
+interface InfoRowProps {
+  icon: LucideIcon;
+  label: string;
+  value: ReactNode;
+}
+
+function InfoRow({ icon: Icon, label, value }: InfoRowProps) {
+  return (
+    <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white">
+      <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/5">
+        <Icon className="h-4 w-4 text-brand-emerald" />
+      </div>
+      <div>
+        <p className="text-xs uppercase tracking-[0.3em] text-white/50">{label}</p>
+        <p className="text-sm font-medium text-white">{value}</p>
+      </div>
+    </div>
+  );
+}
+
+interface PlanMetricProps {
+  label: string;
+  value: ReactNode;
+}
+
+function PlanMetric({ label, value }: PlanMetricProps) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white">
+      <p className="text-2xs uppercase tracking-[0.3em] text-white/60">{label}</p>
+      <p className="mt-1 font-semibold text-white">{value}</p>
     </div>
   );
 }

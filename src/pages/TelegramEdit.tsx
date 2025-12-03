@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import '../index.css';
-import api from '../lib/api';
+import { authService, apostaService, bancaService, tipsterService, telegramService } from '../services/api';
 import { type ApiBetWithBank, type ApiError } from '../types/api';
 import { ESPORTES } from '../constants/esportes';
 import { CASAS_APOSTAS } from '../constants/casasApostas';
@@ -88,6 +87,14 @@ const normalizeEsporte = (esporteFromDb: string): string => {
   return esporteEncontrado ?? esporteFromDb;
 };
 
+const getTextWithFallback = (value?: string | null, fallback = '') => {
+  if (typeof value !== 'string') {
+    return fallback;
+  }
+  const trimmed = value.trim();
+  return trimmed === '' ? fallback : trimmed;
+};
+
 export default function TelegramEdit() {
   const [searchParams] = useSearchParams();
   const betId = searchParams.get('betId');
@@ -105,7 +112,7 @@ export default function TelegramEdit() {
   useEffect(() => {
     console.log('=== TELEGRAM EDIT PAGE LOADED ===');
     console.log('Telegram WebApp:', !!window.Telegram?.WebApp);
-    
+
     // Garantir que o body tenha estilos básicos
     if (typeof document !== 'undefined') {
       document.body.style.margin = '0';
@@ -157,7 +164,7 @@ export default function TelegramEdit() {
     // Se não estiver disponível, aguardar o script carregar
     let attempts = 0;
     const maxAttempts = 30; // 3 segundos (30 * 100ms)
-    
+
     const checkInterval = setInterval(() => {
       attempts++;
       if (checkTelegram() || attempts >= maxAttempts) {
@@ -181,9 +188,7 @@ export default function TelegramEdit() {
       const telegramWebApp = window.Telegram?.WebApp;
       if (telegramWebApp?.initData) {
         try {
-          const { data } = await api.post<{ token?: string }>('/auth/telegram', {
-            initData: telegramWebApp.initData
-          });
+          const data = await authService.telegramAuth(telegramWebApp.initData);
           if (typeof data.token === 'string') {
             localStorage.setItem('token', data.token);
             setAuthenticated(true);
@@ -215,12 +220,12 @@ export default function TelegramEdit() {
     if (authenticated) {
       const loadData = async () => {
         try {
-          const [bancasRes, tipstersRes] = await Promise.all([
-            api.get('/bancas').catch(() => ({ data: [] })),
-            api.get('/tipsters').catch(() => ({ data: [] }))
+          const [bancasData, tipstersData] = await Promise.all([
+            bancaService.getAll().catch(() => []),
+            tipsterService.getAll().catch(() => [])
           ]);
-          setBancas(Array.isArray(bancasRes.data) ? bancasRes.data : []);
-          setTipsters(Array.isArray(tipstersRes.data) ? tipstersRes.data : []);
+          setBancas(Array.isArray(bancasData) ? bancasData : []);
+          setTipsters(Array.isArray(tipstersData) ? tipstersData : []);
         } catch (err) {
           console.warn('Erro ao carregar bancas/tipsters:', err);
         }
@@ -232,28 +237,35 @@ export default function TelegramEdit() {
   const fetchAposta = useCallback(async () => {
     try {
       setLoading(true);
-      const { data: apostas } = await api.get<ApiBetWithBank[]>('/apostas');
-      const apostaEncontrada = apostas.find(a => a.id === betId);
+      const response = await apostaService.getAll();
+      const apostasArray = response.apostas;
+      const apostaEncontrada = apostasArray.find(a => a.id === betId);
       if (apostaEncontrada) {
         setAposta(apostaEncontrada);
         const dataJogo = new Date(apostaEncontrada.dataJogo).toISOString().split('T')[0];
         const esporteNormalizado = normalizeEsporte(apostaEncontrada.esporte);
+        const paisNormalizado = getTextWithFallback(apostaEncontrada.pais, 'Mundo');
+        const torneioNormalizado = getTextWithFallback(apostaEncontrada.torneio);
+        const tipsterNormalizado = getTextWithFallback(apostaEncontrada.tipster);
+        const casaNormalizada = getTextWithFallback(apostaEncontrada.casaDeAposta);
+        const retornoNumero = apostaEncontrada.retornoObtido;
+        const retornoObtido = Number.isFinite(retornoNumero) ? retornoNumero.toString() : '';
         setFormData({
           bancaId: apostaEncontrada.bancaId,
           esporte: esporteNormalizado,
           jogo: apostaEncontrada.jogo,
-          torneio: apostaEncontrada.torneio ?? '',
-          pais: apostaEncontrada.pais ?? 'Mundo',
+          torneio: torneioNormalizado,
+          pais: paisNormalizado,
           mercado: apostaEncontrada.mercado,
           tipoAposta: apostaEncontrada.tipoAposta,
           valorApostado: apostaEncontrada.valorApostado.toString(),
           odd: apostaEncontrada.odd.toString(),
           bonus: apostaEncontrada.bonus.toString(),
           dataJogo,
-          tipster: apostaEncontrada.tipster ?? '',
+          tipster: tipsterNormalizado,
           status: apostaEncontrada.status,
-          casaDeAposta: apostaEncontrada.casaDeAposta,
-          retornoObtido: apostaEncontrada.retornoObtido != null ? apostaEncontrada.retornoObtido.toString() : ''
+          casaDeAposta: casaNormalizada,
+          retornoObtido: retornoObtido
         });
       } else {
         setError('Aposta não encontrada');
@@ -275,7 +287,7 @@ export default function TelegramEdit() {
 
   const handleSave = useCallback(async () => {
     if (!betId || !aposta) return;
-    
+
     // Prevenir múltiplas chamadas simultâneas
     if (saving) {
       console.warn('Salvamento já em andamento, ignorando chamada duplicada');
@@ -363,14 +375,11 @@ export default function TelegramEdit() {
         }
       }
 
-      await api.put(`/apostas/${betId}`, payload);
+      await apostaService.update(betId, payload);
 
       // Atualizar mensagem do Telegram se messageId e chatId estiverem disponíveis
       if (messageId && chatId) {
-        void api.post(`/telegram/update-bet-message/${betId}`, {
-          messageId,
-          chatId
-        }).catch((err: unknown) => {
+        void telegramService.updateBetMessage(betId, messageId, chatId).catch((err: unknown) => {
           console.warn('Erro ao atualizar mensagem do Telegram:', err);
         });
       }
@@ -412,47 +421,12 @@ export default function TelegramEdit() {
   // Mostrar loading ou erro com estilos inline para garantir que apareça
   if (!authenticated || loading) {
     return (
-      <div style={{ 
-        padding: '20px', 
-        textAlign: 'center', 
-        color: '#ffffff',
-        background: '#1a1a1a',
-        minHeight: '100vh',
-        width: '100%',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        flexDirection: 'column',
-        fontFamily: 'system-ui, -apple-system, sans-serif',
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        zIndex: 9999
-      }}>
-        <div style={{
-          width: '40px',
-          height: '40px',
-          border: '4px solid #333',
-          borderTopColor: '#3b82f6',
-          borderRadius: '50%',
-          animation: 'spin 1s linear infinite',
-          marginBottom: '16px'
-        }} />
-        <p style={{ margin: 0, fontSize: '16px', color: '#ffffff' }}>
+      <div className="fixed inset-0 z-50 flex min-h-screen flex-col items-center justify-center gap-2 bg-background px-5 text-center text-foreground">
+        <div className="h-10 w-10 rounded-full border-4 border-border/60 border-t-brand-emerald animate-spin" />
+        <p className="text-base font-medium text-foreground">
           {!authenticated ? 'Autenticando...' : 'Carregando aposta...'}
         </p>
-        {betId && (
-          <p style={{ margin: '8px 0 0 0', fontSize: '12px', color: '#888' }}>
-            Bet ID: {betId}
-          </p>
-        )}
-        <style>{`
-          @keyframes spin {
-            to { transform: rotate(360deg); }
-          }
-        `}</style>
+        {betId && <p className="text-xs text-foreground-muted">Bet ID: {betId}</p>}
       </div>
     );
   }
@@ -460,94 +434,41 @@ export default function TelegramEdit() {
   if (error && !aposta) {
     console.log('Renderizando tela de erro:', error);
     return (
-      <div style={{ 
-        padding: '20px', 
-        textAlign: 'center', 
-        color: '#ef4444',
-        background: '#1a1a1a',
-        minHeight: '100vh',
-        width: '100%',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontFamily: 'system-ui, -apple-system, sans-serif',
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        zIndex: 9999
-      }}>
-        <div>
-          <p style={{ margin: 0, fontSize: '16px', marginBottom: '16px', color: '#ef4444' }}>❌ {error}</p>
-          {betId && (
-            <p style={{ margin: 0, fontSize: '14px', color: '#888' }}>
-              Bet ID: {betId}
-            </p>
-          )}
-          <button 
-            onClick={() => window.location.reload()} 
-            style={{
-              marginTop: '16px',
-              padding: '10px 20px',
-              background: '#3b82f6',
-              color: '#ffffff',
-              border: 'none',
-              borderRadius: '8px',
-              fontSize: '14px',
-              cursor: 'pointer'
-            }}
-          >
-            Tentar Novamente
-          </button>
-        </div>
+      <div className="fixed inset-0 z-50 flex min-h-screen flex-col items-center justify-center bg-background px-5 text-center text-foreground">
+        <p className="mb-2 text-base font-semibold text-danger">❌ {error}</p>
+        {betId && <p className="text-sm text-foreground-muted">Bet ID: {betId}</p>}
+        <button
+          type="button"
+          onClick={() => window.location.reload()}
+          className="mt-4 rounded-lg bg-brand-emerald px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand-hover"
+        >
+          Tentar Novamente
+        </button>
       </div>
     );
   }
 
   console.log('Renderizando formulário de edição');
-  
+
+  const inputClasses = 'w-full rounded-lg border border-border/60 bg-background px-3 py-3 text-base text-foreground shadow-sm focus:border-brand-emerald focus:outline-none focus:ring-2 focus:ring-brand-emerald/30';
+
   return (
-    <div style={{
-      padding: '16px',
-      background: '#1a1a1a',
-      color: '#ffffff',
-      minHeight: '100vh',
-      width: '100%',
-      fontFamily: 'system-ui, -apple-system, sans-serif',
-      boxSizing: 'border-box'
-    }}>
-      <h2 style={{ marginTop: 0, marginBottom: '24px', fontSize: '24px', fontWeight: 'bold' }}>
-        ✏️ Editar Aposta
-      </h2>
+    <div className="min-h-screen bg-background px-4 py-6 text-foreground">
+      <h2 className="mb-6 text-2xl font-semibold">✏️ Editar Aposta</h2>
 
       {error && (
-        <div style={{
-          padding: '12px',
-          background: '#ef4444',
-          color: 'white',
-          borderRadius: '8px',
-          marginBottom: '16px'
-        }}>
+        <div className="mb-4 rounded-lg bg-danger/90 px-4 py-3 text-sm font-medium text-white">
           {error}
         </div>
       )}
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      <div className="flex flex-col gap-4">
         <div>
-          <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>Banca *</label>
+          <label className="mb-2 block text-sm font-medium">Banca *</label>
           <select
             value={formData.bancaId}
             onChange={(e) => setFormData({ ...formData, bancaId: e.target.value })}
-            style={{
-              width: '100%',
-              padding: '12px',
-              borderRadius: '8px',
-              border: '1px solid #333',
-              background: '#2a2a2a',
-              color: '#ffffff',
-              fontSize: '16px'
-            }}
+            className={inputClasses}
           >
             <option value="">Selecione uma banca</option>
             {bancas.map(banca => (
@@ -557,19 +478,11 @@ export default function TelegramEdit() {
         </div>
 
         <div>
-          <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>Esporte *</label>
+          <label className="mb-2 block text-sm font-medium">Esporte *</label>
           <select
             value={formData.esporte}
             onChange={(e) => setFormData({ ...formData, esporte: e.target.value })}
-            style={{
-              width: '100%',
-              padding: '12px',
-              borderRadius: '8px',
-              border: '1px solid #333',
-              background: '#2a2a2a',
-              color: '#ffffff',
-              fontSize: '16px'
-            }}
+            className={inputClasses}
           >
             <option value="">Selecione um esporte</option>
             {ESPORTES.map(esporte => (
@@ -579,91 +492,51 @@ export default function TelegramEdit() {
         </div>
 
         <div>
-          <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>Jogo *</label>
+          <label className="mb-2 block text-sm font-medium">Jogo *</label>
           <input
             type="text"
             value={formData.jogo}
             onChange={(e) => setFormData({ ...formData, jogo: e.target.value })}
-            style={{
-              width: '100%',
-              padding: '12px',
-              borderRadius: '8px',
-              border: '1px solid #333',
-              background: '#2a2a2a',
-              color: '#ffffff',
-              fontSize: '16px'
-            }}
+            className={inputClasses}
           />
         </div>
 
         <div>
-          <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>Torneio</label>
+          <label className="mb-2 block text-sm font-medium">Torneio</label>
           <input
             type="text"
             value={formData.torneio}
             onChange={(e) => setFormData({ ...formData, torneio: e.target.value })}
-            style={{
-              width: '100%',
-              padding: '12px',
-              borderRadius: '8px',
-              border: '1px solid #333',
-              background: '#2a2a2a',
-              color: '#ffffff',
-              fontSize: '16px'
-            }}
+            className={inputClasses}
           />
         </div>
 
         <div>
-          <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>País</label>
+          <label className="mb-2 block text-sm font-medium">País</label>
           <input
             type="text"
             value={formData.pais}
             onChange={(e) => setFormData({ ...formData, pais: e.target.value })}
-            style={{
-              width: '100%',
-              padding: '12px',
-              borderRadius: '8px',
-              border: '1px solid #333',
-              background: '#2a2a2a',
-              color: '#ffffff',
-              fontSize: '16px'
-            }}
+            className={inputClasses}
           />
         </div>
 
         <div>
-          <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>Mercado *</label>
+          <label className="mb-2 block text-sm font-medium">Mercado *</label>
           <input
             type="text"
             value={formData.mercado}
             onChange={(e) => setFormData({ ...formData, mercado: e.target.value })}
-            style={{
-              width: '100%',
-              padding: '12px',
-              borderRadius: '8px',
-              border: '1px solid #333',
-              background: '#2a2a2a',
-              color: '#ffffff',
-              fontSize: '16px'
-            }}
+            className={inputClasses}
           />
         </div>
 
         <div>
-          <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>Tipo de Aposta *</label>
+          <label className="mb-2 block text-sm font-medium">Tipo de Aposta *</label>
           <select
             value={formData.tipoAposta}
             onChange={(e) => setFormData({ ...formData, tipoAposta: e.target.value })}
-            style={{
-              width: '100%',
-              padding: '12px',
-              borderRadius: '8px',
-              border: '1px solid #333',
-              background: '#2a2a2a',
-              color: '#ffffff',
-              fontSize: '16px'
-            }}
+            className={inputClasses}
           >
             <option value="">Selecione um tipo</option>
             {TIPOS_APOSTA.map(tipo => (
@@ -672,78 +545,46 @@ export default function TelegramEdit() {
           </select>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+        <div className="grid gap-4 sm:grid-cols-2">
           <div>
-            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>Valor Apostado *</label>
+            <label className="mb-2 block text-sm font-medium">Valor Apostado *</label>
             <input
               type="number"
               step="0.01"
               value={formData.valorApostado}
               onChange={(e) => setFormData({ ...formData, valorApostado: e.target.value })}
-              style={{
-                width: '100%',
-                padding: '12px',
-                borderRadius: '8px',
-                border: '1px solid #333',
-                background: '#2a2a2a',
-                color: '#ffffff',
-                fontSize: '16px'
-              }}
+              className={inputClasses}
             />
           </div>
 
           <div>
-            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>Odd *</label>
+            <label className="mb-2 block text-sm font-medium">Odd *</label>
             <input
               type="number"
               step="0.01"
               value={formData.odd}
               onChange={(e) => setFormData({ ...formData, odd: e.target.value })}
-              style={{
-                width: '100%',
-                padding: '12px',
-                borderRadius: '8px',
-                border: '1px solid #333',
-                background: '#2a2a2a',
-                color: '#ffffff',
-                fontSize: '16px'
-              }}
+              className={inputClasses}
             />
           </div>
         </div>
 
         <div>
-          <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>Data do Jogo *</label>
+          <label className="mb-2 block text-sm font-medium">Data do Jogo *</label>
           <input
             type="date"
             value={formData.dataJogo}
             onChange={(e) => setFormData({ ...formData, dataJogo: e.target.value })}
-            style={{
-              width: '100%',
-              padding: '12px',
-              borderRadius: '8px',
-              border: '1px solid #333',
-              background: '#2a2a2a',
-              color: '#ffffff',
-              fontSize: '16px'
-            }}
+            className={inputClasses}
           />
         </div>
 
         <div>
-          <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>Casa de Apostas *</label>
+          <label className="mb-2 block text-sm font-medium">Casa de Apostas *</label>
           <select
             value={formData.casaDeAposta}
             onChange={(e) => setFormData({ ...formData, casaDeAposta: e.target.value })}
-            style={{
-              width: '100%',
-              padding: '12px',
-              borderRadius: '8px',
-              border: '1px solid #333',
-              background: '#2a2a2a',
-              color: '#ffffff',
-              fontSize: '16px'
-            }}
+            className={inputClasses}
           >
             <option value="">Selecione uma casa</option>
             {CASAS_APOSTAS.map(casa => (
@@ -753,19 +594,11 @@ export default function TelegramEdit() {
         </div>
 
         <div>
-          <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>Tipster</label>
+          <label className="mb-2 block text-sm font-medium">Tipster</label>
           <select
             value={formData.tipster}
             onChange={(e) => setFormData({ ...formData, tipster: e.target.value })}
-            style={{
-              width: '100%',
-              padding: '12px',
-              borderRadius: '8px',
-              border: '1px solid #333',
-              background: '#2a2a2a',
-              color: '#ffffff',
-              fontSize: '16px'
-            }}
+            className={inputClasses}
           >
             <option value="">Nenhum</option>
             {tipsters.map(tipster => (
@@ -775,19 +608,11 @@ export default function TelegramEdit() {
         </div>
 
         <div>
-          <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>Status *</label>
+          <label className="mb-2 block text-sm font-medium">Status *</label>
           <select
             value={formData.status}
             onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-            style={{
-              width: '100%',
-              padding: '12px',
-              borderRadius: '8px',
-              border: '1px solid #333',
-              background: '#2a2a2a',
-              color: '#ffffff',
-              fontSize: '16px'
-            }}
+            className={inputClasses}
           >
             {STATUS_APOSTAS.filter(s => s !== 'Tudo').map(status => (
               <option key={status} value={status}>{status}</option>
@@ -797,21 +622,13 @@ export default function TelegramEdit() {
 
         {(formData.status === 'Ganha' || formData.status === 'Meio Ganha' || formData.status === 'Cashout') && (
           <div>
-            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>Retorno Obtido</label>
+            <label className="mb-2 block text-sm font-medium">Retorno Obtido</label>
             <input
               type="number"
               step="0.01"
               value={formData.retornoObtido}
               onChange={(e) => setFormData({ ...formData, retornoObtido: e.target.value })}
-              style={{
-                width: '100%',
-                padding: '12px',
-                borderRadius: '8px',
-                border: '1px solid #333',
-                background: '#2a2a2a',
-                color: '#ffffff',
-                fontSize: '16px'
-              }}
+              className={inputClasses}
             />
           </div>
         )}
@@ -821,18 +638,9 @@ export default function TelegramEdit() {
         <button
           onClick={handleSave}
           disabled={saving}
-          style={{
-            width: '100%',
-            marginTop: '24px',
-            padding: '16px',
-            background: saving ? '#666' : '#3b82f6',
-            color: 'white',
-            border: 'none',
-            borderRadius: '8px',
-            fontSize: '16px',
-            fontWeight: 'bold',
-            cursor: saving ? 'not-allowed' : 'pointer'
-          }}
+          className={`mt-6 w-full rounded-lg px-5 py-4 text-base font-semibold text-white transition-colors ${saving
+            ? 'cursor-not-allowed bg-foreground-muted'
+            : 'bg-brand-emerald hover:bg-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-emerald'}`}
         >
           {saving ? 'Salvando...' : 'Salvar Alterações'}
         </button>

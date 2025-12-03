@@ -1,36 +1,24 @@
-import { Copy, Eye, LineChart, Pencil, Share2, Trash2, AlertTriangle } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import PageHeader from '../components/PageHeader';
-import StatCard from '../components/StatCard';
-import Toggle from '../components/Toggle';
-import Modal from '../components/Modal';
-import api from '../lib/api';
-import EmptyState from '../components/EmptyState';
-import { type Banco, type BancoStats } from '../data/mock';
-import { BANK_COLOR_PALETTE, DEFAULT_BANK_COLOR, normalizeColor } from '../utils/colors';
-import { formatNumber, formatDateTime } from '../utils/formatters';
-import '../styles/pages/bancas.css';
+import { AlertTriangle, Copy, Eye, LineChart, Loader2, Pencil, Share2, Trash2 } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useBancas } from '../hooks/useBancas';
+import { apiClient, bancaService, type Banca, type BancaStats } from '../services/api';
+import { formatNumber } from '../utils/formatters';
+import { eventBus } from '../utils/eventBus';
+import { cn } from '../components/ui/utils';
 
-interface BancoMetricasApi {
-  totalApostas?: number;
-  totalTransacoes?: number;
-  visualizacoesHoje?: number;
-  visualizacoesSemana?: number;
-  visualizacoesMes?: number;
+interface EditFormState {
+  nome: string;
+  descricao: string;
+  valorInicial: string;
+  ativa: boolean;
+  padrao: boolean;
+  compartilhamento: boolean;
 }
 
-interface BancoApi {
-  id: string;
-  nome: string;
-  descricao?: string | null;
-  status?: string | null;
-  ePadrao?: boolean | null;
-  cor?: string | null;
-  metricas?: BancoMetricasApi | null;
-  stats?: BancoStats;
-  linkCompartilhamento?: string | null;
-  criadoEm?: string | null;
-  updatedAt?: string | null;
+interface ConfirmDeleteState {
+  open: boolean;
+  banca: Banca | null;
+  loading: boolean;
 }
 
 interface BetApi {
@@ -39,352 +27,308 @@ interface BetApi {
   data?: string | null;
 }
 
-interface EditFormState {
-  nome: string;
-  descricao: string;
-  valorInicial: string;
-  cor: string;
-  ativa: boolean;
-  padrao: boolean;
-  compartilhamento: boolean;
-}
-
 const defaultForm: EditFormState = {
   nome: '',
   descricao: '',
   valorInicial: '',
-  cor: DEFAULT_BANK_COLOR,
   ativa: true,
   padrao: false,
-  compartilhamento: false
+  compartilhamento: false,
 };
 
-interface ConfirmDeleteState {
-  open: boolean;
-  banca?: Banco;
-  loading: boolean;
-}
+const sectionCardClass =
+  'rounded-3xl border border-border/30 bg-background-card/80 p-6 shadow-card backdrop-blur-sm';
+const dashboardCardShellClass =
+  'rounded-lg border border-white/5 bg-[#0f2d29] p-6 text-white shadow-[0_25px_45px_rgba(0,0,0,0.25)] backdrop-blur-sm';
+const summaryCardBaseClass =
+  'rounded-lg border border-white/5 bg-[#10322e] p-6 text-white shadow-[0_25px_45px_rgba(0,0,0,0.25)] backdrop-blur-sm';
+const modalCardClass = 'rounded-2xl border border-border/30 bg-background px-5 py-5';
+const cardLabelClass = 'text-2xs uppercase tracking-[0.3em] text-foreground-muted';
 
 export default function Bancas() {
-  const [bancas, setBancas] = useState<Banco[]>([]);
-  const [selectedBanco, setSelectedBanco] = useState<Banco | null>(null);
-  const [statsOverride, setStatsOverride] = useState<BancoStats | null>(null);
+  const { bancas: remoteBancas, loading, error, invalidateCache } = useBancas();
+  const [bancas, setBancas] = useState<Banca[]>(remoteBancas);
+  const [selectedBanco, setSelectedBanco] = useState<Banca | null>(null);
+  const [statsOverride, setStatsOverride] = useState<BancaStats | null>(null);
   const [statsLoading, setStatsLoading] = useState(false);
-  const [loadingBancas, setLoadingBancas] = useState(true);
-  const [fetchError, setFetchError] = useState('');
-  const [editBanco, setEditBanco] = useState<Banco | null>(null);
-  const [savingEdit, setSavingEdit] = useState(false);
+  const [editBanco, setEditBanco] = useState<Banca | null>(null);
   const [editForm, setEditForm] = useState<EditFormState>(defaultForm);
+  const [savingEdit, setSavingEdit] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<ConfirmDeleteState>({
     open: false,
-    loading: false
+    banca: null,
+    loading: false,
   });
 
-  const fetchBancas = useCallback(async () => {
-    setLoadingBancas(true);
-    try {
-      const { data } = await api.get<BancoApi[]>('/bancas');
-      if (!Array.isArray(data)) {
-        setBancas([]);
-        setFetchError('');
-        return;
-      }
+  useEffect(() => {
+    // Ordena: banca principal (padrao: true) sempre no topo
+    const ordered = [...remoteBancas].sort((a, b) => {
+      if (a.padrao === b.padrao) return 0;
+      return a.padrao ? -1 : 1;
+    });
+    setBancas(ordered);
+  }, [remoteBancas]);
 
-      if (data.length > 0) {
-        setBancas(data.map(mapBancoFromApi));
-        setFetchError('');
-        return;
-      }
-
-      setBancas([]);
-      setFetchError('');
-    } catch (error) {
-      console.warn('Não foi possível carregar bancas.', error);
-      setBancas([]);
-      setFetchError('Não foi possível carregar suas bancas agora.');
-    } finally {
-      setLoadingBancas(false);
-    }
-  }, []);
+  const refreshFromEvent = useCallback(() => {
+    invalidateCache();
+  }, [invalidateCache]);
 
   useEffect(() => {
-    void fetchBancas();
-  }, [fetchBancas]);
+    const unsubscribes = [
+      eventBus.on('banca:created', refreshFromEvent),
+      eventBus.on('banca:saved', refreshFromEvent),
+      eventBus.on('banca:updated', refreshFromEvent),
+      eventBus.on('banca:deleted', refreshFromEvent),
+    ];
 
-  // Listener para eventos de criação/edição/deleção de bancas
-  useEffect(() => {
-    const handleBancaUpdate = () => {
-      void fetchBancas();
-    };
-
-    window.addEventListener('banca-created', handleBancaUpdate);
-    window.addEventListener('banca-deleted', handleBancaUpdate);
-    window.addEventListener('banca-saved', handleBancaUpdate);
-    
     return () => {
-      window.removeEventListener('banca-created', handleBancaUpdate);
-      window.removeEventListener('banca-deleted', handleBancaUpdate);
-      window.removeEventListener('banca-saved', handleBancaUpdate);
+      unsubscribes.forEach((unsubscribe) => {
+        if (typeof unsubscribe === 'function') {
+          unsubscribe();
+        }
+      });
     };
-  }, [fetchBancas]);
+  }, [refreshFromEvent]);
 
   const summaryCards = useMemo(() => {
     const totalViews = bancas.reduce((sum, banca) => sum + banca.visualizacoes, 0);
     const totalVisitors = bancas.reduce((sum, banca) => sum + banca.visitantes, 0);
-    const activeBancas = bancas.filter((banca) => banca.status === 'Ativa').length;
-    const conversion =
-      totalViews === 0 ? '0%' : `${Math.min(100, Math.round((totalVisitors / totalViews) * 100))}%`;
+    const activeBancas = bancas.filter((bancaItem) => bancaItem.status === 'Ativa').length;
+    const conversion = totalViews === 0 ? '0%' : `${Math.min(100, Math.round((totalVisitors / totalViews) * 100))}%`;
 
     return [
       {
-        title: 'Total de Visualizações',
+        title: 'Total de visualizações',
         value: formatNumber(totalViews),
-        helper: '+0% em relação ao mês passado',
-        icon: <Eye size={20} />,
-        color: 'blue' as const
+        helper: 'Últimos 30 dias',
+        icon: <Eye className="h-5 w-5" />,
       },
       {
-        title: 'Visitantes Únicos',
+        title: 'Visitantes únicos',
         value: formatNumber(totalVisitors),
-        helper: '+0% em relação ao mês passado',
-        icon: <Eye size={20} />,
-        color: 'emerald' as const
+        helper: 'Audiência orgânica',
+        icon: <Eye className="h-5 w-5" />,
       },
       {
-        title: 'Bancas Ativas',
+        title: 'Bancas ativas',
         value: String(activeBancas),
-        helper: `de ${String(bancas.length)}`,
-        icon: <LineChart size={20} />,
-        color: 'purple' as const
+        helper: `de ${bancas.length} registradas`,
+        icon: <LineChart className="h-5 w-5" />,
       },
       {
-        title: 'Taxa de Conversão',
+        title: 'Taxa de conversão',
         value: conversion,
-        helper: 'visitantes únicos / visualizações',
-        icon: <LineChart size={20} />,
-        color: 'amber' as const
-      }
+        helper: 'Visitantes / visualizações',
+        icon: <LineChart className="h-5 w-5" />,
+      },
     ];
   }, [bancas]);
 
-  const handleOpenStats = async (banca: Banco) => {
+  const statsData = selectedBanco ? statsOverride ?? selectedBanco.stats : null;
+
+  const handleOpenStats = async (banca: Banca) => {
     setSelectedBanco(banca);
     setStatsOverride(null);
     setStatsLoading(true);
 
     try {
-      const { data: apostas } = await api.get<BetApi[]>('/apostas', {
-        params: { bancaId: banca.id }
-      });
-      const views = computeViewsFromBets(apostas);
+      const response = await apiClient.get<BetApi[]>('/apostas', { params: { bancaId: banca.id } });
+      const views = computeViewsFromBets(response.data);
       setStatsOverride({
         ...banca.stats,
-        views
+        views,
       });
-    } catch (error) {
-      console.warn('Não foi possível carregar métricas detalhadas, exibindo dados locais.', error);
+    } catch (err) {
+      console.warn('Não foi possível carregar métricas detalhadas.', err);
     } finally {
       setStatsLoading(false);
     }
   };
 
-  const openEditModal = (banca: Banco) => {
+  const openEditModal = (banca: Banca) => {
     setEditBanco(banca);
     setEditForm({
       nome: banca.nome,
       descricao: banca.descricao,
       valorInicial: '',
-      cor: normalizeColor(banca.cor, DEFAULT_BANK_COLOR),
       ativa: banca.status === 'Ativa',
       padrao: banca.padrao,
-      compartilhamento: false
+      compartilhamento: false,
     });
   };
 
-  const handleDeleteBanco = async () => {
-    if (!confirmDelete.banca) return;
-    setConfirmDelete((prev) => ({ ...prev, loading: true }));
-    try {
-      await api.delete(`/bancas/${confirmDelete.banca.id}`);
-      await fetchBancas();
-      // Disparar evento para notificar outros componentes
-      window.dispatchEvent(new CustomEvent('banca-deleted', { detail: { id: confirmDelete.banca.id } }));
-    } catch (error) {
-      console.error('Não foi possível excluir a banca.', error);
-    } finally {
-      setConfirmDelete({ open: false, banca: undefined, loading: false });
-    }
-  };
-
-  const handleEditChange = <Key extends keyof EditFormState>(
-    field: Key,
-    value: EditFormState[Key]
-  ) => {
+  const handleEditChange = <Key extends keyof EditFormState>(field: Key, value: EditFormState[Key]) => {
     setEditForm((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleTogglePadrao = async (banca: Banco) => {
+  const handleTogglePadrao = async (banca: Banca) => {
+    const newValue = !banca.padrao;
+    setBancas((prev) =>
+      prev.map((item) => {
+        if (item.id === banca.id) {
+          return { ...item, padrao: newValue };
+        }
+        if (newValue) {
+          return { ...item, padrao: false };
+        }
+        return item;
+      })
+    );
+
     try {
-      // Update local state optimistically
-      setBancas(prev => prev.map(b => 
-        b.id === banca.id ? { ...b, padrao: !b.padrao } : b
-      ));
-      
-      // Make API call to update the bank
-      await api.put(`/bancas/${banca.id}`, {
-        ePadrao: !banca.padrao
-      });
-      
-      // Refresh data to ensure consistency
-      await fetchBancas();
-    } catch (error) {
-      console.error('Não foi possível atualizar o status padrão da banca:', error);
-      // Revert the change if API call fails
-      await fetchBancas();
+      await bancaService.update(banca.id, { ePadrao: newValue });
+      invalidateCache();
+    } catch (err) {
+      console.error('Não foi possível atualizar o status padrão da banca.', err);
+      invalidateCache();
     }
   };
 
-  const handleToggleStatus = async (banca: Banco) => {
+  const handleToggleStatus = async (banca: Banca) => {
+    const nextStatus = banca.status === 'Ativa' ? 'Inativa' : 'Ativa';
+    setBancas((prev) =>
+      prev.map((item) => (item.id === banca.id ? { ...item, status: nextStatus } : item))
+    );
+
     try {
-      // Update local state optimistically
-      setBancas(prev => prev.map(b => 
-        b.id === banca.id 
-          ? { ...b, status: b.status === 'Ativa' ? 'Inativa' : 'Ativa' }
-          : b
-      ));
-      
-      // Make API call to update the bank status
-      await api.put(`/bancas/${banca.id}`, {
-        status: banca.status === 'Ativa' ? 'Inativa' : 'Ativa'
-      });
-      
-      // Refresh data to ensure consistency
-      await fetchBancas();
-    } catch (error) {
-      console.error('Não foi possível atualizar o status da banca:', error);
-      // Revert the change if API call fails
-      await fetchBancas();
+      await bancaService.update(banca.id, { status: nextStatus });
+      invalidateCache();
+    } catch (err) {
+      console.error('Não foi possível atualizar o status da banca.', err);
+      invalidateCache();
     }
   };
 
   const handleSaveBanco = async () => {
     if (!editBanco) return;
     setSavingEdit(true);
+
     try {
-      await api.put(`/bancas/${editBanco.id}`, {
+      await bancaService.update(editBanco.id, {
         nome: editForm.nome,
         descricao: editForm.descricao,
-        cor: editForm.cor,
         status: editForm.ativa ? 'Ativa' : 'Inativa',
-        ePadrao: editForm.padrao
+        ePadrao: editForm.padrao,
       });
-
-      // Recarregar bancas do backend para garantir que temos os dados atualizados
-      await fetchBancas();
-      
-      // Disparar evento para atualizar tema se a banca editada for a selecionada
-      window.dispatchEvent(new CustomEvent('banca-updated', { detail: { id: editBanco.id, cor: editForm.cor } }));
-      
-      // Disparar evento para notificar outros componentes sobre a atualização
-      window.dispatchEvent(new CustomEvent('banca-saved', { detail: { id: editBanco.id } }));
-      
       setEditBanco(null);
-    } catch (error) {
-      console.error('Não foi possível salvar a banca.', error);
+      setStatsOverride(null);
+      invalidateCache();
+    } catch (err) {
+      console.error('Não foi possível salvar a banca.', err);
     } finally {
       setSavingEdit(false);
     }
   };
 
-  const statsData = selectedBanco ? statsOverride ?? selectedBanco.stats : undefined;
+  const handleDeleteBanco = async () => {
+    if (!confirmDelete.banca) return;
+    setConfirmDelete((prev) => ({ ...prev, loading: true }));
+
+    try {
+      await bancaService.delete(confirmDelete.banca.id);
+      setConfirmDelete({ open: false, banca: null, loading: false });
+      invalidateCache();
+    } catch (err) {
+      console.error('Não foi possível excluir a banca.', err);
+      setConfirmDelete((prev) => ({ ...prev, loading: false }));
+    }
+  };
 
   return (
-    <div className="bancas-page">
-      <PageHeader title="Bancas" subtitle="Gerencie suas bancas" badge="Padrão" />
-
-      <div className="stat-grid">
-        {summaryCards.map((stat) => (
-          <StatCard key={stat.title} title={stat.title} value={stat.value} helper={stat.helper} icon={stat.icon} color={stat.color} />
-        ))}
+    <div className="space-y-6 text-foreground">
+      <div className="mb-4">
+        <h1 className="text-2xl font-semibold">Bancas</h1>
+        <p className="text-sm text-foreground-muted">Gerencie todas as suas bancas cadastradas.</p>
       </div>
 
-      {!loadingBancas && fetchError && (
-        <div className="card">
-          <h3 style={{ margin: 0 }}>Bancas Compartilhadas</h3>
-          <p className="card-desc" style={{ marginTop: 12 }}>{fetchError}</p>
+      {error && (
+        <div className={cn(sectionCardClass, 'border-rose-500/30 bg-rose-500/5 text-sm text-rose-200')}>
+          {error.message}
         </div>
       )}
 
-      {bancas.length > 0 ? (
-        <div className="card">
-          <h3 style={{ margin: '0 0 16px' }}>Bancas Compartilhadas</h3>
+      <section className={cn(dashboardCardShellClass, 'space-y-6')}>
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <p className={cn(cardLabelClass, 'text-white/70')}>Bancas compartilhadas</p>
+            <h2 className="text-2xl font-semibold text-white">Lista completa</h2>
+          </div>
+          <p className="text-sm text-white/70">Gerencie o status, padrão e links públicos.</p>
+        </div>
 
-          <div style={{ overflowX: 'auto' }}>
-            <table>
-              <thead>
+        {loading ? (
+          <div className="flex h-48 items-center justify-center text-white/70">
+            <Loader2 className="h-6 w-6 animate-spin" />
+          </div>
+        ) : bancas.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-white/15 px-6 py-12 text-center text-sm text-white/70">
+            Nenhuma banca cadastrada ainda.
+          </div>
+        ) : (
+          <div className="overflow-x-auto rounded-2xl border border-white/10">
+            <table className="min-w-full divide-y divide-white/10 text-sm">
+              <thead className="bg-white/5 text-white/70">
                 <tr>
-                  <th>Banca</th>
-                  <th>Desc</th>
-                  <th>Status</th>
-                  <th>Padrão</th>
-                  <th>Última Visualização</th>
-                  <th>Criado em</th>
-                  <th>Ações</th>
+                  <th className="px-4 py-3 text-left text-2xs font-semibold uppercase tracking-[0.3em]">Banca</th>
+                  <th className="px-4 py-3 text-left text-2xs font-semibold uppercase tracking-[0.3em]">Descrição</th>
+                  <th className="px-4 py-3 text-left text-2xs font-semibold uppercase tracking-[0.3em]">Status</th>
+                  <th className="px-4 py-3 text-left text-2xs font-semibold uppercase tracking-[0.3em]">Padrão</th>
+                  <th className="px-4 py-3 text-left text-2xs font-semibold uppercase tracking-[0.3em]">Última visualização</th>
+                  <th className="px-4 py-3 text-left text-2xs font-semibold uppercase tracking-[0.3em]">Criado em</th>
+                  <th className="px-4 py-3 text-right text-2xs font-semibold uppercase tracking-[0.3em]">Ações</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-white/10">
                 {bancas.map((banca) => (
-                  <tr key={banca.id}>
-                    <td>
-                      <strong>{banca.nome}</strong>
-                      <p className="card-desc" style={{ margin: 0 }}>
-                        ID: {banca.id}
-                      </p>
+                  <tr key={banca.id} className="transition hover:bg-white/5">
+                    <td className="px-4 py-4 align-top">
+                      <div className="space-y-1">
+                        <p className="font-semibold text-white">{banca.nome}</p>
+                        <p className="text-xs text-white/60">ID: {banca.id}</p>
+                      </div>
                     </td>
-                    <td>{banca.descricao}</td>
-                    <td>
-                      <Toggle 
-                        checked={banca.status === 'Ativa'} 
-                        onClick={() => void handleToggleStatus(banca)}
+                    <td className="px-4 py-4 align-top text-white/70">{banca.descricao}</td>
+                    <td className="px-4 py-4 align-top">
+                      <SwitchControl
+                        checked={banca.status === 'Ativa'}
+                        onToggle={() => void handleToggleStatus(banca)}
+                        label={`Alternar status da banca ${banca.nome}`}
                       />
                     </td>
-                    <td>
-                      <Toggle 
-                        checked={banca.padrao} 
-                        onClick={() => void handleTogglePadrao(banca)}
+                    <td className="px-4 py-4 align-top">
+                      <SwitchControl
+                        checked={banca.padrao}
+                        onToggle={() => void handleTogglePadrao(banca)}
+                        label={`Alternar banca padrão para ${banca.nome}`}
                       />
                     </td>
-                    <td>{banca.ultimaVisualizacao}</td>
-                    <td>{banca.criadoEm}</td>
-                    <td>
-                      <div style={{ display: 'flex', gap: 8 }}>
-                        <button
-                          className="btn ghost"
+                    <td className="px-4 py-4 align-top text-white/70">{banca.ultimaVisualizacao}</td>
+                    <td className="px-4 py-4 align-top text-white/70">{banca.criadoEm}</td>
+                    <td className="px-4 py-4 align-top">
+                      <div className="flex justify-end gap-2">
+                        <ActionIconButton
+                          label="Ver estatísticas"
+                          icon={<LineChart className="h-4 w-4" />}
+                          onClick={() => void handleOpenStats(banca)}
+                        />
+                        <ActionIconButton
+                          label="Copiar link de compartilhamento"
+                          icon={<Share2 className="h-4 w-4" />}
                           onClick={() => {
-                            void handleOpenStats(banca);
+                            void copyToClipboard(banca.stats.infoLink.url);
                           }}
-                        >
-                          <LineChart size={16} />
-                        </button>
-                        <button className="btn ghost">
-                          <Share2 size={16} />
-                        </button>
-                        <button
-                          className="btn ghost"
-                          onClick={() => {
-                            openEditModal(banca);
-                          }}
-                        >
-                          <Pencil size={16} />
-                        </button>
-                        <button
-                          className="btn ghost"
-                          onClick={() => {
-                            setConfirmDelete({ open: true, banca, loading: false });
-                          }}
-                        >
-                          <Trash2 size={16} />
-                        </button>
+                        />
+                        <ActionIconButton
+                          label="Editar banca"
+                          icon={<Pencil className="h-4 w-4" />}
+                          onClick={() => openEditModal(banca)}
+                        />
+                        <ActionIconButton
+                          label="Excluir banca"
+                          icon={<Trash2 className="h-4 w-4" />}
+                          variant="danger"
+                          onClick={() => setConfirmDelete({ open: true, banca, loading: false })}
+                        />
                       </div>
                     </td>
                   </tr>
@@ -392,102 +336,80 @@ export default function Bancas() {
               </tbody>
             </table>
           </div>
-        </div>
-      ) : (
-        !loadingBancas && !fetchError && (
-          <div className="card">
-            <h3 style={{ margin: '0 0 16px' }}>Bancas Compartilhadas</h3>
-            <EmptyState
-              title="Nenhuma banca cadastrada"
-              description="Crie uma nova banca para começar a registrar suas estatísticas."
-            />
-          </div>
-        )
-      )}
+        )}
+      </section>
 
-      <Modal
-        isOpen={!!selectedBanco}
+      <ModalShell
+        open={!!selectedBanco}
+        title={selectedBanco ? `Estatísticas detalhadas - ${selectedBanco.nome}` : ''}
         onClose={() => {
           setSelectedBanco(null);
           setStatsOverride(null);
         }}
-        title={selectedBanco ? `Estatísticas Detalhadas - ${selectedBanco.nome}` : ''}
+        maxWidth="max-w-4xl"
       >
-        {selectedBanco && (
-          <div className="stats-modal">
-            <div className="stats-tabs">
-              <button className="stats-tab active">Visão Geral</button>
-            </div>
-            {statsLoading ? (
-              <p className="card-desc">Carregando métricas em tempo real...</p>
-            ) : (
-              <>
-                <div className="stats-overview">
-                  {statsData &&
-                    (Object.entries(statsData.views) as [keyof BancoStats['views'], number][]).map(([key, value]) => (
-                      <div key={key} className="stats-card">
-                        <p className="stats-card-label">
-                          {key === 'hoje' && 'Hoje'}
-                          {key === 'semana' && 'Esta Semana'}
-                          {key === 'mes' && 'Este Mês'}
-                          {key === 'total' && 'Total'}
-                        </p>
-                        <p className="stats-card-value">{value}</p>
-                        <p className="card-desc">visualizações</p>
-                      </div>
-                    ))}
-                </div>
-
-                <div className="stats-sections">
-                  <div className="stats-section">
-                    <h4>Informações do Link</h4>
-                    <p className="card-desc">URL de Compartilhamento</p>
-                    <div className="link-field">
-                      <span>{statsData?.infoLink.url}</span>
-                      <button
-                        className="btn ghost"
-                        onClick={() => {
-                          copyToClipboard(statsData?.infoLink.url);
-                        }}
-                      >
-                        <Copy size={16} />
-                      </button>
-                    </div>
-                    <p className="card-desc" style={{ marginTop: 12 }}>
-                      Criado em
-                    </p>
-                    <p>{statsData?.infoLink.criadoEm}</p>
-                  </div>
-
-                  <div className="stats-section">
-                    <h4>Métricas de Engajamento</h4>
-                    <div className="engagement-row">
-                      <span>Taxa de Visitantes Únicos</span>
-                      <strong>{statsData?.engajamento.taxaVisitantes}%</strong>
-                    </div>
-                    <div className="engagement-row">
-                      <span>Média de Visualizações/Dia</span>
-                      <strong>{statsData?.engajamento.mediaVisualizacoesDia}</strong>
-                    </div>
-                    <div className="engagement-row">
-                      <span>Última Atividade</span>
-                      <strong>{statsData?.engajamento.ultimaAtividade}</strong>
-                    </div>
-                  </div>
-                </div>
-              </>
-            )}
+        {statsLoading ? (
+          <div className="flex h-40 items-center justify-center text-foreground-muted">
+            <Loader2 className="h-6 w-6 animate-spin" />
           </div>
-        )}
-      </Modal>
+        ) : statsData ? (
+          <div className="space-y-6">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {(
+                Object.entries(statsData.views) as [keyof BancaStats['views'], number][]
+              ).map(([key, value]) => (
+                <div key={key} className={modalCardClass}>
+                  <p className="text-xs uppercase tracking-[0.2em] text-foreground-muted">
+                    {key === 'hoje' && 'Hoje'}
+                    {key === 'semana' && 'Semana'}
+                    {key === 'mes' && 'Mês'}
+                    {key === 'total' && 'Total'}
+                  </p>
+                  <p className="mt-3 text-2xl font-semibold text-foreground">{value}</p>
+                  <p className="text-xs text-foreground-muted">visualizações</p>
+                </div>
+              ))}
+            </div>
 
-      <Modal
-        isOpen={!!editBanco}
+            <div className="grid gap-6 lg:grid-cols-2">
+              <div className={cn(modalCardClass, 'space-y-3')}>
+                <p className={cardLabelClass}>Link público</p>
+                <div className="flex items-center gap-3 rounded-2xl border border-border/40 bg-background px-4 py-3 text-sm">
+                  <span className="flex-1 truncate text-foreground">{statsData.infoLink.url}</span>
+                  <ActionIconButton
+                    label="Copiar link"
+                    icon={<Copy className="h-4 w-4" />}
+                    onClick={() => {
+                      void copyToClipboard(statsData.infoLink.url);
+                    }}
+                  />
+                </div>
+                <p className="text-xs text-foreground-muted">Criado em {statsData.infoLink.criadoEm}</p>
+              </div>
+
+              <div className={cn(modalCardClass, 'space-y-3')}>
+                <p className={cardLabelClass}>Engajamento</p>
+                <div className="space-y-2 text-sm">
+                  <StatHighlight label="Taxa de visitantes únicos" value={`${statsData.engajamento.taxaVisitantes}%`} />
+                  <StatHighlight label="Média de visualizações / dia" value={statsData.engajamento.mediaVisualizacoesDia} />
+                  <StatHighlight label="Última atividade" value={statsData.engajamento.ultimaAtividade} />
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm text-foreground-muted">Não encontramos métricas para esta banca.</p>
+        )}
+      </ModalShell>
+
+      <ModalShell
+        open={!!editBanco}
+        title="Editar banca"
         onClose={() => {
           setEditBanco(null);
           setSavingEdit(false);
         }}
-        title="Editar Banca"
+        maxWidth="max-w-2xl"
       >
         {editBanco && (
           <EditBancoForm
@@ -498,101 +420,267 @@ export default function Bancas() {
             saving={savingEdit}
           />
         )}
-      </Modal>
+      </ModalShell>
 
-      <Modal
-        isOpen={confirmDelete.open}
-        onClose={() => setConfirmDelete({ open: false, banca: undefined, loading: false })}
-        title="Excluir Banca"
+      <ModalShell
+        open={confirmDelete.open}
+        title="Excluir banca"
+        onClose={() => setConfirmDelete({ open: false, banca: null, loading: false })}
+        maxWidth="max-w-lg"
       >
-        <div className="danger-zone">
-          <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-            <AlertTriangle color="var(--color-danger-dark)" />
-            <div>
-              <p className="toggle-title">Tem certeza que deseja excluir esta banca?</p>
-              <p className="toggle-description">
-                Essa ação não pode ser desfeita e todas as informações relacionadas serão removidas permanentemente.
+        <div className="space-y-4">
+          <div className="flex items-start gap-3 rounded-2xl border border-danger/40 bg-danger/10 p-4">
+            <AlertTriangle className="mt-0.5 h-5 w-5 text-danger" />
+            <div className="space-y-2">
+              <p className="text-sm font-semibold text-foreground">Tem certeza?</p>
+              <p className="text-sm text-foreground-muted">
+                Essa ação remove permanentemente a banca {confirmDelete.banca?.nome ?? ''} e seus dados de compartilhamento.
               </p>
             </div>
           </div>
-          <div className="form-actions" style={{ marginTop: 18 }}>
-        <button
-          type="button"
-          className="btn ghost"
-          onClick={() => {
-            setConfirmDelete({ open: false, banca: undefined, loading: false });
-          }}
-        >
+          <div className="flex flex-wrap justify-end gap-3">
+            <button
+              type="button"
+              className="rounded-2xl border border-border/40 px-4 py-2 text-sm text-foreground hocus:border-brand-emerald/40"
+              onClick={() => setConfirmDelete({ open: false, banca: null, loading: false })}
+            >
               Cancelar
             </button>
             <button
               type="button"
-              className="btn"
-              style={{ background: 'var(--color-bg-button-danger)' }}
+              className="rounded-2xl border border-danger/50 bg-danger/15 px-4 py-2 text-sm font-semibold text-danger hocus:bg-danger/20"
               onClick={() => {
                 void handleDeleteBanco();
               }}
               disabled={confirmDelete.loading}
             >
-              {confirmDelete.loading ? 'Excluindo...' : 'Excluir'}
+              {confirmDelete.loading ? 'Excluindo...' : 'Excluir banca'}
             </button>
           </div>
         </div>
-      </Modal>
+      </ModalShell>
     </div>
   );
 }
 
+function SwitchControl({ checked, onToggle, label }: { checked: boolean; onToggle: () => void; label: string }) {
+  return (
+    <button
+      type="button"
+      className={cn(
+        'relative inline-flex h-6 w-11 items-center rounded-full border border-white/15 bg-white/5 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-emerald/40',
+        checked && 'border-brand-emerald/50 bg-brand-emerald/20'
+      )}
+      onClick={onToggle}
+    >
+      <span className="sr-only">{label}</span>
+      <span
+        className={cn(
+          'inline-block h-4 w-4 translate-x-1 rounded-full bg-white transition shadow-sm',
+          checked && 'translate-x-6 bg-brand-emerald'
+        )}
+      />
+    </button>
+  );
+}
 
-const createStats = (banca: BancoApi): BancoStats => {
-  if (banca.stats) return banca.stats;
+function ActionIconButton({
+  icon,
+  label,
+  onClick,
+  variant = 'default',
+}: {
+  icon: ReactNode;
+  label: string;
+  onClick?: () => void;
+  variant?: 'default' | 'danger';
+}) {
+  return (
+    <button
+      type="button"
+      className={cn(
+        'inline-flex h-10 w-10 items-center justify-center rounded-2xl border text-white/70 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-emerald/30',
+        variant === 'danger'
+          ? 'border-danger/40 bg-danger/15 text-danger/80 hocus:bg-danger/20'
+          : 'border-white/15 bg-white/5 hocus:border-brand-emerald/40 hocus:bg-white/10'
+      )}
+      onClick={onClick}
+      aria-label={label}
+    >
+      {icon}
+    </button>
+  );
+}
 
-  const totalApostas = banca.metricas?.totalApostas ?? 0;
-  return {
-    views: {
-      hoje: banca.metricas?.visualizacoesHoje ?? 0,
-      semana: banca.metricas?.visualizacoesSemana ?? 0,
-      mes: banca.metricas?.visualizacoesMes ?? 0,
-      total: totalApostas
-    },
-    infoLink: {
-      url: banca.linkCompartilhamento ?? `${window.location.origin}/banca/${banca.id}`,
-        criadoEm: formatDateTime(banca.criadoEm)
-    },
-    engajamento: {
-      taxaVisitantes: Math.min(
-        100,
-        Math.round(
-          (banca.metricas?.totalTransacoes && totalApostas
-            ? (banca.metricas.totalTransacoes / totalApostas) * 100
-            : 0) || 0
-        )
-      ),
-      mediaVisualizacoesDia: totalApostas,
-        ultimaAtividade: formatDateTime(banca.updatedAt)
-    }
-  };
-};
+function ModalShell({
+  open,
+  title,
+  onClose,
+  children,
+  maxWidth = 'max-w-3xl',
+}: {
+  open: boolean;
+  title: string;
+  onClose: () => void;
+  children: ReactNode;
+  maxWidth?: string;
+}) {
+  if (!open) return null;
 
-const mapBancoFromApi = (item: BancoApi): Banco => {
-  const stats = createStats(item);
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 px-4 py-10"
+      onClick={onClose}
+    >
+      <div
+        className={cn(
+          'w-full rounded-3xl border border-border/40 bg-background-surface/95 p-6 text-foreground shadow-glass',
+          maxWidth
+        )}
+        onClick={(event) => {
+          event.stopPropagation();
+        }}
+      >
+        <div className="mb-6 flex items-start justify-between gap-4">
+          <div>
+            <p className={cardLabelClass}>Modal</p>
+            <h3 className="text-2xl font-semibold text-foreground">{title}</h3>
+          </div>
+          <button
+            type="button"
+            className="rounded-full border border-border/30 bg-background px-3 py-2 text-sm text-foreground-muted transition hocus:border-brand-emerald/40 hocus:text-brand-emerald"
+            onClick={onClose}
+            aria-label="Fechar"
+          >
+            &times;
+          </button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
 
-  return {
-    id: item.id,
-    nome: item.nome,
-    descricao: item.descricao ?? 'Banca sem descrição',
-    status: item.status ?? 'Ativa',
-    padrao: item.ePadrao ?? false,
-    cor: normalizeColor(item.cor ?? undefined, DEFAULT_BANK_COLOR),
-    visualizacoes: stats.views.total,
-    visitantes: item.metricas?.totalTransacoes ?? 0,
-    ultimaVisualizacao: stats.engajamento.ultimaAtividade,
-    criadoEm: formatDateTime(item.criadoEm),
-    stats
-  };
-};
+function StatHighlight({ label, value }: { label: string; value: ReactNode }) {
+  return (
+    <div className="flex items-center justify-between rounded-2xl border border-border/30 bg-background px-4 py-2 text-sm">
+      <span className="text-foreground-muted">{label}</span>
+      <strong className="text-foreground">{value}</strong>
+    </div>
+  );
+}
 
-const computeViewsFromBets = (bets?: BetApi[]): BancoStats['views'] => {
+interface EditFormProps {
+  form: EditFormState;
+  onChange: <Key extends keyof EditFormState>(field: Key, value: EditFormState[Key]) => void;
+  onCancel: () => void;
+  onSubmit: () => void;
+  saving: boolean;
+}
+
+function EditBancoForm({ form, onChange, onCancel, onSubmit, saving }: EditFormProps) {
+  const inputClass =
+    'w-full rounded-2xl border border-border/40 bg-background px-4 py-2.5 text-sm text-foreground placeholder:text-foreground-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-emerald/30';
+
+  return (
+    <form
+      className="space-y-6"
+      onSubmit={(event) => {
+        event.preventDefault();
+        onSubmit();
+      }}
+    >
+      <div className="space-y-2">
+        <label className="text-sm font-medium text-foreground">Nome da banca</label>
+        <input className={inputClass} value={form.nome} onChange={(event) => onChange('nome', event.target.value)} />
+      </div>
+
+      <div className="space-y-2">
+        <label className="text-sm font-medium text-foreground">Descrição</label>
+        <textarea
+          rows={3}
+          className={cn(inputClass, 'resize-none')}
+          value={form.descricao}
+          onChange={(event) => onChange('descricao', event.target.value)}
+        />
+      </div>
+
+      <div className="space-y-2">
+        <label className="text-sm font-medium text-foreground">Valor inicial</label>
+        <input
+          className={inputClass}
+          value={form.valorInicial}
+          placeholder="0,00"
+          onChange={(event) => onChange('valorInicial', event.target.value)}
+        />
+      </div>
+
+      <div className="space-y-4">
+        <div className="space-y-3">
+          <ToggleLine
+            title="Banca ativa"
+            description="Ativar ou desativar esta banca no sistema."
+            value={form.ativa}
+            onToggle={() => onChange('ativa', !form.ativa)}
+          />
+          <ToggleLine
+            title="Banca padrão"
+            description="Defina para onde novas apostas serão direcionadas."
+            value={form.padrao}
+            onToggle={() => onChange('padrao', !form.padrao)}
+          />
+          <ToggleLine
+            title="Compartilhamento público"
+            description="Permitir que outras pessoas visualizem esta banca."
+            value={form.compartilhamento}
+            onToggle={() => onChange('compartilhamento', !form.compartilhamento)}
+          />
+        </div>
+      </div>
+
+      <div className="flex flex-wrap justify-end gap-3">
+        <button
+          type="button"
+          className="rounded-2xl border border-border/40 px-4 py-2 text-sm text-foreground hocus:border-brand-emerald/40"
+          onClick={onCancel}
+        >
+          Cancelar
+        </button>
+        <button
+          type="submit"
+          className="rounded-2xl border border-brand-emerald/40 bg-brand-emerald/10 px-4 py-2 text-sm font-semibold text-brand-emerald hocus:bg-brand-emerald/20"
+          disabled={saving}
+        >
+          {saving ? 'Salvando...' : 'Salvar alterações'}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+function ToggleLine({
+  title,
+  description,
+  value,
+  onToggle,
+}: {
+  title: string;
+  description: string;
+  value: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-4 rounded-2xl border border-border/40 bg-background px-4 py-3">
+      <div>
+        <p className="text-sm font-medium text-foreground">{title}</p>
+        <p className="text-xs text-foreground-muted">{description}</p>
+      </div>
+      <SwitchControl checked={value} onToggle={onToggle} label={title} />
+    </div>
+  );
+}
+
+const computeViewsFromBets = (bets?: BetApi[]): BancaStats['views'] => {
   if (!Array.isArray(bets)) {
     return { hoje: 0, semana: 0, mes: 0, total: 0 };
   }
@@ -621,134 +709,16 @@ const computeViewsFromBets = (bets?: BetApi[]): BancoStats['views'] => {
     hoje,
     semana,
     mes,
-    total: bets.length
+    total: bets.length,
   };
 };
 
-const copyToClipboard = (value?: string) => {
+const copyToClipboard = async (value?: string) => {
   if (!value) return;
-  void navigator.clipboard.writeText(value);
+  try {
+    await navigator.clipboard.writeText(value);
+  } catch (err) {
+    console.error('Não foi possível copiar o valor.', err);
+  }
 };
-
-
-interface EditFormProps {
-  form: EditFormState;
-  onChange: <Key extends keyof EditFormState>(field: Key, value: EditFormState[Key]) => void;
-  onCancel: () => void;
-  onSubmit: () => void;
-  saving: boolean;
-}
-
-function EditBancoForm({ form, onChange, onCancel, onSubmit, saving }: EditFormProps) {
-  return (
-    <div className="edit-banca-form">
-      <div className="field">
-        <label>Nome da Banca</label>
-        <input value={form.nome} onChange={(e) => onChange('nome', e.target.value)} />
-      </div>
-      <div className="field">
-        <label>Descrição</label>
-        <textarea rows={3} value={form.descricao} onChange={(e) => onChange('descricao', e.target.value)} />
-      </div>
-      <div className="field">
-        <label>Valor Inicial da Banca</label>
-        <input
-          value={form.valorInicial}
-          onChange={(e) => onChange('valorInicial', e.target.value)}
-          placeholder="0,00"
-        />
-      </div>
-
-      <div className="field">
-        <label>Cor da Banca</label>
-        <div className="color-grid">
-          {BANK_COLOR_PALETTE.map((color) => (
-            <button
-              key={color}
-              type="button"
-              className={`color-option ${form.cor === color ? 'selected' : ''}`}
-              style={{ background: color }}
-              onClick={() => {
-                onChange('cor', color);
-              }}
-            />
-          ))}
-        </div>
-        <div className="color-input">
-          <input value={form.cor} onChange={(e) => onChange('cor', e.target.value)} />
-        </div>
-      </div>
-
-      <div className="toggle-section">
-        <ToggleLine
-          title="Banca Ativa"
-          description="Ativar ou desativar esta banca no sistema. A banca padrão do sistema não pode ser desativada."
-          value={form.ativa}
-          onToggle={() => onChange('ativa', !form.ativa)}
-        />
-        <ToggleLine
-          title="Banca Padrão"
-          description="Ativar ou desativar a banca padrão. A banca padrão é onde todas as apostas enviadas serão salvas."
-          value={form.padrao}
-          onToggle={() => onChange('padrao', !form.padrao)}
-        />
-        <ToggleLine
-          title="Compartilhamento Público"
-          description="Permitir que outras pessoas visualizem esta banca."
-          value={form.compartilhamento}
-          onToggle={() => onChange('compartilhamento', !form.compartilhamento)}
-        />
-      </div>
-
-      <div className="form-actions">
-        <button
-          type="button"
-          className="btn ghost"
-          onClick={() => {
-            onCancel();
-          }}
-        >
-          Cancelar
-        </button>
-        <button
-          type="button"
-          className="btn"
-          onClick={() => {
-            onSubmit();
-          }}
-          disabled={saving}
-        >
-          {saving ? 'Salvando...' : 'Salvar Alterações'}
-        </button>
-      </div>
-    </div>
-  );
-}
-
-interface ToggleLineProps {
-  title: string;
-  description: string;
-  value: boolean;
-  onToggle: () => void;
-}
-
-function ToggleLine({ title, description, value, onToggle }: ToggleLineProps) {
-  return (
-    <div className="toggle-line">
-      <div>
-        <p className="toggle-title">{title}</p>
-        <p className="toggle-description">{description}</p>
-      </div>
-      <button
-        type="button"
-        className={`toggle-control ${value ? 'active' : ''}`}
-        onClick={() => {
-          onToggle();
-        }}
-      >
-        <span />
-      </button>
-    </div>
-  );
-}
 

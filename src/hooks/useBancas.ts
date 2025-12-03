@@ -1,32 +1,35 @@
+/**
+ * Hook para gerenciamento de bancas
+ * 
+ * Utiliza o bancaService para operações de CRUD e
+ * mantém cache local para otimização.
+ */
+
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import api from '../lib/api';
+import { bancaService, type Banca } from '../services/api';
+import { invalidateCachePattern } from '../services/api/apiClient';
+import { eventBus, type EventName } from '../utils/eventBus';
 
-interface Banca {
-  id: string;
-  nome: string;
-  ePadrao: boolean;
-}
+// Re-exportar tipo para manter compatibilidade
+export type { Banca };
 
-interface BancaApi {
-  id?: string | null;
-  nome?: string | null;
-  ePadrao?: boolean | null;
-}
-
-// Cache global para evitar múltiplas requisições
+// Cache global simples (o apiClient já tem cache, mas mantemos para estado local)
 let bancasCache: Banca[] | null = null;
 let bancasCacheTime: number = 0;
 const CACHE_DURATION = 60000; // 1 minuto
 
-export function useBancas() {
+interface UseBancasResult {
+  bancas: Banca[];
+  loading: boolean;
+  error: Error | null;
+  refetch: (force?: boolean) => Promise<void>;
+  invalidateCache: () => void;
+}
+
+export function useBancas(): UseBancasResult {
   const [bancas, setBancas] = useState<Banca[]>([]);
   const [loading, setLoading] = useState(true);
-
-  const mapBanca = (item: BancaApi): Banca => ({
-    id: item.id ?? '',
-    nome: item.nome ?? 'Banca',
-    ePadrao: Boolean(item.ePadrao),
-  });
+  const [error, setError] = useState<Error | null>(null);
 
   const fetchBancas = useCallback(async (force = false) => {
     const now = Date.now();
@@ -40,15 +43,18 @@ export function useBancas() {
 
     try {
       setLoading(true);
-      const { data } = await api.get<BancaApi[]>('/bancas');
-      const bancasData = Array.isArray(data) ? data.map(mapBanca) : [];
+      setError(null);
+      
+      const bancasData = await bancaService.getAll();
       setBancas(bancasData);
       
-      // Atualizar cache
+      // Atualizar cache local
       bancasCache = bancasData;
       bancasCacheTime = now;
-    } catch (error) {
-      console.error('Erro ao carregar bancas:', error);
+    } catch (err) {
+      console.error('Erro ao carregar bancas:', err);
+      setError(err instanceof Error ? err : new Error('Erro ao carregar bancas'));
+      
       // Usar cache mesmo em caso de erro se disponível
       if (bancasCache) {
         setBancas(bancasCache);
@@ -62,17 +68,43 @@ export function useBancas() {
     void fetchBancas();
   }, [fetchBancas]);
 
+  useEffect(() => {
+    const events: EventName[] = ['banca:created', 'banca:updated', 'banca:deleted', 'banca:saved'];
+    const unsubscribes = events.map((event) =>
+      eventBus.on(event, () => {
+        void fetchBancas(true);
+      })
+    );
+
+    return () => {
+      unsubscribes.forEach((unsubscribe) => {
+        if (typeof unsubscribe === 'function') {
+          unsubscribe();
+        }
+      });
+    };
+  }, [fetchBancas]);
+
   // Função para invalidar cache (útil após criar/editar/deletar)
-  const invalidateCache = useCallback(() => {
+  const invalidateLocalCache = useCallback(() => {
     bancasCache = null;
     bancasCacheTime = 0;
+    invalidateCachePattern('/bancas');
     void fetchBancas(true);
   }, [fetchBancas]);
 
   // Memoizar retorno para evitar re-criação do objeto
   return useMemo(
-    () => ({ bancas, loading, refetch: fetchBancas, invalidateCache }),
-    [bancas, loading, fetchBancas, invalidateCache]
+    () => ({ 
+      bancas, 
+      loading, 
+      error,
+      refetch: fetchBancas, 
+      invalidateCache: invalidateLocalCache 
+    }),
+    [bancas, loading, error, fetchBancas, invalidateLocalCache]
   );
 }
+
+export default useBancas;
 

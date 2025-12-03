@@ -2,10 +2,6 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import './styles/globals.css';
-import './styles/theme.css';
-import './styles/glass.css';
-// Importar cards.css DEPOIS de glass.css para sobrescrever
-import './styles/components/cards.css';
 import App from './App.tsx';
 import { ThemeProvider } from './contexts/ThemeContext';
 

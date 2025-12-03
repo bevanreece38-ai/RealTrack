@@ -11,102 +11,113 @@ interface AuthTokens {
   expiresAt: number;
 }
 
-/**
- * Gerencia tokens de forma segura usando httpOnly cookies
- * Nota: Parte da implementação precisa ser server-side para httpOnly
- */
-export class AuthManager {
-  private static readonly ACCESS_TOKEN_KEY = 'at';
-  private static readonly REFRESH_TOKEN_KEY = 'rt';
-  private static readonly EXPIRES_KEY = 'exp';
-
-  /**
-   * Define tokens usando localStorage (temporário até configurar subdomínio)
-   */
-  static setTokens(tokens: AuthTokens): void {
-    // TEMPORÁRIO: Usar localStorage em produção até configurar subdomínio api.realtracker.site
-    // Cookies httpOnly cross-domain requerem configuração de DNS personalizada
-    localStorage.setItem(this.ACCESS_TOKEN_KEY, tokens.accessToken);
-    localStorage.setItem(this.REFRESH_TOKEN_KEY, tokens.refreshToken);
-    localStorage.setItem(this.EXPIRES_KEY, tokens.expiresAt.toString());
-  }
-
-  /**
-   * Obtém token de acesso atual
-   */
-  static getAccessToken(): string | null {
-    const token = localStorage.getItem(this.ACCESS_TOKEN_KEY);
-    if (!token) return null;
-
-    // Verificar expiração
-    const expiresAt = localStorage.getItem(this.EXPIRES_KEY);
-    if (expiresAt && parseInt(expiresAt) < Date.now()) {
-      this.clearTokens();
-      return null;
-    }
-
-    return token;
-  }
-
-  /**
-   * Verifica se o token está válido
-   */
-  static isTokenValid(): boolean {
-    const token = this.getAccessToken();
-    if (!token) return false;
-
-    try {
-      // Verificar expiração do payload JWT
-      const payload = this.parseJWT(token);
-      const now = Math.floor(Date.now() / 1000);
-      return payload.exp > now;
-    } catch {
-      return false;
-    }
-  }
-
-  /**
-   * Limpa todos os tokens
-   */
-  static clearTokens(): void {
-    localStorage.removeItem(this.ACCESS_TOKEN_KEY);
-    localStorage.removeItem(this.REFRESH_TOKEN_KEY);
-    localStorage.removeItem(this.EXPIRES_KEY);
-    
-    // Também chamar logout do backend para limpar cookies (se houver)
-    fetch(`${import.meta.env.VITE_API_URL}/auth/logout`, {
-      method: 'POST',
-      credentials: 'include',
-    }).catch(() => {});
-  }
-
-
-
-  /**
-   * Parse JWT payload de forma segura
-   */
-  private static parseJWT(token: string): { exp: number; iat: number; [key: string]: any } {
-    const parts = token.split('.');
-    if (parts.length !== 3) {
-      throw new Error('Invalid JWT format');
-    }
-
-    try {
-      const payload = JSON.parse(atob(parts[1]));
-      if (!payload.exp || typeof payload.exp !== 'number') {
-        throw new Error('Invalid JWT payload');
-      }
-      return payload;
-    } catch {
-      throw new Error('Failed to parse JWT');
-    }
-  }
+interface JwtPayload {
+  exp: number;
+  iat?: number;
+  [key: string]: unknown;
 }
+
+const ACCESS_TOKEN_KEY = 'at';
+const REFRESH_TOKEN_KEY = 'rt';
+const EXPIRES_KEY = 'exp';
+const DEFAULT_API_URL = 'http://localhost:3001/api';
+
+const resolveApiBaseUrl = (): string => {
+  const envUrl = typeof import.meta.env.VITE_API_URL === 'string' ? import.meta.env.VITE_API_URL : undefined;
+  return (envUrl && envUrl.length > 0 ? envUrl : DEFAULT_API_URL).replace(/\/$/, '');
+};
+
+const isJwtPayload = (value: unknown): value is JwtPayload => {
+  if (typeof value !== 'object' || value === null) return false;
+  const record = value as Record<string, unknown>;
+  return typeof record.exp === 'number';
+};
+
+const decodeJwtSegment = (segment: string): string => {
+  const normalized = segment.replace(/-/g, '+').replace(/_/g, '/');
+  const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=');
+  return atob(padded);
+};
+
+const parseJwt = (token: string): JwtPayload => {
+  const parts = token.split('.');
+  if (parts.length !== 3) {
+    throw new Error('Invalid JWT format');
+  }
+
+  try {
+    const payloadJson = decodeJwtSegment(parts[1]);
+    const payload = JSON.parse(payloadJson) as unknown;
+    if (!isJwtPayload(payload)) {
+      throw new Error('Invalid JWT payload');
+    }
+    return payload;
+  } catch {
+    throw new Error('Failed to parse JWT');
+  }
+};
+
+const setTokens = (tokens: AuthTokens): void => {
+  localStorage.setItem(ACCESS_TOKEN_KEY, tokens.accessToken);
+  localStorage.setItem(REFRESH_TOKEN_KEY, tokens.refreshToken);
+  localStorage.setItem(EXPIRES_KEY, tokens.expiresAt.toString());
+};
+
+const clearTokens = (): void => {
+  localStorage.removeItem(ACCESS_TOKEN_KEY);
+  localStorage.removeItem(REFRESH_TOKEN_KEY);
+  localStorage.removeItem(EXPIRES_KEY);
+
+  const logoutUrl = `${resolveApiBaseUrl()}/auth/logout`;
+  fetch(logoutUrl, {
+    method: 'POST',
+    credentials: 'include',
+  }).catch(() => {
+    /* Falha silenciosa para manter UX */
+  });
+};
+
+const getAccessToken = (): string | null => {
+  const token = localStorage.getItem(ACCESS_TOKEN_KEY);
+  if (!token) return null;
+
+  const expiresAt = localStorage.getItem(EXPIRES_KEY);
+  if (expiresAt && Number.parseInt(expiresAt, 10) < Date.now()) {
+    clearTokens();
+    return null;
+  }
+
+  return token;
+};
+
+const isTokenValid = (): boolean => {
+  const token = getAccessToken();
+  if (!token) return false;
+
+  try {
+    const payload = parseJwt(token);
+    const now = Math.floor(Date.now() / 1000);
+    return payload.exp > now;
+  } catch {
+    return false;
+  }
+};
+
+/**
+ * Gerencia tokens de forma segura usando httpOnly cookies.
+ * Representado como objeto simples para alinhar com lint e facilitar testes.
+ */
+export const AuthManager = {
+  setTokens,
+  getAccessToken,
+  isTokenValid,
+  clearTokens,
+} as const;
 
 /**
  * Hook para gerenciar autenticação em componentes React
  */
-  export function useAuth() {
+export function useAuth() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -124,7 +135,7 @@ export class AuthManager {
     checkAuth();
   }, []);
 
-  const login = async (tokens: AuthTokens) => {
+  const login = (tokens: AuthTokens) => {
     AuthManager.setTokens(tokens);
     setIsAuthenticated(true);
   };

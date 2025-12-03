@@ -56,7 +56,7 @@ const api: AxiosInstance = axios.create({
   timeout: 70000, // 70 segundos de timeout para uploads/análises mais demorados
 });
 
-api.interceptors.request.use(async (config) => {
+api.interceptors.request.use((config) => {
   // Removido refresh automático para evitar problemas com cookies
   
   const token = AuthManager.getAccessToken();

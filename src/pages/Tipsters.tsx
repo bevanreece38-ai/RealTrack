@@ -1,10 +1,24 @@
-import { Plus, Pencil, Trash2, X, Check } from 'lucide-react';
 import { useCallback, useState } from 'react';
+import { Check, Pencil, Plus, Trash2, X } from 'lucide-react';
 import PageHeader from '../components/PageHeader';
 import Modal from '../components/Modal';
-import api from '../lib/api';
+import { tipsterService } from '../services/api';
 import { useTipsters } from '../hooks/useTipsters';
 import { type ApiTipster, type ApiError } from '../types/api';
+import { cn } from '../components/ui/utils';
+
+const sectionCardClass =
+  'rounded-3xl border border-border/30 bg-background-card/80 p-6 shadow-card backdrop-blur-sm';
+const gradientCardClass =
+  'relative overflow-hidden rounded-3xl border border-border/30 bg-background-card/80 p-6 shadow-card backdrop-blur-sm bg-brand-radial';
+const inputClass =
+  'w-full rounded-2xl border border-border/40 bg-background px-4 py-2.5 text-sm text-foreground placeholder:text-foreground-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-emerald/30';
+const primaryButtonClass =
+  'inline-flex items-center justify-center gap-2 rounded-2xl border border-brand-emerald/40 bg-brand-emerald/10 px-5 py-2.5 text-sm font-semibold text-brand-emerald transition hocus:bg-brand-emerald/20';
+const ghostButtonClass =
+  'inline-flex items-center justify-center gap-2 rounded-2xl border border-transparent px-4 py-2 text-sm font-semibold text-foreground transition hocus:border-border/60 hocus:text-brand-emerald';
+const destructiveGhostButtonClass =
+  'inline-flex items-center justify-center gap-2 rounded-2xl border border-transparent px-3 py-2 text-sm font-semibold text-danger transition hocus:border-danger/40 hocus:bg-danger/10';
 
 export default function Tipsters() {
   const { tipsters, loading, invalidateCache } = useTipsters();
@@ -15,7 +29,6 @@ export default function Tipsters() {
   const [error, setError] = useState('');
 
   const handleOpenModal = useCallback((tipster?: ApiTipster) => {
-    console.log('handleOpenModal chamado', tipster);
     if (tipster) {
       setEditingTipster(tipster);
       setFormData({ nome: tipster.nome });
@@ -34,16 +47,22 @@ export default function Tipsters() {
     setError('');
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    const nome = formData.nome.trim();
+    if (!nome) {
+      setError('Informe o nome do tipster.');
+      return;
+    }
+
     setSaving(true);
     setError('');
 
     try {
       if (editingTipster) {
-        await api.put(`/tipsters/${editingTipster.id}`, { nome: formData.nome.trim() });
+        await tipsterService.update(editingTipster.id, { nome });
       } else {
-        await api.post('/tipsters', { nome: formData.nome.trim() });
+        await tipsterService.create({ nome });
       }
       invalidateCache();
       handleCloseModal();
@@ -58,7 +77,7 @@ export default function Tipsters() {
 
   const handleToggleActive = async (tipster: ApiTipster) => {
     try {
-      await api.put(`/tipsters/${tipster.id}`, { ativo: !tipster.ativo });
+      await tipsterService.update(tipster.id, { ativo: !tipster.ativo });
       invalidateCache();
     } catch (err) {
       const apiError = err as ApiError;
@@ -73,7 +92,7 @@ export default function Tipsters() {
     }
 
     try {
-      await api.delete(`/tipsters/${tipster.id}`);
+      await tipsterService.remove(tipster.id);
       invalidateCache();
     } catch (err) {
       const apiError = err as ApiError;
@@ -82,195 +101,152 @@ export default function Tipsters() {
     }
   };
 
-  return (
-    <div>
-      <PageHeader
-        title="Tipsters"
-        subtitle="Gerencie seus tipsters favoritos"
-      />
+  const tipsterCount = tipsters.length;
 
-      {loading ? (
-        <div style={{ padding: '40px', textAlign: 'center', color: 'var(--muted)' }}>
-          Carregando...
-        </div>
-      ) : tipsters.length === 0 ? (
-        <div style={{ 
-          padding: '60px 20px', 
-          textAlign: 'center',
-          background: 'var(--surface)',
-          borderRadius: 'var(--card-radius)',
-          border: '1px solid var(--border)'
-        }}>
-          <p style={{ color: 'var(--muted)', marginBottom: '20px' }}>
-            Nenhum tipster cadastrado ainda.
-          </p>
-          <button 
-            className="btn" 
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              console.log('Botão clicado');
-              handleOpenModal();
-            }} 
-            type="button"
-          >
-            <Plus size={16} /> Adicionar Primeiro Tipster
+  return (
+    <div className="space-y-8 text-foreground">
+      <PageHeader title="Tipsters" subtitle="Gerencie sua lista de especialistas e mantenha tudo organizado" />
+
+      <section className={gradientCardClass}>
+        <div className="flex flex-wrap items-center justify-between gap-6">
+          <div>
+            <p className="text-2xs uppercase tracking-[0.3em] text-foreground-muted">Resumo</p>
+            <h2 className="text-3xl font-semibold text-transparent bg-gradient-to-r from-brand-emerald via-teal-200 to-white bg-clip-text">
+              {tipsterCount > 0 ? `${tipsterCount} tipster${tipsterCount > 1 ? 's' : ''}` : 'Sem tipsters ainda'}
+            </h2>
+            <p className="mt-1 text-sm text-foreground-muted">
+              Crie, organize e ajuste a atividade dos tipsters usados nas suas bancas.
+            </p>
+          </div>
+          <button type="button" className={primaryButtonClass} onClick={() => handleOpenModal()}>
+            <Plus className="h-4 w-4" /> Novo tipster
           </button>
         </div>
-      ) : (
-        <div style={{ marginTop: '24px' }}>
-          <div style={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            alignItems: 'center',
-            marginBottom: '16px'
-          }}>
-            <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 600, color: 'var(--text)' }}>
-              Meus Tipsters ({tipsters.length})
-            </h2>
-            <button 
-              className="btn" 
-              onClick={() => handleOpenModal()} 
-              type="button"
-            >
-              <Plus size={16} /> Adicionar Tipster
+      </section>
+
+      {loading ? (
+        <div className={sectionCardClass}>
+          <p className="text-sm text-foreground-muted animate-pulse">Carregando tipsters...</p>
+        </div>
+      ) : tipsterCount === 0 ? (
+        <div className={sectionCardClass}>
+          <div className="flex flex-col items-center gap-4 text-center">
+            <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl border border-border/40 bg-background">
+              <Plus className="h-6 w-6 text-brand-emerald" />
+            </div>
+            <div>
+              <p className="text-base font-semibold">Nenhum tipster cadastrado</p>
+              <p className="mt-1 text-sm text-foreground-muted">
+                Adicione seu primeiro tipster para começar a acompanhar desempenhos e organizar resultados.
+              </p>
+            </div>
+            <button type="button" className={primaryButtonClass} onClick={() => handleOpenModal()}>
+              <Plus className="h-4 w-4" /> Adicionar tipster
             </button>
           </div>
-          <div className="tipsters-list">
-            {tipsters.map((tipster) => (
-            <div
-              key={tipster.id}
-              className="card tipster-card"
-            >
-              <div style={{ flex: 1 }}>
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px'
-                }}>
-                  <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 600, color: 'var(--text)' }}>
-                    {tipster.nome}
-                  </h3>
-                  <button
-                    type="button"
-                    onClick={() => handleToggleActive(tipster)}
-                    style={{
-                      border: 'none',
-                      background: tipster.ativo ? 'var(--bank-color, #10b981)' : 'var(--border)',
-                      color: tipster.ativo ? 'white' : 'var(--muted)',
-                      padding: '4px 10px',
-                      borderRadius: '6px',
-                      fontSize: '0.75rem',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      transition: 'all 0.2s'
-                    }}
-                    onMouseEnter={(e) => {
-                      if (tipster.ativo) {
-                        e.currentTarget.style.background = 'var(--bank-color-dark, #0d9668)';
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (tipster.ativo) {
-                        e.currentTarget.style.background = 'var(--bank-color, #10b981)';
-                      }
-                    }}
-                  >
-                    {tipster.ativo ? <Check size={12} /> : <X size={12} />}
-                    {tipster.ativo ? 'Ativo' : 'Inativo'}
-                  </button>
-                </div>
-              </div>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <button
-                  type="button"
-                  className="btn ghost"
-                  onClick={() => handleOpenModal(tipster)}
-                  style={{ padding: '8px' }}
-                  title="Editar tipster"
-                >
-                  <Pencil size={16} />
-                </button>
-                <button
-                  type="button"
-                  className="btn ghost"
-                  onClick={() => handleDelete(tipster)}
-                  style={{
-                    padding: '8px',
-                    color: '#ef4444'
-                  }}
-                  title="Deletar tipster"
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'transparent';
-                  }}
-                >
-                  <Trash2 size={16} />
-                </button>
-              </div>
-            </div>
-          ))}
-          </div>
         </div>
+      ) : (
+        <section className={sectionCardClass}>
+          <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border/20 pb-4">
+            <div>
+              <p className="text-2xs uppercase tracking-[0.3em] text-foreground-muted">Lista</p>
+              <h3 className="text-xl font-semibold text-foreground">Meus tipsters</h3>
+            </div>
+            <button type="button" className={primaryButtonClass} onClick={() => handleOpenModal()}>
+              <Plus className="h-4 w-4" /> Adicionar
+            </button>
+          </div>
+
+          <div className="mt-5 space-y-4">
+            {tipsters.map((tipster) => (
+              <TipsterCard
+                key={tipster.id}
+                tipster={tipster}
+                onEdit={() => handleOpenModal(tipster)}
+                onDelete={() => handleDelete(tipster)}
+                onToggleActive={() => handleToggleActive(tipster)}
+              />
+            ))}
+          </div>
+        </section>
       )}
 
       <Modal
         isOpen={modalOpen}
         onClose={handleCloseModal}
         title={editingTipster ? 'Editar Tipster' : 'Adicionar Tipster'}
+        size="sm"
       >
-        <form onSubmit={handleSubmit}>
-          <div className="field">
-            <label>Nome do Tipster *</label>
+        <form className="space-y-5" onSubmit={handleSubmit}>
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-foreground">Nome do tipster *</label>
             <input
               type="text"
               value={formData.nome}
-              onChange={(e) => setFormData({ nome: e.target.value })}
+              onChange={(event) => setFormData({ nome: event.target.value })}
               placeholder="Ex: Tipster A, João Silva, etc."
+              className={inputClass}
               required
               autoFocus
             />
           </div>
 
           {error && (
-            <div style={{
-              padding: '12px',
-              background: 'rgba(239, 68, 68, 0.1)',
-              border: '1px solid #ef4444',
-              borderRadius: '8px',
-              color: '#ef4444',
-              fontSize: '0.875rem',
-              marginBottom: '16px'
-            }}>
-              {error}
-            </div>
+            <div className="rounded-2xl border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-danger">{error}</div>
           )}
 
-          <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '24px' }}>
-            <button
-              type="button"
-              className="btn ghost"
-              onClick={handleCloseModal}
-              disabled={saving}
-            >
+          <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+            <button type="button" className={ghostButtonClass} onClick={handleCloseModal} disabled={saving}>
               Cancelar
             </button>
-            <button
-              type="submit"
-              className="btn"
-              disabled={saving || !formData.nome.trim()}
-            >
-              {saving ? 'Salvando...' : editingTipster ? 'Salvar Alterações' : 'Adicionar'}
+            <button type="submit" className={primaryButtonClass} disabled={saving || !formData.nome.trim()}>
+              {saving ? 'Salvando...' : editingTipster ? 'Salvar alterações' : 'Adicionar tipster'}
             </button>
           </div>
         </form>
       </Modal>
     </div>
+  );
+}
+
+interface TipsterCardProps {
+  tipster: ApiTipster;
+  onEdit: () => void;
+  onDelete: () => void;
+  onToggleActive: () => void;
+}
+
+function TipsterCard({ tipster, onEdit, onDelete, onToggleActive }: TipsterCardProps) {
+  return (
+    <article className="flex flex-col gap-4 rounded-2xl border border-border/20 bg-background/60 p-4 shadow-card md:flex-row md:items-center md:justify-between">
+      <div>
+        <h4 className="text-lg font-semibold text-foreground">{tipster.nome}</h4>
+        <div className="mt-1 text-sm text-foreground-muted">Status atual do tipster</div>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          onClick={onToggleActive}
+          className={cn(
+            'inline-flex items-center gap-2 rounded-2xl border px-3 py-1.5 text-xs font-semibold transition',
+            tipster.ativo
+              ? 'border-brand-emerald/60 bg-brand-emerald/15 text-brand-emerald'
+              : 'border-border/60 bg-transparent text-foreground-muted'
+          )}
+        >
+          {tipster.ativo ? <Check className="h-3.5 w-3.5" /> : <X className="h-3.5 w-3.5" />}
+          {tipster.ativo ? 'Ativo' : 'Inativo'}
+        </button>
+
+        <button type="button" className={ghostButtonClass} onClick={onEdit} aria-label="Editar tipster">
+          <Pencil className="h-4 w-4" />
+        </button>
+        <button type="button" className={destructiveGhostButtonClass} onClick={onDelete} aria-label="Remover tipster">
+          <Trash2 className="h-4 w-4" />
+        </button>
+      </div>
+    </article>
   );
 }
 

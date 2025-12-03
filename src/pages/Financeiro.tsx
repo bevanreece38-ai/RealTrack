@@ -1,20 +1,32 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Filter, Plus, Wallet, Pencil, Trash2 } from 'lucide-react';
-import PageHeader from '../components/PageHeader';
-import EmptyState from '../components/EmptyState';
-import Modal from '../components/Modal';
-import FilterPopover from '../components/FilterPopover';
+import { Filter, Loader2, Pencil, Plus, Trash2, Wallet } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import DateInput from '../components/DateInput';
+import FilterPopover from '../components/FilterPopover';
+import Modal from '../components/Modal';
+import EmptyState from '../components/EmptyState';
 import { CASAS_APOSTAS } from '../constants/casasApostas';
-import api from '../lib/api';
+import { financeiroService, type TipoTransacao } from '../services/api';
 import { useBancas } from '../hooks/useBancas';
-import { formatCurrency, formatDate, formatDateDisplay, normalizeDisplayToISO, getTodayDateISO, toISODate } from '../utils/formatters';
-import { type ApiFinancialTransaction, type ApiFinancialSummary, type ApiError } from '../types/api';
-import '../styles/dashboard-new.css';
-import '../styles/pages/financeiro.css';
+import {
+  formatCurrency,
+  formatDate,
+  formatDateDisplay,
+  getTodayDateISO,
+  normalizeDisplayToISO,
+  toISODate,
+} from '../utils/formatters';
+import {
+  type ApiError,
+  type ApiFinancialSummary,
+  type ApiFinancialTransaction,
+} from '../types/api';
+import { cn } from '../components/ui/utils';
+
+type TipoFiltro = TipoTransacao | '';
 
 interface FinanceiroFilters {
-  tipo: string;
+  bancaId: string;
+  tipo: TipoFiltro;
   casa: string;
   dataDe: string;
   dataAte: string;
@@ -22,11 +34,60 @@ interface FinanceiroFilters {
 }
 
 const initialFilters: FinanceiroFilters = {
+  bancaId: '',
   tipo: '',
   casa: '',
   dataDe: '',
   dataAte: '',
-  observacao: ''
+  observacao: '',
+};
+
+interface FinanceiroFormData {
+  bancaId: string;
+  tipo: TipoFiltro;
+  casaDeAposta: string;
+  valor: string;
+  dataTransacao: string;
+  observacao: string;
+}
+
+const createDefaultFormData = (bancaId = '', date = getTodayDateISO()): FinanceiroFormData => ({
+  bancaId,
+  tipo: '',
+  casaDeAposta: '',
+  valor: '',
+  dataTransacao: date,
+  observacao: '',
+});
+
+const sectionCardClass =
+  'rounded-3xl border border-border/30 bg-background-card/80 p-6 shadow-card backdrop-blur-sm';
+const dashboardCardShellClass =
+  'rounded-lg border border-white/5 bg-[#0f2d29] p-6 text-white shadow-[0_25px_45px_rgba(0,0,0,0.25)] backdrop-blur-sm';
+const sectionLabelClass = 'text-2xs uppercase tracking-[0.3em] text-foreground-muted';
+const inputClass =
+  'w-full rounded-2xl border border-border/40 bg-background px-4 py-2.5 text-sm text-foreground placeholder:text-foreground-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-emerald/30';
+const headerGhostButtonClass =
+  'inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm font-semibold text-white/80 transition hover:border-brand-emerald/50 hover:text-brand-emerald focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-emerald/30';
+const headerPrimaryButtonClass =
+  'inline-flex items-center gap-2 rounded-full border border-brand-emerald/60 bg-brand-emerald/15 px-4 py-2 text-sm font-semibold text-brand-emerald transition hover:bg-brand-emerald/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-emerald/30';
+const tableActionButtonClass =
+  'inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-white/15 bg-white/5 text-white/80 transition hover:border-brand-emerald/40 hover:bg-white/10 hover:text-brand-emerald focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-emerald/30';
+const tableActionButtonDangerClass =
+  'inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-rose-400/40 bg-rose-500/10 text-rose-200 transition hover:bg-rose-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400/40';
+
+const emptyStats: ApiFinancialSummary = {
+  totalDepositado: 0,
+  totalSacado: 0,
+  resultadoApostas: 0,
+  apostasPendentes: 0,
+  valorApostasPendentes: 0,
+  saldoAtual: 0,
+  totalDepositos: 0,
+  totalSaques: 0,
+  apostasConcluidas: 0,
+  totalTransacoes: 0,
+  porCasa: {},
 };
 
 export default function Financeiro() {
@@ -36,134 +97,125 @@ export default function Financeiro() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { bancas } = useBancas();
+  const preferredBancaId = useMemo(() => {
+    if (bancas.length === 0) {
+      return '';
+    }
+    const padrao = bancas.find((banca) => banca.padrao);
+    return padrao?.id ?? bancas[0].id;
+  }, [bancas]);
   const [transacoes, setTransacoes] = useState<ApiFinancialTransaction[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [statsData, setStatsData] = useState<ApiFinancialSummary>({
-    totalDepositado: 0,
-    totalSacado: 0,
-    resultadoApostas: 0,
-    apostasPendentes: 0,
-    valorApostasPendentes: 0,
-    saldoAtual: 0,
-    totalDepositos: 0,
-    totalSaques: 0,
-    apostasConcluidas: 0,
-    totalTransacoes: 0,
-    porCasa: {}
-  });
-  const [formData, setFormData] = useState(() => ({
-    bancaId: '',
-    tipo: '',
-    casaDeAposta: '',
-    valor: '',
-    dataTransacao: getTodayDateISO(),
-    observacao: ''
-  }));
+  const [statsData, setStatsData] = useState<ApiFinancialSummary>(emptyStats);
+  const [statsLoading, setStatsLoading] = useState(true);
+  const [formData, setFormData] = useState<FinanceiroFormData>(() => createDefaultFormData());
   const [manualDateInput, setManualDateInput] = useState(() => formatDateDisplay(getTodayDateISO()));
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
-  const [transactionsExpanded, setTransactionsExpanded] = useState(false);
-  const [saldoCasaExpanded, setSaldoCasaExpanded] = useState(false);
   const [pendingFilters, setPendingFilters] = useState<FinanceiroFilters>(initialFilters);
   const [appliedFilters, setAppliedFilters] = useState<FinanceiroFilters>(initialFilters);
+  const autoSyncBancaRef = useRef(true);
+  const resolvedBancaId = useMemo(
+    () => appliedFilters.bancaId || preferredBancaId || (bancas[0]?.id ?? ''),
+    [appliedFilters.bancaId, preferredBancaId, bancas],
+  );
+
+  useEffect(() => {
+    const fallbackId = preferredBancaId || bancas[0]?.id || '';
+    if (!fallbackId) {
+      return;
+    }
+
+    const syncFilters = (prev: FinanceiroFilters): FinanceiroFilters => {
+      const bancaExists = prev.bancaId ? bancas.some((banca) => banca.id === prev.bancaId) : false;
+      const shouldForceSync = !prev.bancaId || !bancaExists || autoSyncBancaRef.current;
+
+      if (!shouldForceSync && prev.bancaId === fallbackId) {
+        autoSyncBancaRef.current = true;
+        return prev;
+      }
+
+      if (!shouldForceSync) {
+        return prev;
+      }
+
+      if (prev.bancaId === fallbackId) {
+        autoSyncBancaRef.current = true;
+        return prev;
+      }
+
+      autoSyncBancaRef.current = true;
+      return { ...prev, bancaId: fallbackId };
+    };
+
+    setPendingFilters(syncFilters);
+    setAppliedFilters(syncFilters);
+  }, [preferredBancaId, bancas]);
+
+  useEffect(() => {
+    if (!resolvedBancaId) {
+      return;
+    }
+    setFormData((prev) => {
+      const exists = prev.bancaId && bancas.some((banca) => banca.id === prev.bancaId);
+      if (exists || prev.bancaId === resolvedBancaId) {
+        return prev;
+      }
+      return { ...prev, bancaId: resolvedBancaId };
+    });
+  }, [resolvedBancaId, bancas]);
 
   const fetchTransacoes = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
 
-      const params: Record<string, string> = {};
-
-      if (appliedFilters.tipo) {
-        params.tipo = appliedFilters.tipo;
-      }
-      if (appliedFilters.casa) {
-        params.casaDeAposta = appliedFilters.casa;
-      }
-      if (appliedFilters.observacao) {
-        params.observacao = appliedFilters.observacao;
+      if (!appliedFilters.bancaId) {
+        setTransacoes([]);
+        return;
       }
 
-      if (appliedFilters.dataDe && !appliedFilters.dataAte) {
-        params.dataInicio = appliedFilters.dataDe;
-        params.dataFim = appliedFilters.dataDe;
-      } else {
-        if (appliedFilters.dataDe) {
-          params.dataInicio = appliedFilters.dataDe;
-        }
-        if (appliedFilters.dataAte) {
-          params.dataFim = appliedFilters.dataAte;
-        }
-      }
+      const filters = {
+        bancaId: appliedFilters.bancaId,
+        tipo: appliedFilters.tipo || undefined,
+        casaDeAposta: appliedFilters.casa || undefined,
+        observacao: appliedFilters.observacao || undefined,
+        dataInicio:
+          appliedFilters.dataDe && !appliedFilters.dataAte ? appliedFilters.dataDe : appliedFilters.dataDe || undefined,
+        dataFim:
+          appliedFilters.dataDe && !appliedFilters.dataAte ? appliedFilters.dataDe : appliedFilters.dataAte || undefined,
+      };
 
-      const { data } = await api.get<ApiFinancialTransaction[]>('/financeiro/transacoes', { params });
+      const data = await financeiroService.getTransacoes(filters);
       setTransacoes(data);
-    } catch (error) {
-      console.error('Erro ao buscar transações:', error);
+    } catch (err) {
+      console.error('Erro ao buscar transações:', err);
       setTransacoes([]);
-      const apiError = error as ApiError;
-      if (apiError.response?.data) {
-        setError('Erro ao carregar transações. Tente recarregar a página.');
-      } else {
-        setError('Erro ao carregar transações. Tente recarregar a página.');
-      }
+      setError('Erro ao carregar transações. Tente recarregar a página.');
     } finally {
       setLoading(false);
     }
   }, [appliedFilters]);
 
   const fetchStats = useCallback(async () => {
+    if (!appliedFilters.bancaId) {
+      setStatsData(emptyStats);
+      setStatsLoading(false);
+      return;
+    }
+
     try {
       setError(null);
-
-      const params: Record<string, string> = {};
-
-      if (appliedFilters.tipo) {
-        params.tipo = appliedFilters.tipo;
-      }
-      if (appliedFilters.casa) {
-        params.casaDeAposta = appliedFilters.casa;
-      }
-      if (appliedFilters.observacao) {
-        params.observacao = appliedFilters.observacao;
-      }
-
-      if (appliedFilters.dataDe && !appliedFilters.dataAte) {
-        params.dataInicio = appliedFilters.dataDe;
-        params.dataFim = appliedFilters.dataDe;
-      } else {
-        if (appliedFilters.dataDe) {
-          params.dataInicio = appliedFilters.dataDe;
-        }
-        if (appliedFilters.dataAte) {
-          params.dataFim = appliedFilters.dataAte;
-        }
-      }
-
-      const { data } = await api.get<ApiFinancialSummary>('/financeiro/saldo-geral', { params });
+      setStatsLoading(true);
+      const data = await financeiroService.getSaldoGeral({ bancaId: appliedFilters.bancaId });
       setStatsData(data);
-    } catch (error) {
-      console.error('Erro ao buscar estatísticas:', error);
-      const apiError = error as ApiError;
-      setStatsData({
-        totalDepositado: 0,
-        totalSacado: 0,
-        resultadoApostas: 0,
-        apostasPendentes: 0,
-        valorApostasPendentes: 0,
-        saldoAtual: 0,
-        totalDepositos: 0,
-        totalSaques: 0,
-        apostasConcluidas: 0,
-        totalTransacoes: 0,
-        porCasa: {}
-      });
-      if (apiError.response?.data) {
-        setError('Erro ao carregar estatísticas. Tente recarregar a página.');
-      } else {
-        setError('Erro ao carregar estatísticas. Tente recarregar a página.');
-      }
+    } catch (err) {
+      console.error('Erro ao buscar estatísticas:', err);
+      setStatsData(emptyStats);
+      setError('Erro ao carregar estatísticas. Tente recarregar a página.');
+    } finally {
+      setStatsLoading(false);
     }
-  }, [appliedFilters]);
+  }, [appliedFilters.bancaId]);
 
   useEffect(() => {
     void fetchTransacoes();
@@ -171,36 +223,43 @@ export default function Financeiro() {
   }, [fetchTransacoes, fetchStats]);
 
   useEffect(() => {
-    if (bancas.length > 0 && !formData.bancaId) {
-      setFormData(prev => ({ ...prev, bancaId: bancas[0].id }));
+    if (appliedFilters.bancaId) {
+      setStatsLoading(true);
     }
-  }, [bancas, formData.bancaId]);
+  }, [appliedFilters]);
 
-  const handleFormChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    if (formErrors[field]) {
-      setFormErrors(prev => ({ ...prev, [field]: '' }));
+  const handleFormChange = <K extends keyof FinanceiroFormData>(field: K, value: FinanceiroFormData[K]) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+    if (formErrors[field as string]) {
+      setFormErrors((prev) => ({ ...prev, [field as string]: '' }));
     }
   };
 
   const handleFilterChange = <K extends keyof FinanceiroFilters>(field: K, value: FinanceiroFilters[K]) => {
-    setPendingFilters(prev => ({ ...prev, [field]: value }));
+    if (field === 'bancaId') {
+      autoSyncBancaRef.current = false;
+    }
+    setPendingFilters((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleApplyFilters = () => {
-    setAppliedFilters(pendingFilters);
+    setAppliedFilters({ ...pendingFilters });
     setFiltersOpen(false);
   };
 
   const handleClearFilters = () => {
-    setPendingFilters(initialFilters);
-    setAppliedFilters(initialFilters);
+    const bancaId = pendingFilters.bancaId || appliedFilters.bancaId || resolvedBancaId;
+    const reset = { ...initialFilters, bancaId }; // mantém a banca atual e limpa o restante
+    autoSyncBancaRef.current = true;
+    setPendingFilters(reset);
+    setAppliedFilters(reset);
     setFiltersOpen(false);
   };
 
   const activeFiltersCount = useMemo(
-    () => Object.values(appliedFilters).filter((v) => v !== '').length,
-    [appliedFilters]
+    () =>
+      Object.entries(appliedFilters).filter(([key, value]) => key !== 'bancaId' && value !== '').length,
+    [appliedFilters],
   );
 
   const validateForm = () => {
@@ -213,7 +272,7 @@ export default function Financeiro() {
       errors.tipo = 'Selecione o tipo de transação';
     }
     if (!formData.casaDeAposta) {
-      errors.casaDeAposta = 'Selecione uma casa de apostas';
+      errors.casaDeAposta = 'Selecione uma casa';
     }
     if (!formData.valor || parseFloat(formData.valor) <= 0) {
       errors.valor = 'Informe um valor válido';
@@ -226,8 +285,8 @@ export default function Financeiro() {
     return Object.keys(errors).length === 0;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
 
     if (!validateForm()) {
       return;
@@ -236,41 +295,36 @@ export default function Financeiro() {
     try {
       setSaving(true);
 
+      const tipo = formData.tipo as TipoTransacao;
+      const dataTransacaoISO = formData.dataTransacao || getTodayDateISO();
+
       const dataToSend = {
         bancaId: formData.bancaId,
-        tipo: formData.tipo,
+        tipo,
         casaDeAposta: formData.casaDeAposta,
         valor: parseFloat(formData.valor),
-        dataTransacao: formData.dataTransacao ? `${formData.dataTransacao}T00:00:00` : undefined,
-        observacao: formData.observacao.trim() === '' ? undefined : formData.observacao
+        dataTransacao: `${dataTransacaoISO}T00:00:00`,
+        observacao: formData.observacao.trim() === '' ? undefined : formData.observacao,
       };
 
       if (editingId) {
-        await api.put(`/financeiro/transacao/${editingId}`, dataToSend);
+        await financeiroService.updateTransacao(editingId, dataToSend);
       } else {
-        await api.post('/financeiro/transacao', dataToSend);
+        await financeiroService.createTransacao(dataToSend);
       }
 
-      // Reset form
-      setFormData({
-        bancaId: bancas.length > 0 ? bancas[0].id : '',
-        tipo: '',
-        casaDeAposta: '',
-        valor: '',
-        dataTransacao: getTodayDateISO(),
-        observacao: ''
-      });
-      setManualDateInput(formatDateDisplay(getTodayDateISO()));
+      const today = getTodayDateISO();
+      setFormData(createDefaultFormData(resolvedBancaId, today));
+      setManualDateInput(formatDateDisplay(today));
       setFormErrors({});
       setEditingId(null);
       setModalOpen(false);
 
-      // Refresh transactions and stats
       await fetchTransacoes();
       await fetchStats();
-    } catch (error) {
-      console.error('Erro ao salvar transação:', error);
-      const apiError = error as ApiError;
+    } catch (err) {
+      console.error('Erro ao salvar transação:', err);
+      const apiError = err as ApiError;
       const errorData = apiError.response?.data?.error;
 
       if (errorData) {
@@ -279,7 +333,9 @@ export default function Financeiro() {
               .map((entry) => entry.message?.trim())
               .filter((entry): entry is string => Boolean(entry && entry.length > 0))
               .join(', ') || 'Erro desconhecido.'
-          : typeof errorData === 'string' ? errorData : 'Erro desconhecido.';
+          : typeof errorData === 'string'
+          ? errorData
+          : 'Erro desconhecido.';
         alert(`Erro ao salvar transação: ${message}`);
       } else {
         alert('Erro ao salvar transação. Tente novamente.');
@@ -290,15 +346,9 @@ export default function Financeiro() {
   };
 
   const handleCloseModal = () => {
-    setFormData({
-      bancaId: bancas.length > 0 ? bancas[0].id : '',
-      tipo: '',
-      casaDeAposta: '',
-      valor: '',
-      dataTransacao: getTodayDateISO(),
-      observacao: ''
-    });
-    setManualDateInput(formatDateDisplay(getTodayDateISO()));
+    const today = getTodayDateISO();
+    setFormData(createDefaultFormData(resolvedBancaId, today));
+    setManualDateInput(formatDateDisplay(today));
     setFormErrors({});
     setEditingId(null);
     setModalOpen(false);
@@ -306,15 +356,9 @@ export default function Financeiro() {
 
   const handleOpenCreateModal = () => {
     setEditingId(null);
-    setFormData({
-      bancaId: bancas.length > 0 ? bancas[0].id : '',
-      tipo: '',
-      casaDeAposta: '',
-      valor: '',
-      dataTransacao: getTodayDateISO(),
-      observacao: ''
-    });
-    setManualDateInput(formatDateDisplay(getTodayDateISO()));
+    const today = getTodayDateISO();
+    setFormData(createDefaultFormData(resolvedBancaId, today));
+    setManualDateInput(formatDateDisplay(today));
     setModalOpen(true);
   };
 
@@ -326,9 +370,10 @@ export default function Financeiro() {
       casaDeAposta: transacao.casaDeAposta,
       valor: String(transacao.valor),
       dataTransacao: toISODate(transacao.dataTransacao),
-      observacao: transacao.observacao ?? ''
+      observacao: transacao.observacao ?? '',
     });
     setManualDateInput(formatDateDisplay(toISODate(transacao.dataTransacao)));
+    setFormErrors({});
     setModalOpen(true);
   };
 
@@ -336,8 +381,9 @@ export default function Financeiro() {
     if (!window.confirm('Deseja remover esta transação?')) {
       return;
     }
+
     try {
-      await api.delete(`/financeiro/transacao/${transacao.id}`);
+      await financeiroService.deleteTransacao(transacao.id);
       await fetchTransacoes();
       await fetchStats();
     } catch (err) {
@@ -346,504 +392,324 @@ export default function Financeiro() {
     }
   };
 
-
   return (
-    <div className="financeiro-page">
-      <PageHeader
-        title='Financeiro'
-        subtitle='Gerencie suas transações e acompanhe seus saldos'
-        actions={
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div className="filter-trigger-wrapper">
-              <button className='filter-trigger' onClick={() => setFiltersOpen((prev) => !prev)}>
-                <Filter size={16} /> Filtros {activeFiltersCount > 0 && <span className="filter-count">{activeFiltersCount}</span>}
-              </button>
-              <FilterPopover
-                open={filtersOpen}
-                onClose={() => setFiltersOpen(false)}
-                onClear={handleClearFilters}
-                footer={
-                  <button className='btn' onClick={handleApplyFilters}>
-                    Aplicar Filtros
-                  </button>
-                }
-              >
-                <div className='filters-panel filters-panel--plain'>
-                  <div className='field'>
-                    <label>Tipo</label>
-                    <select
-                      value={pendingFilters.tipo}
-                      onChange={(e) => handleFilterChange('tipo', e.target.value)}
-                      style={{ color: pendingFilters.tipo ? 'var(--text)' : 'var(--muted)' }}
-                    >
-                      <option value="" disabled hidden>Selecione um status</option>
-                      <option value="Depósito">Depósito</option>
-                      <option value="Saque">Saque</option>
-                    </select>
-                  </div>
-                  <div className='field'>
-                    <label>Casa de Apostas</label>
-                    <select
-                      value={pendingFilters.casa}
-                      onChange={(e) => handleFilterChange('casa', e.target.value)}
-                      style={{ color: pendingFilters.casa ? 'var(--text)' : 'var(--muted)' }}
-                    >
-                      <option value="" disabled hidden>Selecione a casa</option>
-                      {CASAS_APOSTAS.length > 0 && CASAS_APOSTAS.map((casa) => (
-                        <option key={casa} value={casa}>
-                          {casa}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className='field'>
-                    <label>Período (De)</label>
-                    <DateInput
-                      value={pendingFilters.dataDe}
-                      onChange={(value) => handleFilterChange('dataDe', value)}
-                      placeholder="dd/mm/aaaa"
-                      className="date-input-modern"
-                      style={{
-                        width: '100%',
-                        padding: '10px 14px',
-                        fontSize: '0.9rem',
-                        border: '1.5px solid var(--border)',
-                        borderRadius: '8px',
-                        background: 'var(--surface)',
-                        color: 'var(--text)',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s'
-                      }}
-                      onFocus={(e) => {
-                        const root = getComputedStyle(document.documentElement);
-                        const bankColorValue = root.getPropertyValue('--bank-color').trim();
-                        const bankColorLightValue = root.getPropertyValue('--bank-color-light').trim();
-                        const bankColor = bankColorValue === '' ? getComputedStyle(document.documentElement).getPropertyValue('--color-chart-primary').trim() : bankColorValue;
-                        const bankColorLight = bankColorLightValue === '' ? getComputedStyle(document.documentElement).getPropertyValue('--color-bg-hover').trim() : bankColorLightValue;
-                        e.target.style.borderColor = bankColor;
-                        e.target.style.boxShadow = `0 0 0 3px ${bankColorLight}`;
-                      }}
-                      onBlur={(e) => {
-                        e.target.style.borderColor = 'var(--border)';
-                        e.target.style.boxShadow = 'none';
-                      }}
-                    />
-                  </div>
-                  <div className='field'>
-                    <label>Período (Até)</label>
-                    <DateInput
-                      value={pendingFilters.dataAte}
-                      onChange={(value) => handleFilterChange('dataAte', value)}
-                      placeholder="dd/mm/aaaa"
-                      className="date-input-modern"
-                      style={{
-                        width: '100%',
-                        padding: '10px 14px',
-                        fontSize: '0.9rem',
-                        border: '1.5px solid var(--border)',
-                        borderRadius: '8px',
-                        background: 'var(--surface)',
-                        color: 'var(--text)',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s'
-                      }}
-                      onFocus={(e) => {
-                        const root = getComputedStyle(document.documentElement);
-                        const bankColorValue = root.getPropertyValue('--bank-color').trim();
-                        const bankColorLightValue = root.getPropertyValue('--bank-color-light').trim();
-                        const bankColor = bankColorValue === '' ? getComputedStyle(document.documentElement).getPropertyValue('--color-chart-primary').trim() : bankColorValue;
-                        const bankColorLight = bankColorLightValue === '' ? getComputedStyle(document.documentElement).getPropertyValue('--color-bg-hover').trim() : bankColorLightValue;
-                        e.target.style.borderColor = bankColor;
-                        e.target.style.boxShadow = `0 0 0 3px ${bankColorLight}`;
-                      }}
-                      onBlur={(e) => {
-                        e.target.style.borderColor = 'var(--border)';
-                        e.target.style.boxShadow = 'none';
-                      }}
-                    />
-                    <p style={{ 
-                      margin: '8px 0 0 0', 
-                      fontSize: '0.75rem', 
-                      color: 'var(--muted)',
-                      lineHeight: '1.4'
-                    }}>
-                      Se só preencher "De", será filtrado apenas nesta data. Se preencher "Até", será considerado como intervalo.
-                    </p>
-                  </div>
-                  <div className='field'>
-                    <label>Observação</label>
-                    <input
-                      type='text'
-                      placeholder='Buscar na observação…'
-                      value={pendingFilters.observacao}
-                      onChange={(e) => handleFilterChange('observacao', e.target.value)}
-                    />
-                  </div>
-                </div>
-              </FilterPopover>
-            </div>
-            <button className='btn' onClick={handleOpenCreateModal}>
-              <Plus size={16} /> Nova Transação
+    <div className="space-y-6 text-foreground">
+      <div className="mb-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold">Financeiro</h1>
+            <p className="text-sm text-foreground-muted">Gerencie transações e saldos por banca.</p>
+          </div>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              className={headerGhostButtonClass}
+              onClick={() => setFiltersOpen(true)}
+            >
+              <Filter className="h-4 w-4" />
+              FILTROS
+            </button>
+            <button
+              type="button"
+              className={headerPrimaryButtonClass}
+              onClick={handleOpenCreateModal}
+            >
+              <Plus className="h-4 w-4" />
+              NOVA TRANSAÇÃO
             </button>
           </div>
-        }
-      />
+        </div>
+      </div>
+
+      <section className="grid gap-4 lg:grid-cols-[2fr_1fr_1fr]">
+        {statsLoading ? (
+          <>
+            {[0, 1, 2].map((index) => (
+              <div
+                key={index}
+                className={cn(dashboardCardShellClass, 'animate-pulse space-y-4 text-white')}
+              >
+                <div className="h-5 w-32 rounded-full bg-white/10" />
+                <div className="h-10 w-40 rounded-full bg-white/10" />
+                <div className="space-y-3">
+                  <div className="h-4 w-full rounded-full bg-white/5" />
+                  <div className="h-4 w-3/4 rounded-full bg-white/5" />
+                </div>
+              </div>
+            ))}
+          </>
+        ) : (
+          <>
+            <div className={cn(dashboardCardShellClass, 'bg-bank-hero text-white shadow-[0_35px_55px_rgba(0,0,0,0.35)]')}>
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-[0.65rem] font-semibold uppercase tracking-[0.35em] text-white/70">Saldo Atual</p>
+                  <p className="mt-3 text-4xl font-semibold text-white">{formatCurrency(statsData.saldoAtual)}</p>
+                </div>
+                <div className="rounded-2xl bg-white/10 p-3 text-white">
+                  <Wallet className="h-5 w-5" />
+                </div>
+              </div>
+              <div className="mt-6 grid gap-4 sm:grid-cols-2">
+                <div className="space-y-1 text-sm text-white/80">
+                  <p>Total Depositado</p>
+                  <p className="text-xl font-semibold text-white">{formatCurrency(statsData.totalDepositado)}</p>
+                </div>
+                <div className="space-y-1 text-sm text-white/80">
+                  <p>Total Sacado</p>
+                  <p className="text-xl font-semibold text-white">{formatCurrency(Math.abs(statsData.totalSacado))}</p>
+                </div>
+              </div>
+              <div className="mt-4 text-sm text-white/75">
+                {statsData.totalTransacoes}{' '}
+                {statsData.totalTransacoes === 1 ? 'transação registrada' : 'transações registradas'}
+              </div>
+            </div>
+
+            <div className={dashboardCardShellClass}>
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-[0.65rem] font-semibold uppercase tracking-[0.35em] text-white/60">Resultado de Apostas</p>
+                  <p className="mt-3 text-3xl font-semibold text-white">{formatCurrency(statsData.resultadoApostas)}</p>
+                  <p className="mt-4 text-sm text-white/70">Apostas/saldo recebidas</p>
+                </div>
+                <span className="text-xs font-semibold text-brand-emerald">
+                  {statsData.apostasConcluidas}{' '}
+                  {statsData.apostasConcluidas === 1 ? 'aposta' : 'apostas'}
+                </span>
+              </div>
+            </div>
+
+            <div className={dashboardCardShellClass}>
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-[0.65rem] font-semibold uppercase tracking-[0.35em] text-white/60">Apostas Pendentes</p>
+                  <p className="mt-3 text-3xl font-semibold text-white">{formatCurrency(statsData.valorApostasPendentes)}</p>
+                  <p className="mt-4 text-sm text-white/70">Aguardando resultado</p>
+                </div>
+                <span className="text-xs font-semibold text-amber-300">
+                  {statsData.apostasPendentes}{' '}
+                  {statsData.apostasPendentes === 1 ? 'aposta' : 'apostas'}
+                </span>
+              </div>
+            </div>
+          </>
+        )}
+      </section>
 
       {error && (
-        <div style={{ 
-          padding: '12px 16px', 
-          marginBottom: '24px',
-          background: 'var(--surface)',
-          border: '1px solid var(--color-danger)',
-          borderRadius: '8px',
-          color: 'var(--color-danger)'
-        }}>
+        <div className={cn(sectionCardClass, 'border-danger/30 bg-danger/5 text-sm text-danger')}>
           {error}
         </div>
       )}
 
-      <div className="dashboard-new-hero-stats" style={{ marginBottom: '24px' }}>
-          {/* Card Unificado Principal */}
-          <div className="dashboard-new-hero-main">
-            <div className="dashboard-new-hero-main-header">
-              <div>
-                <p className="dashboard-new-hero-label">Saldo Atual</p>
-                <h2 className="dashboard-new-hero-value">{formatCurrency(statsData.saldoAtual)}</h2>
-              </div>
-              <div className="dashboard-new-hero-badge">
-                <Wallet size={16} />
-                <span>Financeiro</span>
-              </div>
-            </div>
-            
-            <div className="dashboard-new-hero-main-footer">
-              <div>
-                <p className="dashboard-new-hero-footer-label">Total Depositado</p>
-                <p className="dashboard-new-hero-footer-value">{formatCurrency(statsData.totalDepositado)}</p>
-              </div>
-              <div>
-                <p className="dashboard-new-hero-footer-label">Total Sacado</p>
-                <p className="dashboard-new-hero-footer-value">{formatCurrency(statsData.totalSacado)}</p>
-              </div>
-            </div>
+      <section className={cn(dashboardCardShellClass, 'space-y-6')}>
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-semibold text-white">Gerenciar Transações Financeiras</h2>
+            <p className="text-sm text-white/70">Visualize depósitos e saques registrados.</p>
           </div>
-
-          {/* Cards Laterais */}
-          <div className="dashboard-new-hero-card dashboard-new-hero-card--blue">
-            <div className="dashboard-new-hero-card-header">
-              <div className="dashboard-new-hero-card-icon dashboard-new-hero-card-icon--blue">
-                <Wallet size={24} />
-              </div>
-              <span className="dashboard-new-hero-card-badge dashboard-new-hero-card-badge--blue">
-                {statsData.apostasConcluidas} {statsData.apostasConcluidas === 1 ? 'aposta' : 'apostas'}
-              </span>
-            </div>
-            <p className="dashboard-new-hero-card-label">Resultado de Apostas</p>
-            <h3 className="dashboard-new-hero-card-value">{formatCurrency(statsData.resultadoApostas)}</h3>
-            <p className="dashboard-new-hero-card-subtitle">Apostas concluídas</p>
-          </div>
-
-          <div className="dashboard-new-hero-card dashboard-new-hero-card--amber">
-            <div className="dashboard-new-hero-card-header">
-              <div className="dashboard-new-hero-card-icon dashboard-new-hero-card-icon--amber">
-                <Wallet size={24} />
-              </div>
-              <span className="dashboard-new-hero-card-badge dashboard-new-hero-card-badge--amber">
-                {statsData.apostasPendentes} {statsData.apostasPendentes === 1 ? 'aposta' : 'apostas'}
-              </span>
-            </div>
-            <p className="dashboard-new-hero-card-label">Apostas Pendentes</p>
-            <h3 className="dashboard-new-hero-card-value">{formatCurrency(statsData.valorApostasPendentes)}</h3>
-            <p className="dashboard-new-hero-card-subtitle">Aguardando resultado</p>
-          </div>
+          <span className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/70">
+            {transacoes.length} {transacoes.length === 1 ? 'transação' : 'transações'}
+          </span>
         </div>
 
-      <div className="card" style={{ marginBottom: 24 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-          <h3 style={{ marginTop: 0 }}>Gerenciar Transações Financeiras</h3>
-          {transacoes.length > 0 && (
-            <button
-              type="button"
-              className="btn ghost"
-              style={{ padding: '4px 10px', fontSize: '0.8rem' }}
-              onClick={() => setTransactionsExpanded(prev => !prev)}
-            >
-              {transactionsExpanded ? 'Recolher' : 'Expandir'}
-            </button>
-          )}
-        </div>
         {loading ? (
-          <div style={{ padding: '20px', textAlign: 'center' }}>Carregando...</div>
+          <div className="flex h-48 items-center justify-center text-white/70">
+            <Loader2 className="h-6 w-6 animate-spin" />
+          </div>
         ) : transacoes.length === 0 ? (
-          <EmptyState title='Nada encontrado' description='Nenhuma transação financeira foi encontrada.' />
+          <EmptyState title="Nenhuma transação" description="Cadastre um depósito ou saque para visualizar aqui." />
         ) : (
-          <div
-            style={{
-              maxHeight: transactionsExpanded ? 'none' : '420px',
-              overflowY: transactionsExpanded ? 'visible' : 'auto',
-              marginTop: 4
-            }}
-          >
-            <table>
-              <thead>
+          <div className="overflow-hidden rounded-2xl border border-white/10">
+            <table className="min-w-full table-auto text-sm text-white">
+              <thead className="bg-white/5 text-[0.7rem] uppercase tracking-[0.25em] text-white/60">
                 <tr>
-                  <th>Data</th>
-                  <th>Tipo</th>
-                  <th>Casa</th>
-                  <th>Valor</th>
-                  <th>Observação</th>
-                  <th></th>
+                  <th className="px-4 py-3 text-left">Data</th>
+                  <th className="px-4 py-3 text-left">Tipo</th>
+                  <th className="px-4 py-3 text-left">Casa</th>
+                  <th className="px-4 py-3 text-left">Valor</th>
+                  <th className="px-4 py-3 text-left">Observação</th>
+                  <th className="px-4 py-3 text-right">Ações</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-white/10">
                 {transacoes.map((transacao) => (
-                  <tr key={transacao.id}>
-                    <td>{formatDate(transacao.dataTransacao)}</td>
-                    <td>{transacao.tipo}</td>
-                    <td>{transacao.casaDeAposta}</td>
-                    <td>{formatCurrency(transacao.valor)}</td>
-                    <td>{transacao.observacao ?? '-'}</td>
-                    <td>
-                      <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                      <button
-                        type="button"
-                        onClick={() => handleEditTransacao(transacao)}
-                        style={{
-                          border: 'none',
-                          background: 'var(--bank-color-light, var(--color-bg-hover))',
-                          color: 'var(--bank-color, var(--color-chart-primary))',
-                          padding: '6px 10px',
-                          borderRadius: 8,
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 6,
-                          fontWeight: 600,
-                          cursor: 'pointer'
-                        }}
+                  <tr key={transacao.id} className="text-white transition hover:bg-white/5">
+                    <td className="px-4 py-4 font-medium">{formatDate(transacao.dataTransacao)}</td>
+                    <td className="px-4 py-4">
+                      <span
+                        className={cn(
+                          'inline-flex rounded-full px-3 py-1 text-xs font-semibold',
+                          transacao.tipo === 'Depósito' ? 'bg-emerald-500/15 text-emerald-300' : 'bg-rose-500/15 text-rose-300'
+                        )}
                       >
-                        <Pencil size={14} /> Editar
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteTransacao(transacao)}
-                        style={{
-                          border: 'none',
-                          background: 'var(--color-bg-danger-medium)',
-                          color: 'var(--color-danger)',
-                          padding: '6px 10px',
-                          borderRadius: 8,
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 6,
-                          fontWeight: 600,
-                          cursor: 'pointer'
-                        }}
-                      >
-                        <Trash2 size={14} /> Excluir
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                        {transacao.tipo}
+                      </span>
+                    </td>
+                    <td className="px-4 py-4 text-white/80">{transacao.casaDeAposta}</td>
+                    <td
+                      className={cn(
+                        'px-4 py-4 font-semibold',
+                        transacao.tipo === 'Depósito' ? 'text-emerald-300' : 'text-rose-300'
+                      )}
+                    >
+                      {formatCurrency(transacao.valor)}
+                    </td>
+                    <td className="px-4 py-4 text-white/70">
+                      {transacao.observacao?.trim() ? transacao.observacao : '-'}
+                    </td>
+                    <td className="px-4 py-4">
+                      <div className="flex justify-end gap-2">
+                        <button
+                          type="button"
+                          className={tableActionButtonClass}
+                          onClick={() => handleEditTransacao(transacao)}
+                          aria-label="Editar transação"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          className={tableActionButtonDangerClass}
+                          onClick={() => handleDeleteTransacao(transacao)}
+                          aria-label="Remover transação"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
         )}
-      </div>
-
-      <div className="card">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-          <h3 style={{ marginTop: 0 }}>Saldo Ajustado por Casa</h3>
-          {Object.keys(statsData.porCasa).length > 0 && (
-            <button
-              type="button"
-              className="btn ghost"
-              style={{ padding: '4px 10px', fontSize: '0.8rem' }}
-              onClick={() => setSaldoCasaExpanded(prev => !prev)}
-            >
-              {saldoCasaExpanded ? 'Recolher' : 'Expandir'}
-            </button>
-          )}
-        </div>
-        {loading ? (
-          <div style={{ padding: '20px', textAlign: 'center' }}>Carregando...</div>
-        ) : Object.keys(statsData.porCasa).length > 0 ? (
-          <div
-            style={{
-              maxHeight: saldoCasaExpanded ? 'none' : '360px',
-              overflowY: saldoCasaExpanded ? 'visible' : 'auto',
-              marginTop: 4
-            }}
-          >
-            <table>
-              <thead>
-                <tr>
-                  <th>Casa de Aposta</th>
-                  <th>Depósitos</th>
-                  <th>Saques</th>
-                  <th>Resultado de Apostas</th>
-                  <th>Saldo Ajustado</th>
-                </tr>
-              </thead>
-              <tbody>
-                {Object.entries(statsData.porCasa)
-                  .sort((a, b) => b[1].saldo - a[1].saldo)
-                  .map(([casa, dados]) => (
-                    <tr key={casa}>
-                      <td style={{ fontWeight: 600 }}>{casa}</td>
-                      <td>{formatCurrency(dados.depositos)}</td>
-                      <td>{formatCurrency(dados.saques)}</td>
-                      <td style={{ color: dados.resultado >= 0 ? 'var(--color-success)' : 'var(--color-danger)' }}>
-                        {formatCurrency(dados.resultado)}
-                      </td>
-                      <td style={{ 
-                        fontWeight: 600, 
-                        color: dados.saldo >= 0 ? 'var(--color-success)' : 'var(--color-danger)' 
-                      }}>
-                        {formatCurrency(dados.saldo)}
-                      </td>
-                    </tr>
-                  ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <EmptyState title='Nada encontrado' description='Nenhum saldo encontrado para as casas filtradas.' />
-        )}
-      </div>
+      </section>
 
       <Modal
         isOpen={modalOpen}
+        title={editingId ? 'Editar transação' : 'Nova transação'}
         onClose={handleCloseModal}
-        title={editingId ? 'Editar Transação' : 'Nova Transação'}
+        size="lg"
       >
-        <form onSubmit={handleSubmit} className='filters-panel filters-panel--plain' style={{ gridTemplateColumns: '1fr 1fr' }}>
-          <div className='field'>
-            <label>Banca *</label>
-            <select 
-              value={formData.bancaId}
-              onChange={(e) => handleFormChange('bancaId', e.target.value)}
-              style={{ color: formData.bancaId ? 'var(--text)' : 'var(--muted)' }}
-            >
-              <option value="" disabled hidden>Selecione uma banca</option>
-              {bancas.map((banca) => (
-                <option key={banca.id} value={banca.id}>
-                  {banca.nome}
-                </option>
-              ))}
-            </select>
-            {formErrors.bancaId && <span className="field-error">{formErrors.bancaId}</span>}
+        <form className="space-y-5 text-foreground" onSubmit={handleSubmit}>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Banca</label>
+              <select
+                className={cn(inputClass, !formData.bancaId && 'text-foreground-muted')}
+                value={formData.bancaId}
+                onChange={(event) => handleFormChange('bancaId', event.target.value)}
+              >
+                <option value="">Selecione</option>
+                {bancas.map((banca) => (
+                  <option key={banca.id} value={banca.id}>
+                    {banca.nome}
+                  </option>
+                ))}
+              </select>
+              {formErrors.bancaId && <p className="text-xs text-danger">{formErrors.bancaId}</p>}
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Tipo de transação</label>
+              <select
+                className={cn(inputClass, !formData.tipo && 'text-foreground-muted')}
+                value={formData.tipo}
+                onChange={(event) => handleFormChange('tipo', event.target.value as TipoFiltro)}
+              >
+                <option value="">Selecione</option>
+                <option value="Depósito">Depósito</option>
+                <option value="Saque">Saque</option>
+              </select>
+              {formErrors.tipo && <p className="text-xs text-danger">{formErrors.tipo}</p>}
+            </div>
           </div>
-          <div className='field'>
-            <label>Tipo *</label>
-            <select 
-              value={formData.tipo}
-              onChange={(e) => handleFormChange('tipo', e.target.value)}
-              style={{ color: formData.tipo ? 'var(--text)' : 'var(--muted)' }}
-            >
-              <option value="" disabled hidden>Selecione o tipo</option>
-              <option value="Depósito">Depósito</option>
-              <option value="Saque">Saque</option>
-            </select>
-            {formErrors.tipo && <span className="field-error">{formErrors.tipo}</span>}
-          </div>
-          <div className='field'>
-            <label>Casa de Apostas *</label>
-            <select 
-              value={formData.casaDeAposta}
-              onChange={(e) => handleFormChange('casaDeAposta', e.target.value)}
-              style={{ color: formData.casaDeAposta ? 'var(--text)' : 'var(--muted)' }}
-            >
-              <option value="" disabled hidden>Selecione uma casa…</option>
-              {CASAS_APOSTAS.length > 0 && CASAS_APOSTAS.map((casa) => (
-                <option key={casa} value={casa}>
-                  {casa}
-                </option>
-              ))}
-            </select>
-            {formErrors.casaDeAposta && <span className="field-error">{formErrors.casaDeAposta}</span>}
-          </div>
-          <div className='field'>
-            <label>Valor *</label>
-            <input 
-              type='number' 
-              placeholder='0,00' 
-              value={formData.valor}
-              onChange={(e) => handleFormChange('valor', e.target.value)}
-              step="0.01"
-              min="0.01"
-            />
-            {formErrors.valor && <span className="field-error">{formErrors.valor}</span>}
-          </div>
-          <div className='field'>
-            <label>Data da Transação *</label>
-            <input
-              type='text'
-              placeholder='dd/mm/aaaa'
-              value={manualDateInput}
-              onChange={(e) => {
-                const digits = e.target.value.replace(/[^\d]/g, '').slice(0, 8);
-                const day = digits.slice(0, 2);
-                const month = digits.slice(2, 4);
-                const year = digits.slice(4, 8);
-                let formatted = day;
-                if (month) {
-                  formatted = `${day}/${month}`;
-                }
-                if (year) {
-                  formatted = `${formatted}/${year}`;
-                }
-                setManualDateInput(formatted);
 
-                const maybeISO = normalizeDisplayToISO(formatted);
-                if (maybeISO) {
-                  handleFormChange('dataTransacao', maybeISO);
-                  if (formErrors.dataTransacao) {
-                    setFormErrors(prev => ({ ...prev, dataTransacao: '' }));
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Casa de apostas</label>
+              <select
+                className={cn(inputClass, !formData.casaDeAposta && 'text-foreground-muted')}
+                value={formData.casaDeAposta}
+                onChange={(event) => handleFormChange('casaDeAposta', event.target.value)}
+              >
+                <option value="">Selecione</option>
+                {CASAS_APOSTAS.map((casa) => (
+                  <option key={casa} value={casa}>
+                    {casa}
+                  </option>
+                ))}
+              </select>
+              {formErrors.casaDeAposta && <p className="text-xs text-danger">{formErrors.casaDeAposta}</p>}
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Valor</label>
+              <input
+                className={inputClass}
+                inputMode="decimal"
+                value={formData.valor}
+                onChange={(event) => handleFormChange('valor', event.target.value)}
+                placeholder="0,00"
+              />
+              {formErrors.valor && <p className="text-xs text-danger">{formErrors.valor}</p>}
+            </div>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Data</label>
+              <DateInput
+                value={manualDateInput}
+                onChange={(value) => {
+                  setManualDateInput(value);
+                  const isoValue = normalizeDisplayToISO(value);
+                  if (isoValue) {
+                    handleFormChange('dataTransacao', isoValue);
                   }
-                }
-              }}
-              onBlur={(e) => {
-                const maybeISO = normalizeDisplayToISO(e.target.value);
-                if (maybeISO) {
-                  handleFormChange('dataTransacao', maybeISO);
-                  setManualDateInput(formatDateDisplay(maybeISO));
-                  setFormErrors(prev => ({ ...prev, dataTransacao: '' }));
-                } else if (e.target.value.trim() !== '') {
-                  setFormErrors(prev => ({ ...prev, dataTransacao: 'Informe uma data válida' }));
-                }
-              }}
-              style={{
-                background: 'var(--surface)',
-                color: 'var(--text)',
-                border: '1.5px solid var(--border)',
-                borderRadius: '8px',
-                padding: '10px 14px',
-                fontWeight: 500
-              }}
-            />
-            {formErrors.dataTransacao && <span className="field-error">{formErrors.dataTransacao}</span>}
+                }}
+                placeholder="dd/mm/aaaa"
+                className={inputClass}
+              />
+              {formErrors.dataTransacao && <p className="text-xs text-danger">{formErrors.dataTransacao}</p>}
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Observação</label>
+              <input
+                className={inputClass}
+                value={formData.observacao}
+                onChange={(event) => handleFormChange('observacao', event.target.value)}
+                placeholder="Detalhes adicionais"
+              />
+            </div>
           </div>
-          <div className='field' style={{ gridColumn: 'span 2' }}>
-            <label>Observação</label>
-            <textarea 
-              rows={3} 
-              placeholder='Descrição opcional da transação…'
-              value={formData.observacao}
-              onChange={(e) => handleFormChange('observacao', e.target.value)}
-            />
+
+          <div className="flex justify-end gap-3">
+            <button
+              type="button"
+              className="rounded-2xl border border-border/40 px-4 py-2 text-sm text-foreground hocus:border-brand-emerald/40"
+              onClick={handleCloseModal}
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              className="inline-flex items-center gap-2 rounded-2xl border border-brand-emerald/40 bg-brand-emerald/10 px-4 py-2 text-sm font-semibold text-brand-emerald hocus:bg-brand-emerald/20"
+              disabled={saving}
+            >
+              {saving ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" /> Salvando
+                </>
+              ) : (
+                'Salvar transação'
+              )}
+            </button>
           </div>
-          <button 
-            type='submit' 
-            className='btn' 
-            style={{ gridColumn: 'span 2', justifyContent: 'center' }}
-            disabled={saving}
-          >
-            {saving ? 'Salvando...' : editingId ? 'Atualizar Transação' : 'Salvar Transação'}
-          </button>
         </form>
       </Modal>
     </div>
   );
 }
+
 

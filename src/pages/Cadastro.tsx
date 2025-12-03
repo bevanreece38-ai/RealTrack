@@ -1,12 +1,17 @@
 import { useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, Target, ChevronRight, User } from 'lucide-react';
-import api from '../lib/api';
+import { authService } from '../services/api';
 import { type ApiError } from '../types/api';
 
-interface RegisterResponse {
-  token: string;
-}
+const inputClass =
+  'w-full rounded-2xl border border-white/10 bg-white/90 py-3.5 pl-11 pr-4 text-sm text-slate-900 placeholder:text-slate-500 transition focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-400/30';
+const fieldLabelClass = 'text-sm font-medium text-slate-300';
+const fieldWrapperClass = 'flex flex-col gap-2.5';
+const formCardClass =
+  'relative z-10 w-full rounded-[32px] border border-white/10 bg-[rgba(6,19,27,0.9)] p-8 shadow-[0_30px_60px_rgba(2,6,23,0.35)] backdrop-blur-2xl lg:p-10';
+const primaryButtonClass =
+  'mt-7 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 py-4 text-base font-semibold text-white shadow-[0_0_30px_rgba(16,185,129,0.35)] transition hover:from-emerald-600 hover:to-emerald-700 disabled:cursor-not-allowed disabled:opacity-80';
 
 export default function Cadastro() {
   const navigate = useNavigate();
@@ -39,11 +44,7 @@ export default function Cadastro() {
     setLoading(true);
 
     try {
-      const { data } = await api.post<RegisterResponse>('/auth/register', {
-        nomeCompleto,
-        email,
-        senha
-      });
+      const data = await authService.register(nomeCompleto, email, senha);
       
       if (data.token) {
         localStorage.setItem('token', data.token);
@@ -59,65 +60,60 @@ export default function Cadastro() {
   };
 
   return (
-    <div className="cadastro-page w-screen h-screen bg-gradient-to-br from-emerald-950 via-slate-950 to-slate-950 flex flex-col lg:flex-row relative overflow-hidden" style={{ transform: 'scale(1.05)', transformOrigin: 'top left', width: '100vw', height: '100vh', overflow: 'hidden', position: 'fixed', top: '0', left: '0' }}>
-      {/* Decorative Elements */}
-      <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/5 rounded-full blur-3xl" />
-      <div className="absolute bottom-0 left-0 w-96 h-96 bg-emerald-600/5 rounded-full blur-3xl" />
-      
+    <div className="cadastro-page relative flex min-h-screen w-full flex-col overflow-hidden bg-[#010806] text-slate-100 lg:flex-row">
+      <div className="pointer-events-none absolute -right-12 -top-20 h-[26rem] w-[26rem] rounded-full bg-emerald-500/25 blur-[180px]" aria-hidden="true" />
+      <div className="pointer-events-none absolute -bottom-16 -left-16 h-[28rem] w-[28rem] rounded-full bg-emerald-600/20 blur-[180px]" aria-hidden="true" />
+
       {/* Left Panel - Hero */}
-      <div className="lg:w-1/2 p-8 lg:p-16 flex flex-col justify-between relative z-10">
-        {/* Logo & Title */}
-        <div className="pt-20">
-          <div className="flex items-center gap-3 mb-16">
-            <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/30">
+      <div className="relative z-10 flex flex-col justify-between px-6 py-12 sm:px-10 lg:w-1/2 lg:px-16 lg:py-20">
+        <div className="pt-10 lg:pt-14">
+          <div className="mb-16 flex items-center gap-3">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 shadow-lg shadow-emerald-500/30">
               <Target className="text-white" size={24} strokeWidth={2.5} />
             </div>
             <div>
-              <div className="text-white text-xl">Real Comando</div>
-              <div className="text-emerald-400 text-xs tracking-wider">Planilha Esportiva</div>
+              <div className="text-xl font-semibold text-white">Real Comando</div>
+              <div className="text-[0.65rem] uppercase tracking-[0.3em] text-emerald-300">Planilha Esportiva</div>
             </div>
           </div>
 
-          <div className="max-w-2xl pt-10">
-            <h1 className="text-white text-5xl lg:text-6xl mb-6">
+          <div className="max-w-2xl space-y-6">
+            <h1 className="text-4xl font-semibold text-white lg:text-6xl">
               Comece sua jornada
-              <span className="block text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-400 mt-2">
+              <span className="mt-2 block bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">
                 nas apostas esportivas
               </span>
             </h1>
-            <p className="text-slate-400 text-lg leading-relaxed">
+            <p className="text-lg leading-relaxed text-slate-300">
               Crie sua conta e tenha acesso a ferramentas profissionais para análise e gestão.
             </p>
           </div>
         </div>
-
-              </div>
+      </div>
 
       {/* Right Panel - Register Form */}
-      <div className="lg:w-1/2 flex items-center justify-center p-8 relative z-10">
-        <div className="w-full max-w-md">
-          {/* Background Card Effect */}
-          <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent rounded-3xl blur-3xl" />
-          
-          {/* Register Card */}
-          <div className="relative bg-slate-900/90 backdrop-blur-2xl border border-slate-800/50 rounded-2xl p-8 lg:p-10 shadow-2xl">
-            {/* Header */}
+      <div className="relative z-10 flex w-full items-center justify-center px-6 py-12 sm:px-10 lg:w-1/2 lg:px-16 lg:py-16">
+        <div className="relative w-full max-w-md">
+          <div
+            className="pointer-events-none absolute -inset-4 rounded-[32px] bg-gradient-to-br from-emerald-400/15 via-transparent to-transparent blur-3xl"
+            aria-hidden="true"
+          />
+
+          <div className={formCardClass}>
             <div className="mb-8">
-              <h2 className="text-white text-2xl mb-2">Criar conta</h2>
+              <h2 className="mb-2 text-2xl text-white">Criar conta</h2>
               <p className="text-slate-400">Preencha os dados para começar</p>
             </div>
 
-            {/* Form */}
-            <form onSubmit={handleSubmit} className="space-y-5">
-              {/* Name */}
-              <div>
-                <label htmlFor="name" className="block text-slate-300 mb-2.5 text-sm">
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className={fieldWrapperClass}>
+                <label htmlFor="name" className={fieldLabelClass}>
                   Apelido
                 </label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
-                    <User className="text-slate-500" size={18} />
-                  </div>
+                  <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-slate-500">
+                    <User size={18} />
+                  </span>
                   <input
                     ref={nameInputRef}
                     id="name"
@@ -125,31 +121,21 @@ export default function Cadastro() {
                     value={nomeCompleto}
                     onChange={(e) => setNomeCompleto(e.target.value)}
                     placeholder="Seu apelido"
-                    className="w-full bg-black border border-slate-700/50 text-white rounded-xl pl-11 pr-4 py-3.5 text-sm placeholder:text-slate-600 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20 transition-all"
-                    style={{ 
-                      color: '#ffffff !important', 
-                      backgroundColor: '#000000 !important', 
-                      WebkitTextFillColor: '#ffffff !important',
-                      WebkitBoxShadow: '0 0 0 1000px #000000 inset !important',
-                      boxShadow: 'inset 0 0 0 1000px #000000 !important',
-                      transition: 'background-color 5000s ease-in-out 0s',
-                      transitionDelay: '5000s'
-                    }}
+                    className={inputClass}
                     required
                     autoComplete="name"
                   />
                 </div>
               </div>
 
-              {/* Email */}
-              <div>
-                <label htmlFor="email" className="block text-slate-300 mb-2.5 text-sm">
+              <div className={fieldWrapperClass}>
+                <label htmlFor="email" className={fieldLabelClass}>
                   Endereço de e-mail
                 </label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
-                    <Mail className="text-slate-500" size={18} />
-                  </div>
+                  <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-slate-500">
+                    <Mail size={18} />
+                  </span>
                   <input
                     ref={emailInputRef}
                     id="email"
@@ -157,31 +143,21 @@ export default function Cadastro() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="voce@exemplo.com"
-                    className="w-full bg-black border border-slate-700/50 text-white rounded-xl pl-11 pr-4 py-3.5 text-sm placeholder:text-slate-600 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20 transition-all"
-                    style={{ 
-                      color: '#ffffff !important', 
-                      backgroundColor: '#000000 !important', 
-                      WebkitTextFillColor: '#ffffff !important',
-                      WebkitBoxShadow: '0 0 0 1000px #000000 inset !important',
-                      boxShadow: 'inset 0 0 0 1000px #000000 !important',
-                      transition: 'background-color 5000s ease-in-out 0s',
-                      transitionDelay: '5000s'
-                    }}
+                    className={inputClass}
                     required
                     autoComplete="email"
                   />
                 </div>
               </div>
 
-              {/* Password */}
-              <div>
-                <label htmlFor="password" className="block text-slate-300 mb-2.5 text-sm">
+              <div className={fieldWrapperClass}>
+                <label htmlFor="password" className={fieldLabelClass}>
                   Senha
                 </label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
-                    <Lock className="text-slate-500" size={18} />
-                  </div>
+                  <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-slate-500">
+                    <Lock size={18} />
+                  </span>
                   <input
                     ref={passwordInputRef}
                     id="password"
@@ -189,38 +165,28 @@ export default function Cadastro() {
                     value={senha}
                     onChange={(e) => setSenha(e.target.value)}
                     placeholder="••••••••••"
-                    className="w-full bg-black border border-slate-700/50 text-white rounded-xl pl-11 pr-11 py-3.5 text-sm placeholder:text-slate-600 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20 transition-all"
-                    style={{ 
-                      color: '#ffffff !important', 
-                      backgroundColor: '#000000 !important', 
-                      WebkitTextFillColor: '#ffffff !important',
-                      WebkitBoxShadow: '0 0 0 1000px #000000 inset !important',
-                      boxShadow: 'inset 0 0 0 1000px #000000 !important',
-                      transition: 'background-color 5000s ease-in-out 0s',
-                      transitionDelay: '5000s'
-                    }}
+                    className={`${inputClass} pr-11`}
                     required
                     autoComplete="new-password"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-0 flex items-center pr-4 text-slate-500 hover:text-slate-300 transition-colors"
+                    className="absolute inset-y-0 right-0 flex items-center pr-4 text-slate-500 transition hover:text-slate-300"
                   >
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 </div>
               </div>
 
-              {/* Confirm Password */}
-              <div>
-                <label htmlFor="confirmPassword" className="block text-slate-300 mb-2.5 text-sm">
+              <div className={fieldWrapperClass}>
+                <label htmlFor="confirmPassword" className={fieldLabelClass}>
                   Confirmar senha
                 </label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
-                    <Lock className="text-slate-500" size={18} />
-                  </div>
+                  <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-slate-500">
+                    <Lock size={18} />
+                  </span>
                   <input
                     ref={confirmPasswordInputRef}
                     id="confirmPassword"
@@ -228,80 +194,54 @@ export default function Cadastro() {
                     value={confirmarSenha}
                     onChange={(e) => setConfirmarSenha(e.target.value)}
                     placeholder="••••••••••"
-                    className="w-full bg-black border border-slate-700/50 text-white rounded-xl pl-11 pr-11 py-3.5 text-sm placeholder:text-slate-600 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20 transition-all"
-                    style={{ 
-                      color: '#ffffff !important', 
-                      backgroundColor: '#000000 !important', 
-                      WebkitTextFillColor: '#ffffff !important',
-                      WebkitBoxShadow: '0 0 0 1000px #000000 inset !important',
-                      boxShadow: 'inset 0 0 0 1000px #000000 !important',
-                      transition: 'background-color 5000s ease-in-out 0s',
-                      transitionDelay: '5000s'
-                    }}
+                    className={`${inputClass} pr-11`}
                     required
                     autoComplete="new-password"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-0 flex items-center pr-4 text-slate-500 hover:text-slate-300 transition-colors"
+                    className="absolute inset-y-0 right-0 flex items-center pr-4 text-slate-500 transition hover:text-slate-300"
                   >
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 </div>
               </div>
 
-              {/* Error Message */}
               {error && (
-                <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm">
-                  {error}
-                </div>
+                <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">{error}</div>
               )}
 
-              {/* Submit Button */}
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 disabled:from-slate-600 disabled:to-slate-700 text-white py-4 rounded-xl transition-all shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40 disabled:shadow-none flex items-center justify-center gap-2 group mt-7 disabled:cursor-not-allowed"
-              >
+              <button type="submit" disabled={loading} className={`${primaryButtonClass} group`}>
                 <span>{loading ? 'Criando conta...' : 'Criar conta'}</span>
-                <ChevronRight size={18} className="group-hover:translate-x-0.5 transition-transform" />
+                <ChevronRight size={18} className="transition-transform group-hover:translate-x-0.5" />
               </button>
             </form>
 
-            {/* Divider */}
-            <div className="relative my-7">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-slate-800"></div>
-              </div>
-              <div className="relative flex justify-center">
-                <span className="px-4 bg-slate-900 text-slate-600 text-xs uppercase tracking-wider">
-                  Já tem conta?
-                </span>
-              </div>
+            <div className="relative my-7 flex items-center">
+              <div className="h-px w-full bg-slate-800" />
+              <span className="absolute bg-[rgba(6,19,27,0.95)] px-4 text-xs font-semibold uppercase tracking-[0.3em] text-slate-600">
+                Já tem conta?
+              </span>
             </div>
 
-            {/* Login Link */}
             <div className="text-center">
-              <Link 
-                to="/login" 
-                className="inline-flex items-center justify-center gap-2 text-slate-300 hover:text-emerald-400 transition-colors group"
+              <Link
+                to="/login"
+                className="group inline-flex items-center justify-center gap-2 text-sm text-slate-300 transition hover:text-emerald-400"
               >
-                <span className="text-sm">Faça login na sua conta</span>
-                <ChevronRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
+                <span>Faça login na sua conta</span>
+                <ChevronRight size={16} className="transition-transform group-hover:translate-x-0.5" />
               </Link>
             </div>
           </div>
 
-          {/* Trust Badge */}
-          <div className="mt-6 text-center">
-            <p className="text-slate-600 text-xs flex items-center justify-center gap-2">
-              <svg className="w-4 h-4 text-emerald-500" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
-              </svg>
-              Seus dados estão protegidos com criptografia de ponta
-            </p>
-          </div>
+          <p className="mt-6 flex items-center justify-center gap-2 text-center text-xs text-slate-600">
+            <svg className="h-4 w-4 text-emerald-500" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+              <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+            </svg>
+            Seus dados estão protegidos com criptografia de ponta
+          </p>
         </div>
       </div>
     </div>

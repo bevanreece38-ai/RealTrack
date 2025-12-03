@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import '../index.css';
-import api from '../lib/api';
+import { authService, apostaService, telegramService } from '../services/api';
 import { type ApiBetWithBank, type ApiError } from '../types/api';
 import { STATUS_APOSTAS } from '../constants/statusApostas';
+
+const toRetornoString = (value: number) => (Number.isFinite(value) ? value.toString() : '');
 
 const STATUS_WITH_RETURNS = ['Ganha', 'Meio Ganha', 'Cashout'];
 
@@ -50,9 +51,7 @@ export default function TelegramStatus() {
       const webapp = window.Telegram?.WebApp;
       if (isTelegram && webapp?.initData) {
         try {
-          const { data } = await api.post<{ token?: string }>('/auth/telegram', {
-            initData: webapp.initData
-          });
+          const data = await authService.telegramAuth(webapp.initData);
           if (typeof data.token === 'string') {
             localStorage.setItem('token', data.token);
             setAuthenticated(true);
@@ -78,12 +77,13 @@ export default function TelegramStatus() {
   const fetchAposta = useCallback(async () => {
     try {
       setLoading(true);
-      const { data: apostas } = await api.get<ApiBetWithBank[]>('/apostas');
-      const apostaEncontrada = apostas.find(a => a.id === betId);
+      const response = await apostaService.getAll();
+      const apostasArray = response.apostas;
+      const apostaEncontrada = apostasArray.find(a => a.id === betId);
       if (apostaEncontrada) {
         setAposta(apostaEncontrada);
         setStatus(apostaEncontrada.status);
-        setRetornoObtido(apostaEncontrada.retornoObtido != null ? apostaEncontrada.retornoObtido.toString() : '');
+        setRetornoObtido(toRetornoString(apostaEncontrada.retornoObtido));
       } else {
         setError('Aposta não encontrada');
       }
@@ -103,7 +103,7 @@ export default function TelegramStatus() {
 
   const handleSave = useCallback(async () => {
     if (!betId || !aposta) return;
-    
+
     // Prevenir múltiplas chamadas simultâneas
     if (saving) {
       console.warn('Salvamento já em andamento, ignorando chamada duplicada');
@@ -124,14 +124,11 @@ export default function TelegramStatus() {
         payload.retornoObtido = null;
       }
 
-      await api.put(`/apostas/${betId}`, payload);
+      await apostaService.update(betId, payload);
 
       // Atualizar mensagem do Telegram se messageId e chatId estiverem disponíveis
       if (messageId && chatId) {
-        void api.post(`/telegram/update-bet-message/${betId}`, {
-          messageId,
-          chatId
-        }).catch((err: unknown) => {
+        void telegramService.updateBetMessage(betId, messageId, chatId).catch((err: unknown) => {
           console.warn('Erro ao atualizar mensagem do Telegram:', err);
         });
       }
@@ -169,61 +166,45 @@ export default function TelegramStatus() {
 
   if (!authenticated || loading) {
     return (
-      <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text)' }}>
-        <p>{!authenticated ? 'Autenticando...' : 'Carregando...'}</p>
+      <div className="flex min-h-screen items-center justify-center bg-background p-5 text-center text-foreground">
+        <p className="text-sm text-foreground-muted">
+          {!authenticated ? 'Autenticando...' : 'Carregando...'}
+        </p>
       </div>
     );
   }
 
   if (error && !aposta) {
     return (
-      <div style={{ padding: '20px', textAlign: 'center', color: 'var(--color-danger)' }}>
-        <p>{error}</p>
+      <div className="flex min-h-screen items-center justify-center bg-background p-5 text-center">
+        <p className="text-base font-semibold text-danger">{error}</p>
       </div>
     );
   }
 
   return (
-    <div style={{
-      padding: '16px',
-      background: 'var(--bg)',
-      color: 'var(--text)',
-      minHeight: '100vh',
-      fontFamily: 'system-ui, -apple-system, sans-serif'
-    }}>
-      <h2 style={{ marginTop: 0, marginBottom: '24px', fontSize: '24px', fontWeight: 'bold' }}>
-        📚 Alterar Status
-      </h2>
+    <div className="min-h-screen bg-background p-4 text-foreground">
+      <h2 className="mb-6 text-2xl font-semibold">📚 Alterar Status</h2>
 
       {aposta && (
-        <div style={{
-          padding: '16px',
-          background: 'var(--card-bg)',
-          borderRadius: '8px',
-          marginBottom: '24px',
-          border: '1px solid var(--border)'
-        }}>
-          <p style={{ margin: '0 0 8px 0', fontWeight: '500' }}>Jogo: {aposta.jogo}</p>
-          <p style={{ margin: '0 0 8px 0', color: 'var(--muted)' }}>Esporte: {aposta.esporte}</p>
-          <p style={{ margin: 0, color: 'var(--muted)' }}>Valor: R$ {aposta.valorApostado.toFixed(2)} | Odd: {aposta.odd}</p>
+        <div className="mb-6 rounded-xl border border-border/60 bg-background/70 p-4 shadow-sm">
+          <p className="mb-2 font-medium">Jogo: {aposta.jogo}</p>
+          <p className="mb-2 text-sm text-foreground-muted">Esporte: {aposta.esporte}</p>
+          <p className="text-sm text-foreground-muted">
+            Valor: R$ {aposta.valorApostado.toFixed(2)} | Odd: {aposta.odd}
+          </p>
         </div>
       )}
 
       {error && (
-        <div style={{
-          padding: '12px',
-          background: 'var(--color-danger)',
-          color: 'white',
-          borderRadius: '8px',
-          marginBottom: '16px'
-        }}>
+        <div className="mb-4 rounded-lg bg-danger/90 px-4 py-3 text-sm font-medium text-white">
           {error}
         </div>
       )}
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      <div className="flex flex-col gap-4">
         <div>
-          <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>Status *</label>
+          <label className="mb-2 block text-sm font-medium">Status *</label>
           <select
             value={status}
             onChange={(e) => {
@@ -232,15 +213,7 @@ export default function TelegramStatus() {
                 setRetornoObtido('');
               }
             }}
-            style={{
-              width: '100%',
-              padding: '12px',
-              borderRadius: '8px',
-              border: '1px solid var(--border)',
-              background: 'var(--card-bg)',
-              color: 'var(--text)',
-              fontSize: '16px'
-            }}
+            className="w-full rounded-lg border border-border/60 bg-background px-3 py-3 text-base text-foreground shadow-sm focus:border-brand-emerald focus:outline-none focus:ring-2 focus:ring-brand-emerald/30"
           >
             {STATUS_APOSTAS.filter(s => s !== 'Tudo').map(statusOption => (
               <option key={statusOption} value={statusOption}>{statusOption}</option>
@@ -250,26 +223,16 @@ export default function TelegramStatus() {
 
         {STATUS_WITH_RETURNS.includes(status) && (
           <div>
-            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>Retorno Obtido *</label>
+            <label className="mb-2 block text-sm font-medium">Retorno Obtido *</label>
             <input
               type="number"
               step="0.01"
               value={retornoObtido}
               onChange={(e) => setRetornoObtido(e.target.value)}
               placeholder="0.00"
-              style={{
-                width: '100%',
-                padding: '12px',
-                borderRadius: '8px',
-                border: '1px solid var(--border)',
-                background: 'var(--card-bg)',
-                color: 'var(--text)',
-                fontSize: '16px'
-              }}
+              className="w-full rounded-lg border border-border/60 bg-background px-3 py-3 text-base text-foreground shadow-sm focus:border-brand-emerald focus:outline-none focus:ring-2 focus:ring-brand-emerald/30"
             />
-            <p style={{ marginTop: '8px', fontSize: '14px', color: 'var(--muted)' }}>
-              Valor recebido após a aposta ser concluída
-            </p>
+            <p className="mt-2 text-sm text-foreground-muted">Valor recebido após a aposta ser concluída</p>
           </div>
         )}
       </div>
@@ -278,18 +241,9 @@ export default function TelegramStatus() {
         <button
           onClick={handleSave}
           disabled={saving}
-          style={{
-            width: '100%',
-            marginTop: '24px',
-            padding: '16px',
-            background: saving ? 'var(--muted)' : 'var(--primary)',
-            color: 'white',
-            border: 'none',
-            borderRadius: '8px',
-            fontSize: '16px',
-            fontWeight: 'bold',
-            cursor: saving ? 'not-allowed' : 'pointer'
-          }}
+          className={`mt-6 w-full rounded-lg px-5 py-4 text-base font-semibold text-white transition-colors ${saving
+            ? 'cursor-not-allowed bg-foreground-muted'
+            : 'bg-brand-emerald hover:bg-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-emerald'}`}
         >
           {saving ? 'Salvando...' : 'Salvar Status'}
         </button>

@@ -1,1068 +1,693 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { LineChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid } from 'recharts';
-import { Filter, TrendingUp, ArrowUpRight, Trophy, Plus, Download } from 'lucide-react';
+import { ArrowUpRight, ChevronDown, Download, Filter, Loader2, Plus, TrendingUp, Trophy } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import FilterPopover from '../components/FilterPopover';
 import DateInput from '../components/DateInput';
 import { CASAS_APOSTAS } from '../constants/casasApostas';
 import { STATUS_APOSTAS } from '../constants/statusApostas';
-import api from '../lib/api';
-import { useTipsters } from '../hooks/useTipsters';
 import { formatCurrency, formatPercent, getFirstName } from '../utils/formatters';
-import type { ApiProfileResponse } from '../types/api';
-import '../styles/dashboard-new.css';
+import { useDashboardData, useTipsters, useBancas } from '../hooks';
+import { cn } from '../components/ui/utils';
+import { chartTheme } from '../utils/chartTheme';
 
-interface DashboardFilters {
-  status: string;
-  tipster: string;
-  casa: string;
-  dataInicio: string;
-  dataFim: string;
-}
+const formatSignedPercent = (value: number): string => {
+  const normalized = formatPercent(Math.abs(value));
+  if (value > 0) return `+${normalized}`;
+  if (value < 0) return `-${normalized}`;
+  return normalized;
+};
 
-interface DashboardMetricas {
+const formatSignedCurrency = (value: number): string => {
+  const normalized = formatCurrency(Math.abs(value));
+  if (value > 0) return `+${normalized}`;
+  if (value < 0) return `-${normalized}`;
+  return normalized;
+};
+
+const timeframeOptions = [
+  { value: '7', label: '7 dias' },
+  { value: '30', label: '30 dias' },
+  { value: '60', label: '60 dias' },
+];
+
+const labelTextClass = 'text-white/65';
+const softLabelTextClass = 'text-white/55';
+
+interface BreakdownCardItem {
+  id: string;
+  icon: string;
+  name: string;
+  subtitle: string;
   roi: number;
-  taxaAcerto: number;
-  lucroTotal: number;
-  totalInvestido: number;
-  totalDepositado: number;
-  totalSacado: number;
-  saldoBanca: number;
-}
-
-interface LucroAcumuladoItem {
-  date: string;
   lucro: number;
-  acumulado: number;
-}
-
-interface LucroPorTipsterItem {
-  tipster: string;
-  lucro: number;
-}
-
-interface ResumoEsporteItem {
-  esporte: string;
   apostas: number;
   ganhas: number;
   aproveitamento: number;
-  stakeMedia: number;
-  lucro: number;
-  roi: number;
+  stake: number;
+  extraStats?: {
+    label: string;
+    value: string;
+    helper?: string;
+    highlight?: 'positive' | 'negative';
+  }[];
 }
 
-interface ResumoCasaItem {
-  casa: string;
-  apostas: number;
-  ganhas: number;
-  aproveitamento: number;
-  stakeMedia: number;
-  lucro: number;
-  saldo: number;
-  roi: number;
+interface BreakdownListProps {
+  items: BreakdownCardItem[];
+  expandedId: string | null;
+  onToggle: (id: string | null) => void;
+  emptyMessage: string;
 }
-
-interface DashboardResponse {
-  metricas: DashboardMetricas;
-  lucroAcumulado: LucroAcumuladoItem[];
-  lucroPorTipster: LucroPorTipsterItem[];
-  resumoPorEsporte: ResumoEsporteItem[];
-  resumoPorCasa: ResumoCasaItem[];
-}
-
-const SHOW_RANKING_TIPSTERS = false;
 
 export default function Dashboard() {
+  const navigate = useNavigate();
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const { tipsters } = useTipsters();
-  const [profile, setProfile] = useState<ApiProfileResponse | null>(null);
-  const [filters, setFilters] = useState<DashboardFilters>({
-    status: '',
-    tipster: '',
-    casa: '',
-    dataInicio: '',
-    dataFim: ''
-  });
-  const [metricas, setMetricas] = useState<DashboardMetricas>({
-    roi: 0,
-    taxaAcerto: 0,
-    lucroTotal: 0,
-    totalInvestido: 0,
-    totalDepositado: 0,
-    totalSacado: 0,
-    saldoBanca: 0
-  });
-  const [lucroAcumulado, setLucroAcumulado] = useState<LucroAcumuladoItem[]>([]);
-  const [lucroPorTipster, setLucroPorTipster] = useState<LucroPorTipsterItem[]>([]);
-  const [resumoPorEsporte, setResumoPorEsporte] = useState<ResumoEsporteItem[]>([]);
-  const [resumoPorCasa, setResumoPorCasa] = useState<ResumoCasaItem[]>([]);
-  const [periodoGrafico, setPeriodoGrafico] = useState('7');
   const [expandedSport, setExpandedSport] = useState<string | null>(null);
   const [expandedCasa, setExpandedCasa] = useState<string | null>(null);
-  
-  // Estado para apostas recentes dinâmicas
-  const [apostasRecentes, setApostasRecentes] = useState<Array<{
-    id: string;
-    evento: string;
-    odd: string;
-    status: string;
-    lucro: number;
-    dataJogo: Date;
-    esporte: string;
-    casaDeAposta: string;
-  }>>([]);
-  const [loadingApostasRecentes, setLoadingApostasRecentes] = useState(false);
 
-  const buildParams = useCallback((): Partial<DashboardFilters> => {
-    const params: Partial<DashboardFilters> = {};
-    
-    if (filters.status && filters.status !== 'Tudo' && filters.status !== '') {
-      params.status = filters.status;
-    }
-    if (filters.tipster) {
-      params.tipster = filters.tipster;
-    }
-    if (filters.casa) {
-      params.casa = filters.casa;
-    }
-    if (filters.dataInicio) {
-      params.dataInicio = filters.dataInicio;
-    }
-    if (filters.dataFim) {
-      params.dataFim = filters.dataFim;
-    }
-    return params;
-  }, [filters.status, filters.tipster, filters.casa, filters.dataInicio, filters.dataFim]);
+  const {
+    loading,
+    profile,
+    metricas,
+    resumoPorEsporte,
+    resumoPorCasa,
+    apostasRecentes,
+    loadingApostasRecentes,
+    filters,
+    handleFilterChange,
+    clearFilters,
+    activeFiltersCount,
+    periodoGrafico,
+    setPeriodoGrafico,
+    evolucaoBancaChart,
+    crescimentoPercentual,
+    melhorDia,
+    mediaDiaria,
+    fetchDashboardData,
+  } = useDashboardData();
 
-  const fetchApostasRecentes = useCallback(async () => {
-    setLoadingApostasRecentes(true);
-    try {
-      const { data } = await api.get('/apostas/recentes');
-      setApostasRecentes(data || []);
-    } catch (error) {
-      // Em caso de erro, mantém o array vazio
-      setApostasRecentes([]);
-    } finally {
-      setLoadingApostasRecentes(false);
-    }
-  }, []);
+  const { tipsters } = useTipsters();
+  const { bancas: userBancas, loading: bancasLoading } = useBancas();
 
-  const fetchDashboardData = useCallback(async () => {
-    const params = buildParams();
-    try {
-      const { data } = await api.get<DashboardResponse>('/analise/dashboard', { params });
-      
-      setMetricas(data.metricas);
-      setLucroAcumulado(data.lucroAcumulado);
-      setLucroPorTipster(data.lucroPorTipster);
-      setResumoPorEsporte(data.resumoPorEsporte);
-      setResumoPorCasa(data.resumoPorCasa);
-    } catch (error) {
-      const apiError = error as { response?: { status?: number } };
-      if (apiError.response?.status !== 429) {
-        console.error('Erro ao carregar dados do dashboard:', error);
-      }
-    }
-  }, [buildParams]);
+  const defaultBancaId = useMemo(() => {
+    if (!userBancas.length) return '';
+    const padrao = userBancas.find((banca) => banca.padrao);
+    return padrao?.id ?? userBancas[0]?.id ?? '';
+  }, [userBancas]);
 
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      void fetchDashboardData();
-    }, 1000);
+    if (!defaultBancaId) return;
+    const bancaStillExists = userBancas.some((banca) => banca.id === filters.bancaId);
+    const shouldSync = !filters.bancaId || !bancaStillExists;
+    if (shouldSync && filters.bancaId !== defaultBancaId) {
+      handleFilterChange('bancaId', defaultBancaId);
+    }
+  }, [defaultBancaId, filters.bancaId, handleFilterChange, userBancas]);
 
-    return () => clearTimeout(timeoutId);
-  }, [fetchDashboardData]);
-
-  useEffect(() => {
-    void fetchApostasRecentes();
-  }, []);
-
-  useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const { data } = await api.get<ApiProfileResponse>('/perfil');
-        setProfile(data);
-      } catch (error) {
-        // Em caso de erro, definir perfil null para mostrar estado de erro
-        setProfile(null);
-      }
-    };
-    void fetchProfile();
-
-    const handleProfileUpdated = (event: Event) => {
-      const customEvent = event as CustomEvent<ApiProfileResponse | undefined>;
-      const updatedProfile = customEvent.detail;
-      if (updatedProfile) {
-        setProfile(updatedProfile);
-      } else {
-        void fetchProfile();
-      }
-    };
-
-    window.addEventListener('profile-updated', handleProfileUpdated);
-    
-    const handleBancaUpdated = () => {
-      void fetchDashboardData();
-      void fetchApostasRecentes();
-    };
-
-    window.addEventListener('banca-updated', handleBancaUpdated);
-    
-    return () => {
-      window.removeEventListener('profile-updated', handleProfileUpdated);
-      window.removeEventListener('banca-updated', handleBancaUpdated);
-    };
-  }, []);
-
-  const handleFilterChange = useCallback((field: keyof DashboardFilters, value: string) => {
-    setFilters(prev => {
-      if (prev[field] === value) return prev;
-      return { ...prev, [field]: value };
-    });
-  }, []);
-
-  const handleApplyFilters = useCallback(() => {
+  const handleApplyFilters = () => {
+    setFiltersOpen(false);
     void fetchDashboardData();
-    setFiltersOpen(false);
-  }, [fetchDashboardData]);
+  };
 
-  const handleClearFilters = useCallback(() => {
-    setFilters({
-      status: '',
-      tipster: '',
-      casa: '',
-      dataInicio: '',
-      dataFim: ''
-    });
+  const handleClearFilters = () => {
+    clearFilters();
     setFiltersOpen(false);
-  }, []);
+    void fetchDashboardData();
+  };
 
-  const activeFiltersCount = useMemo(
-    () => Object.values(filters).filter(v => v !== '').length,
-    [filters]
+  const rawAccuracyPercent = Number.isFinite(metricas.taxaAcerto) ? metricas.taxaAcerto : 0;
+  const normalizedAccuracyPercent = rawAccuracyPercent > 1 ? rawAccuracyPercent / 100 : rawAccuracyPercent;
+  const accuracyPercent = Math.min(Math.max(normalizedAccuracyPercent, 0), 1);
+  const accuracyPercentLabel = formatPercent(accuracyPercent * 100);
+  const totalApostas = metricas.totalApostas ?? 0;
+  const apostasGanhas = metricas.apostasGanhas ?? Math.round(totalApostas * accuracyPercent);
+  const derrotasCalculadas = metricas.apostasPerdidas ?? Math.max(totalApostas - apostasGanhas, 0);
+  const derrotasLabel = derrotasCalculadas === 1 ? 'derrota' : 'derrotas';
+  const apostasLabel = totalApostas === 1 ? 'aposta' : 'apostas';
+  const accuracyDetailText = `${derrotasCalculadas} ${derrotasLabel} de ${totalApostas} ${apostasLabel}`;
+  const handleNovaAposta = () => {
+    navigate('/atualizar', { state: { openNovaAposta: true } });
+  };
+
+  const sportBreakdown = useMemo<BreakdownCardItem[]>(
+    () =>
+      resumoPorEsporte.slice(0, 4).map((item, index) => ({
+        id: item.esporte || `esporte-${index}`,
+        icon: '⚽️',
+        name: item.esporte || 'Outros',
+        subtitle: `${item.apostas} apostas • ${formatPercent(item.aproveitamento)} de vitórias`,
+        roi: item.roi,
+        lucro: item.lucro,
+        apostas: item.apostas,
+        ganhas: item.ganhas,
+        aproveitamento: item.aproveitamento,
+        stake: item.stakeMedia,
+      })),
+    [resumoPorEsporte]
   );
 
-  // Preparar dados para gráfico de evolução da banca (acumulado)
-  const evolucaoBancaChart = useMemo(() => {
-    if (lucroAcumulado.length === 0) return [];
-    const sliced = periodoGrafico === '7' 
-      ? lucroAcumulado.slice(-7)
-      : periodoGrafico === '30'
-      ? lucroAcumulado.slice(-30)
-      : periodoGrafico === '90'
-      ? lucroAcumulado.slice(-90)
-      : periodoGrafico === '365'
-      ? lucroAcumulado.slice(-365)
-      : lucroAcumulado;
-    
-    return sliced.map((item) => ({
-      date: new Date(item.date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }),
-      diário: Number(item.lucro.toFixed(2)),
-      acumulado: Number(item.acumulado.toFixed(2))
-    }));
-  }, [lucroAcumulado, periodoGrafico]);
+  const casaBreakdown = useMemo<BreakdownCardItem[]>(
+    () =>
+      resumoPorCasa.slice(0, 4).map((item, index) => ({
+        id: item.casa || `casa-${index}`,
+        icon: '🏢',
+        name: item.casa || 'Outros',
+        subtitle: `${item.apostas} apostas • ${formatPercent(item.aproveitamento)} de vitórias`,
+        roi: item.roi,
+        lucro: item.lucro,
+        apostas: item.apostas,
+        ganhas: item.ganhas,
+        aproveitamento: item.aproveitamento,
+        stake: item.stakeMedia,
+        extraStats: [
+          {
+            label: 'Saldo',
+            value: formatCurrency(item.saldo),
+            highlight: item.saldo >= 0 ? 'positive' : 'negative',
+          },
+        ],
+      })),
+    [resumoPorCasa]
+  );
 
-  // Calcular crescimento percentual
-  const crescimentoPercentual = useMemo(() => {
-    if (evolucaoBancaChart.length < 2) return 0;
-    const primeiro = evolucaoBancaChart[0]?.acumulado ?? 0;
-    const ultimo = evolucaoBancaChart[evolucaoBancaChart.length - 1]?.acumulado ?? 0;
-    if (primeiro === 0) return 0;
-    return ((ultimo - primeiro) / Math.abs(primeiro)) * 100;
-  }, [evolucaoBancaChart]);
+  const lucroPeriodo = useMemo(
+    () => evolucaoBancaChart.reduce((total, item) => total + item.diário, 0),
+    [evolucaoBancaChart]
+  );
+  const periodoDiasLabel = `${periodoGrafico} dias`;
 
-  // Calcular melhor dia e média diária
-  const melhorDia = useMemo(() => {
-    if (lucroAcumulado.length === 0) return { valor: 0, data: '' };
-    const melhor = lucroAcumulado.reduce((max, item) => 
-      item.lucro > max.lucro ? item : max, lucroAcumulado[0]
-    );
-    return {
-      valor: melhor.lucro,
-      data: new Date(melhor.date).toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' })
-    };
-  }, [lucroAcumulado]);
+  const filterInputClass =
+    'mt-2 w-full rounded-2xl border border-border/40 bg-background px-4 py-3 text-sm text-foreground placeholder:text-foreground-muted transition focus-visible:border-brand-emerald focus-visible:ring-2 focus-visible:ring-brand-emerald/30';
 
-  const mediaDiaria = useMemo(() => {
-    if (lucroAcumulado.length === 0) return 0;
-    const periodo = periodoGrafico === '7' ? 7 : periodoGrafico === '30' ? 30 : periodoGrafico === '90' ? 90 : periodoGrafico === '365' ? 365 : lucroAcumulado.length;
-    const sliced = lucroAcumulado.slice(-periodo);
-    const soma = sliced.reduce((acc, item) => acc + item.lucro, 0);
-    return soma / sliced.length;
-  }, [lucroAcumulado, periodoGrafico]);
-
-  // Preparar dados para ranking de tipsters
-  const roiReferencia = useMemo(() => {
-    return resumoPorEsporte[0]?.roi ?? metricas.roi;
-  }, [resumoPorEsporte, metricas.roi]);
-
-  const taxaReferencia = useMemo(() => {
-    return resumoPorEsporte[0]?.aproveitamento ?? metricas.taxaAcerto;
-  }, [resumoPorEsporte, metricas.taxaAcerto]);
-
-  const descricaoPadraoTipster = useMemo(() => {
-    if (resumoPorCasa.length === 0) {
-      return 'Tipster profissional';
-    }
-    const melhorCasa = [...resumoPorCasa].sort((a, b) => b.lucro - a.lucro)[0];
-    return `Especialista em ${melhorCasa.casa}`;
-  }, [resumoPorCasa]);
-
-  const rankingTipsters = useMemo(() => {
-    const reais = lucroPorTipster
-      .map(item => {
-        const tipster = tipsters.find(t => t.nome === item.tipster);
-        if (!tipster) return null;
-        
-        // Calcular ROI e taxa de acerto do tipster (simplificado - usando dados do resumo)
-        return {
-          nome: item.tipster,
-          lucro: item.lucro,
-          roi: roiReferencia,
-          taxa: taxaReferencia,
-          descricao: descricaoPadraoTipster
-        };
-      })
-      .filter((item): item is NonNullable<typeof item> => item !== null)
-      .sort((a, b) => b.lucro - a.lucro)
-      .slice(0, 5);
-      
-    const placeholders = [
-      {
-        nome: 'TIPSTER FICTÍCIO A',
-        descricao: descricaoPadraoTipster,
-        lucro: 450,
-        roi: Math.max(roiReferencia - 8, 10),
-        taxa: Math.max(taxaReferencia - 6, 15)
-      },
-      {
-        nome: 'TIPSTER FICTÍCIO B',
-        descricao: 'Analista de mercados emergentes',
-        lucro: 320,
-        roi: Math.max(roiReferencia - 12, 8),
-        taxa: Math.max(taxaReferencia - 10, 12)
-      }
-    ];
-    
-    const resultado = [...reais];
-    let placeholderIndex = 0;
-    
-    while (resultado.length < 3 && placeholderIndex < placeholders.length) {
-      resultado.push(placeholders[placeholderIndex]);
-      placeholderIndex += 1;
-    }
-    
-    return resultado;
-  }, [lucroPorTipster, tipsters, roiReferencia, taxaReferencia, descricaoPadraoTipster]);
-
-  const roiStatus = useMemo(() => {
-    if (metricas.roi >= 50) return 'Ótimo';
-    if (metricas.roi >= 0) return 'Bom';
-    return 'Atenção';
-  }, [metricas.roi]);
-
-  const roiStatusColor = useMemo(() => {
-    if (metricas.roi >= 50) return 'emerald';
-    if (metricas.roi >= 0) return 'blue';
-    return 'red';
-  }, [metricas.roi]);
+  const cardSurfaceClass = 'bg-[#10322e]';
+  const cardBorderClass = 'border-white/5';
+  const cardShadowClass = 'shadow-[0_25px_45px_rgba(0,0,0,0.25)]';
+  const sectionCardClass = `rounded-lg ${cardBorderClass} ${cardSurfaceClass} p-6 ${cardShadowClass} backdrop-blur-sm`;
 
   return (
-    <div className="dashboard-new">
-      {/* Header */}
-      <header className="dashboard-new-header">
-        <div className="dashboard-new-header-content">
+    <div className="space-y-8 text-foreground">
+      <div className="mb-4">
+        <div className="flex items-center justify-between gap-6">
           <div>
-            <h1 className="dashboard-new-title">
-              Bem-vindo de volta, {profile ? getFirstName(profile.nomeCompleto) : 'Usuário'}! 👋
+            <p className={cn('text-2xs uppercase tracking-[0.3em]', softLabelTextClass)}>Visão geral</p>
+            <h1 className="text-3xl font-semibold">
+              Bem-vindo de volta, {profile ? getFirstName(profile.nomeCompleto) : 'Usuário'} 👋
             </h1>
-            <p className="dashboard-new-subtitle">Aqui está o resumo das suas operações</p>
+            <p className={cn('text-sm', labelTextClass)}>Acompanhe seus números mais importantes em tempo real.</p>
           </div>
-          
-          <div className="dashboard-new-header-actions">
-            <button className="dashboard-new-date-filter-btn">
-              <Plus size={16} />
-              <span>Nova Aposta</span>
+          <div className="flex items-center gap-3 mt-6 relative">
+            {loading && (
+              <span className={cn('inline-flex items-center gap-2 rounded-full border border-white/5 bg-white/5 px-3 py-1 text-xs text-foreground-muted', softLabelTextClass)}>
+                <Loader2 className="h-3.5 w-3.5 animate-spin" /> Atualizando
+              </span>
+            )}
+            <button
+              type="button"
+              className="inline-flex items-center gap-2 rounded-2xl border border-border/40 bg-background px-4 py-2 text-sm font-semibold text-foreground transition hocus:border-brand-emerald/60 hocus:text-brand-emerald"
+              onClick={handleNovaAposta}
+            >
+              <Plus size={16} /> Nova aposta
             </button>
-            <button className="dashboard-new-date-filter-btn">
-              <Download size={16} />
-              <span>Importar Dados</span>
+            <button
+              type="button"
+              className="inline-flex items-center gap-2 rounded-2xl border border-border/40 bg-background px-4 py-2 text-sm font-semibold text-foreground transition hocus:border-brand-emerald/60 hocus:text-brand-emerald"
+            >
+              <Download size={16} /> Importar dados
             </button>
-            
-            <div className="filter-trigger-wrapper">
+            <div className="relative">
               <button
-                className="dashboard-new-filter-btn"
-                onClick={() => {
-                  setFiltersOpen((prev) => !prev);
-                }}
+                type="button"
+                className="inline-flex items-center gap-2 rounded-2xl border border-border/40 bg-background px-4 py-2 text-sm font-semibold text-foreground transition hocus:border-brand-emerald/60 hocus:text-brand-emerald"
+                onClick={() => setFiltersOpen((prev) => !prev)}
+                aria-expanded={filtersOpen}
               >
-                <Filter size={16} /> Filtros {activeFiltersCount > 0 && <span className="filter-count">{activeFiltersCount}</span>}
-              </button>
-              <FilterPopover
-                open={filtersOpen}
-                onClose={() => {
-                  setFiltersOpen(false);
-                }}
-                onClear={handleClearFilters}
-                footer={
-                  <button
-                    className="btn"
-                    onClick={() => {
-                      handleApplyFilters();
-                    }}
-                  >
-                    Aplicar Filtros
-                  </button>
-                }
-              >
-                <div className="filters-panel filters-panel--plain">
-                  <div className="field">
-                    <label>Status</label>
-                    <select 
-                      value={filters.status} 
-                      onChange={(e) => {
-                        handleFilterChange('status', e.target.value);
-                      }}
-                      style={{ color: filters.status ? 'var(--text)' : 'var(--muted)' }}
-                    >
-                      <option value="" disabled hidden>Selecione um status</option>
-                      {STATUS_APOSTAS.length > 0 && STATUS_APOSTAS.map((status) => (
-                        <option key={status} value={status}>
-                          {status}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="field">
-                    <label>Tipsters</label>
-                    <select 
-                      value={filters.tipster}
-                      onChange={(e) => {
-                        handleFilterChange('tipster', e.target.value);
-                      }}
-                      style={{ color: filters.tipster ? 'var(--text)' : 'var(--muted)' }}
-                    >
-                      <option value="" disabled hidden>Selecione</option>
-                      {tipsters.filter(t => t.ativo).map((tipster) => (
-                        <option key={tipster.id} value={tipster.nome}>
-                          {tipster.nome}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="field">
-                    <label>Casa de Aposta</label>
-                    <select 
-                      value={filters.casa}
-                      onChange={(e) => {
-                        handleFilterChange('casa', e.target.value);
-                      }}
-                      style={{ color: filters.casa ? 'var(--text)' : 'var(--muted)' }}
-                    >
-                      <option value="" disabled hidden>Selecione a casa</option>
-                      {CASAS_APOSTAS.length > 0 && CASAS_APOSTAS.map((casa) => (
-                        <option key={casa} value={casa}>
-                          {casa}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="field">
-                    <label>Data do Jogo (De)</label>
-                    <DateInput
-                      value={filters.dataInicio}
-                      onChange={(value) => {
-                        handleFilterChange('dataInicio', value);
-                      }}
-                      placeholder="dd/mm/aaaa"
-                      className="date-input-modern"
-                      style={{
-                        width: '100%',
-                        padding: '10px 14px',
-                        fontSize: '0.9rem',
-                        border: '1.5px solid var(--border)',
-                        borderRadius: '8px',
-                        background: 'var(--surface)',
-                        color: 'var(--text)',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s'
-                      }}
-                      onFocus={(e) => {
-                        const root = getComputedStyle(document.documentElement);
-                        const bankColor = root.getPropertyValue('--bank-color').trim() || getComputedStyle(document.documentElement).getPropertyValue('--color-chart-primary').trim();
-                        const bankColorLight = root.getPropertyValue('--bank-color-light').trim() || getComputedStyle(document.documentElement).getPropertyValue('--color-bg-hover').trim();
-                        e.target.style.borderColor = bankColor;
-                        e.target.style.boxShadow = `0 0 0 3px ${bankColorLight}`;
-                      }}
-                      onBlur={(e) => {
-                        e.target.style.borderColor = 'var(--border)';
-                        e.target.style.boxShadow = 'none';
-                      }}
-                    />
-                  </div>
-                  <div className="field">
-                    <label>Data do Jogo (Até)</label>
-                    <DateInput
-                      value={filters.dataFim}
-                      onChange={(value) => {
-                        handleFilterChange('dataFim', value);
-                      }}
-                      placeholder="dd/mm/aaaa"
-                      className="date-input-modern"
-                      style={{
-                        width: '100%',
-                        padding: '10px 14px',
-                        fontSize: '0.9rem',
-                        border: '1.5px solid var(--border)',
-                        borderRadius: '8px',
-                        background: 'var(--surface)',
-                        color: 'var(--text)',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s'
-                      }}
-                      onFocus={(e) => {
-                        const root = getComputedStyle(document.documentElement);
-                        const bankColor = root.getPropertyValue('--bank-color').trim() || getComputedStyle(document.documentElement).getPropertyValue('--color-chart-primary').trim();
-                        const bankColorLight = root.getPropertyValue('--bank-color-light').trim() || getComputedStyle(document.documentElement).getPropertyValue('--color-bg-hover').trim();
-                        e.target.style.borderColor = bankColor;
-                        e.target.style.boxShadow = `0 0 0 3px ${bankColorLight}`;
-                      }}
-                      onBlur={(e) => {
-                        e.target.style.borderColor = 'var(--border)';
-                        e.target.style.boxShadow = 'none';
-                      }}
-                    />
-                    <p style={{ 
-                      margin: '8px 0 0 0', 
-                      fontSize: '0.75rem', 
-                      color: 'var(--muted)',
-                      lineHeight: '1.4'
-                    }}>
-                      Se só preencher "De", será filtrado apenas nesta data. Se preencher "Até", será considerado como intervalo.
-                    </p>
-                  </div>
-                </div>
-              </FilterPopover>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Content */}
-      <div className="dashboard-new-content">
-        {/* Hero Stats */}
-        <div className="dashboard-new-hero-stats">
-          {/* Main Balance Card */}
-          <div className="dashboard-new-hero-main">
-            <div className="dashboard-new-hero-main-header">
-              <div>
-                <p className="dashboard-new-hero-label">Saldo da Banca</p>
-                <h2 className="dashboard-new-hero-value">{formatCurrency(metricas.saldoBanca)}</h2>
-              </div>
-              <div className="dashboard-new-hero-badge">
-                <TrendingUp size={16} />
-                <span>{formatPercent(metricas.roi)}</span>
-              </div>
-            </div>
-            
-            <div className="dashboard-new-hero-main-footer">
-              <div>
-                <p className="dashboard-new-hero-footer-label">Total Investido</p>
-                <p className="dashboard-new-hero-footer-value">{formatCurrency(metricas.totalInvestido)}</p>
-              </div>
-              <div>
-                <p className="dashboard-new-hero-footer-label">Lucro Total</p>
-                <p className="dashboard-new-hero-footer-value">{formatCurrency(metricas.lucroTotal)}</p>
-              </div>
-              <button className="dashboard-new-hero-details-btn">
-                Ver Detalhes
-                <ArrowUpRight size={16} />
-              </button>
-            </div>
-          </div>
-
-          {/* ROI Card */}
-          <div className={`dashboard-new-hero-card dashboard-new-hero-card--${roiStatusColor}`}>
-            <div className="dashboard-new-hero-card-header">
-              <div className={`dashboard-new-hero-card-icon dashboard-new-hero-card-icon--${roiStatusColor}`}>
-                <TrendingUp size={24} />
-              </div>
-              <span className={`dashboard-new-hero-card-badge dashboard-new-hero-card-badge--${roiStatusColor}`}>
-                {roiStatus}
-              </span>
-            </div>
-            <p className="dashboard-new-hero-card-label">ROI</p>
-            <h3 className="dashboard-new-hero-card-value">{formatPercent(metricas.roi)}</h3>
-            <p className="dashboard-new-hero-card-subtitle">Retorno sobre investimento</p>
-          </div>
-
-          {/* Win Rate Card */}
-          <div className="dashboard-new-hero-card dashboard-new-hero-card--blue">
-            <div className="dashboard-new-hero-card-header">
-              <div className="dashboard-new-hero-card-icon dashboard-new-hero-card-icon--blue">
-                <span style={{ fontSize: '1.5rem' }}>🎯</span>
-              </div>
-              <span className="dashboard-new-hero-card-badge dashboard-new-hero-card-badge--blue">
-                {formatPercent(metricas.taxaAcerto)}
-              </span>
-            </div>
-            <p className="dashboard-new-hero-card-label">Taxa de Acerto</p>
-            <h3 className="dashboard-new-hero-card-value">{formatPercent(metricas.taxaAcerto)}</h3>
-            <p className="dashboard-new-hero-card-subtitle">Apostas ganhas</p>
-          </div>
-        </div>
-
-        {/* Charts Grid */}
-        <div className="dashboard-new-charts-grid">
-          <div className="dashboard-new-chart-card dashboard-new-chart-card--large">
-            <div className="dashboard-new-chart-header">
-              <div>
-                <h3 className="dashboard-new-chart-title">Evolução do Lucro</h3>
-                <p className="dashboard-new-chart-subtitle">Desempenho diário e acumulado</p>
-              </div>
-              
-              <div className="dashboard-new-chart-controls">
-                <div className="dashboard-new-time-buttons">
-                  <button 
-                    className={`dashboard-new-time-btn ${periodoGrafico === '7' ? 'active' : ''}`}
-                    onClick={() => setPeriodoGrafico('7')}
-                  >
-                    7d
-                  </button>
-                  <button 
-                    className={`dashboard-new-time-btn ${periodoGrafico === '30' ? 'active' : ''}`}
-                    onClick={() => setPeriodoGrafico('30')}
-                  >
-                    30d
-                  </button>
-                  <button 
-                    className={`dashboard-new-time-btn ${periodoGrafico === '90' ? 'active' : ''}`}
-                    onClick={() => setPeriodoGrafico('90')}
-                  >
-                    90d
-                  </button>
-                  <button 
-                    className={`dashboard-new-time-btn ${periodoGrafico === '365' ? 'active' : ''}`}
-                    onClick={() => setPeriodoGrafico('365')}
-                  >
-                    1y
-                  </button>
-                </div>
-              </div>
-            </div>
-            
-            {/* Summary Cards */}
-            <div className="dashboard-new-summary-cards">
-              <div className="dashboard-new-summary-card">
-                <div className="dashboard-new-summary-header">
-                  <p className="dashboard-new-summary-label">Total Acumulado</p>
-                  <div className="dashboard-new-summary-trend">
-                    <TrendingUp size={16} />
-                    <span>{formatPercent(crescimentoPercentual)}</span>
-                  </div>
-                </div>
-                <h3 className="dashboard-new-summary-value">{formatCurrency(metricas.lucroTotal)}</h3>
-              </div>
-              
-              <div className="dashboard-new-summary-card">
-                <p className="dashboard-new-summary-label">Melhor Dia</p>
-                <h3 className="dashboard-new-summary-value">{formatCurrency(melhorDia.valor)}</h3>
-                <p className="dashboard-new-summary-date">{melhorDia.data}</p>
-              </div>
-              
-              <div className="dashboard-new-summary-card">
-                <p className="dashboard-new-summary-label">Média Diária</p>
-                <h3 className="dashboard-new-summary-value">{formatCurrency(mediaDiaria)}</h3>
-                <p className="dashboard-new-summary-period">Últimos {periodoGrafico === '365' ? '1 ano' : `${periodoGrafico} dias`}</p>
-              </div>
-            </div>
-            
-            <ResponsiveContainer width="100%" height={200}>
-              {evolucaoBancaChart.length > 0 ? (
-                <LineChart data={evolucaoBancaChart} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(71, 85, 105, 0.2)" opacity={0.1} />
-                  <XAxis 
-                    dataKey="date" 
-                    stroke="#64748b"
-                    tick={{ fill: '#94a3b8', fontSize: 12 }}
-                  />
-                  <YAxis 
-                    stroke="#64748b"
-                    tick={{ fill: '#94a3b8', fontSize: 12 }}
-                    tickFormatter={(value) => `R$ ${value}`}
-                  />
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: '#1e293b', 
-                      border: '1px solid #334155',
-                      borderRadius: '12px',
-                      color: '#fff',
-                      boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
-                    }}
-                    formatter={(value: number, name: string) => [
-                      `R$ ${value.toFixed(2)}`, 
-                      name === 'diário' ? 'Lucro Diário' : 'Acumulado'
-                    ]}
-                  />
-                  <Line 
-                    type="monotone" 
-                    dataKey="diário" 
-                    stroke="#3b82f6" 
-                    strokeWidth={2}
-                    dot={false}
-                  />
-                  <Line 
-                    type="monotone" 
-                    dataKey="acumulado" 
-                    stroke="#10b981" 
-                    strokeWidth={3}
-                    dot={false}
-                  />
-                </LineChart>
-              ) : (
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#94a3b8' }}>
-                  Sem dados para exibir
-                </div>
-              )}
-            </ResponsiveContainer>
-          </div>
-          
-          {/* Performance Recente Card */}
-          <div className="dashboard-new-chart-card">
-            <div className="dashboard-new-chart-header">
-              <div>
-                <h3 className="dashboard-new-chart-title">Performance Recente</h3>
-                <p className="dashboard-new-chart-subtitle">Últimas 5 apostas</p>
-              </div>
-              <TrendingUp size={20} className="dashboard-new-trending-icon" />
-            </div>
-            
-            <div className="dashboard-new-recent-performance">
-              {loadingApostasRecentes ? (
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '200px', color: '#94a3b8' }}>
-                  Carregando apostas recentes...
-                </div>
-              ) : apostasRecentes && apostasRecentes.length > 0 ? (
-                <div className="dashboard-new-recent-list">
-                  {apostasRecentes.slice(0, 5).map((aposta, index) => (
-                    <div key={aposta.id || index} className="dashboard-new-recent-item">
-                      <div className="dashboard-new-recent-status">
-                        <div className={`dashboard-new-recent-indicator ${aposta.status === 'GANHOU' ? 'win' : 'loss'}`}></div>
-                      </div>
-                      <div className="dashboard-new-recent-info">
-                        <p className="dashboard-new-recent-event">{aposta.evento || 'Evento'}</p>
-                        <p className="dashboard-new-recent-odd">Odd: {aposta.odd || '-'}</p>
-                      </div>
-                      <div className="dashboard-new-recent-result">
-                        <p className={`dashboard-new-recent-value ${aposta.status === 'GANHOU' ? 'positive' : 'negative'}`}>
-                          {aposta.status === 'GANHOU' ? '+' : '-'}{formatCurrency(aposta.lucro || 0)}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="dashboard-new-empty-state">
-                  <p className="dashboard-new-empty-text">Nenhuma aposta recente</p>
-                </div>
-              )}
-            </div>
-          </div>
-          
-          {SHOW_RANKING_TIPSTERS && (
-            <div className="dashboard-new-chart-card">
-              <div className="dashboard-new-chart-header">
-                <div>
-                  <h3 className="dashboard-new-chart-title">Ranking de Tipsters</h3>
-                  <p className="dashboard-new-chart-subtitle">Top performers</p>
-                </div>
-                <Trophy size={24} className="dashboard-new-trophy-icon" />
-              </div>
-              
-              <div className="dashboard-new-tipster-list">
-                {rankingTipsters.length > 0 ? (
-                  rankingTipsters.map((tipster, index) => (
-                    <div key={tipster.nome} className="dashboard-new-tipster-item">
-                      <div className="dashboard-new-tipster-gradient"></div>
-                      <div className="dashboard-new-tipster-content">
-                        <div className="dashboard-new-tipster-header">
-                          <div className="dashboard-new-tipster-rank">
-                            #{index + 1}
-                          </div>
-                          <div className="dashboard-new-tipster-info">
-                            <h4 className="dashboard-new-tipster-name">{tipster.nome}</h4>
-                            <p className="dashboard-new-tipster-desc">{tipster.descricao}</p>
-                          </div>
-                          <div className="dashboard-new-tipster-profit">
-                            <p className="dashboard-new-tipster-profit-value">{formatCurrency(tipster.lucro)}</p>
-                            <p className="dashboard-new-tipster-profit-label">Lucro total</p>
-                          </div>
-                        </div>
-                        
-                        <div className="dashboard-new-tipster-metrics">
-                          <div className="dashboard-new-tipster-metric">
-                            <p className="dashboard-new-tipster-metric-label">ROI</p>
-                            <p className="dashboard-new-tipster-metric-value">{formatPercent(tipster.roi)}</p>
-                          </div>
-                          <div className="dashboard-new-tipster-metric">
-                            <p className="dashboard-new-tipster-metric-label">Taxa</p>
-                            <p className="dashboard-new-tipster-metric-value">{formatPercent(tipster.taxa)}</p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <p className="dashboard-new-empty-text">Nenhum tipster encontrado</p>
+                <Filter size={16} />
+                Filtros
+                {activeFiltersCount > 0 && (
+                  <span className="rounded-full bg-brand-emerald/15 px-2 text-xs font-semibold text-brand-emerald">{activeFiltersCount}</span>
                 )}
-              </div>
-              
-              <button className="dashboard-new-tipster-view-all">
-                <TrendingUp size={16} />
-                Ver Todos os Tipsters
               </button>
-            </div>
-          )}
-        </div>
-        
-        {/* Layout Lado a Lado: Por Esporte e Por Casa de Apostas */}
-        <div className="recreate-side-by-side-layout">
-          {/* Por Esporte Card */}
-          <div className="dashboard-new-chart-card recreate-sport-card-half">
-            <div className="dashboard-new-chart-header">
-              <div>
-                <h3 className="dashboard-new-chart-title">Por Esporte</h3>
-                <p className="dashboard-new-chart-subtitle">Acompanhe seus resultados por categoria</p>
-              </div>
-            </div>
-            
-            <div className="recreate-sports-breakdown">
-              {resumoPorEsporte && resumoPorEsporte.length > 0 ? (
-                <div className="recreate-sports-grid">
-                  {resumoPorEsporte.slice(0, 4).map((esporte, index) => (
-                    <div 
-                      key={esporte.esporte || index} 
-                      className={`recreate-sport-card ${expandedSport === esporte.esporte ? 'expanded' : ''}`}
-                    >
+              {filtersOpen && (
+                <div className="absolute left-0 top-full mt-2 z-50">
+                  <FilterPopover
+                    open={filtersOpen}
+                    onClose={() => setFiltersOpen(false)}
+                    onClear={handleClearFilters}
+                    footer={
                       <button
-                        onClick={() => setExpandedSport(expandedSport === esporte.esporte ? null : esporte.esporte)}
-                        className="recreate-sport-button"
+                        type="button"
+                        className="w-full rounded-2xl bg-brand-linear px-4 py-2 text-sm font-semibold text-[#f2f2f2] shadow-glow transition active:scale-[0.99]"
+                        onClick={handleApplyFilters}
                       >
-                        <div className="recreate-sport-main">
-                          <div className={`recreate-sport-icon ${esporte.roi >= 0 ? 'positive' : 'negative'}`}>
-                            ⚽
-                          </div>
-                          <div className="recreate-sport-info">
-                            <div className="recreate-sport-name">{esporte.esporte || 'Outros'}</div>
-                            <div className="recreate-sport-subtitle">{esporte.apostas || 0} apostas • {formatPercent(esporte.aproveitamento)}% vitórias</div>
-                          </div>
-                        </div>
-
-                        <div className="recreate-sport-metrics">
-                          <div className="recreate-sport-roi">
-                            <div className={`recreate-sport-roi-value ${esporte.roi >= 0 ? 'positive' : 'negative'}`}>
-                              {esporte.roi >= 0 ? '+' : ''}{formatPercent(esporte.roi)}
-                            </div>
-                            <div className="recreate-sport-roi-label">ROI</div>
-                          </div>
-
-                          <div className="recreate-sport-profit">
-                            <div className={`recreate-sport-profit-value ${esporte.lucro >= 0 ? 'positive' : 'negative'}`}>
-                              {esporte.lucro >= 0 ? '+' : ''}{formatCurrency(esporte.lucro)}
-                            </div>
-                            <div className="recreate-sport-profit-label">Lucro</div>
-                          </div>
-
-                          <div className={`recreate-sport-expand ${expandedSport === esporte.esporte ? 'rotated' : ''}`}>
-                            <span className="recreate-sport-expand-icon">▼</span>
-                          </div>
-                        </div>
+                        Aplicar filtros
                       </button>
-
-                      {expandedSport === esporte.esporte && (
-                        <div className="recreate-sport-expanded">
-                          {/* Stats Summary */}
-                          <div className="recreate-stats-grid">
-                            <div className="recreate-stat-item">
-                              <div className="recreate-stat-label">Apostas</div>
-                              <div className="recreate-stat-value">{esporte.apostas}</div>
-                            </div>
-                            <div className="recreate-stat-item">
-                              <div className="recreate-stat-label">Verdes</div>
-                              <div className="recreate-stat-value positive">{esporte.ganhas}</div>
-                              <div className="recreate-stat-subtitle">{formatPercent(esporte.aproveitamento)}%</div>
-                            </div>
-                            <div className="recreate-stat-item">
-                              <div className="recreate-stat-label">Apostado</div>
-                              <div className="recreate-stat-value">{formatCurrency(esporte.stakeMedia * esporte.apostas)}</div>
-                            </div>
-                            <div className="recreate-stat-item">
-                              <div className="recreate-stat-label">ROI</div>
-                              <div className={`recreate-stat-value ${esporte.roi >= 0 ? 'positive' : 'negative'}`}>
-                                {esporte.roi >= 0 ? '+' : ''}{formatPercent(esporte.roi)}
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Recent Activity */}
-                          <div className="recreate-recent-activity">
-                            <h3 className="recreate-activity-title">Atividade Recente</h3>
-                            
-                            <div className="recreate-activity-table">
-                              {/* Table Header */}
-                              <div className="recreate-table-header">
-                                <div className="recreate-header-col">Descrição</div>
-                                <div className="recreate-header-col">Aposta</div>
-                                <div className="recreate-header-col">Lucro</div>
-                                <div className="recreate-header-col">Status</div>
-                              </div>
-
-                              {/* Sample Table Rows */}
-                              <div className="recreate-table-row">
-                                <div className="recreate-table-desc">Exemplo de aposta - {esporte.esporte}</div>
-                                <div className="recreate-table-amount">R$ 50,00</div>
-                                <div className={`recreate-table-profit ${esporte.roi >= 0 ? 'positive' : 'negative'}`}>
-                                  {esporte.roi >= 0 ? '+' : '-'}R$ 25,00
-                                </div>
-                                <div className="recreate-table-status">
-                                  <span className={`recreate-status-badge ${esporte.roi >= 0 ? 'win' : 'loss'}`}>
-                                    {esporte.roi >= 0 ? 'Ganhou' : 'Perdeu'}
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      )}
+                    }
+                  >
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <label className="text-sm font-medium text-foreground">
+                        <span>Status</span>
+                        <select
+                          value={filters.status}
+                          onChange={(event) => handleFilterChange('status', event.target.value)}
+                          className={filterInputClass}
+                        >
+                          <option value="">Todos</option>
+                          {STATUS_APOSTAS.map((status) => (
+                            <option key={status} value={status}>
+                              {status}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className="text-sm font-medium text-foreground">
+                        <span>Tipster</span>
+                        <select
+                          value={filters.tipster}
+                          onChange={(event) => handleFilterChange('tipster', event.target.value)}
+                          className={filterInputClass}
+                        >
+                          <option value="">Todos</option>
+                          {tipsters
+                            .filter((tipster) => tipster.ativo)
+                            .map((tipster) => (
+                              <option key={tipster.id} value={tipster.nome}>
+                                {tipster.nome}
+                              </option>
+                            ))}
+                        </select>
+                      </label>
+                      <label className="text-sm font-medium text-foreground">
+                        <span>Casa de aposta</span>
+                        <select
+                          value={filters.casa}
+                          onChange={(event) => handleFilterChange('casa', event.target.value)}
+                          className={filterInputClass}
+                        >
+                          <option value="">Todas</option>
+                          {CASAS_APOSTAS.map((casa) => (
+                            <option key={casa} value={casa}>
+                              {casa}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className="text-sm font-medium text-foreground">
+                        <span>Banca</span>
+                        <select
+                          value={filters.bancaId}
+                          onChange={(event) => handleFilterChange('bancaId', event.target.value)}
+                          className={filterInputClass}
+                          disabled={bancasLoading}
+                        >
+                          <option value="">Todas</option>
+                          {userBancas.map((banca) => (
+                            <option key={banca.id} value={banca.id}>
+                              {banca.nome}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <div className="space-y-4">
+                        <label className="text-sm font-medium text-foreground">
+                          <span>Data (de)</span>
+                          <DateInput value={filters.dataInicio} onChange={(value) => handleFilterChange('dataInicio', value)} className={filterInputClass} />
+                        </label>
+                        <label className="text-sm font-medium text-foreground">
+                          <span>Data (até)</span>
+                          <DateInput value={filters.dataFim} onChange={(value) => handleFilterChange('dataFim', value)} className={filterInputClass} />
+                          <p className="mt-2 text-xs text-foreground-muted">
+                            Deixe o campo vazio para considerar todo o histórico.
+                          </p>
+                        </label>
+                      </div>
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="dashboard-new-empty-state">
-                  <p className="dashboard-new-empty-text">Nenhum dado por esporte disponível</p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Por Casa de Apostas Card */}
-          <div className="dashboard-new-chart-card recreate-sport-card-half">
-            <div className="dashboard-new-chart-header">
-              <div>
-                <h3 className="dashboard-new-chart-title">Por Casa de Apostas</h3>
-                <p className="dashboard-new-chart-subtitle">Acompanhe seus resultados por casa</p>
-              </div>
-            </div>
-            
-            <div className="recreate-sports-breakdown">
-              {resumoPorCasa && resumoPorCasa.length > 0 ? (
-                <div className="recreate-sports-grid">
-                  {resumoPorCasa.slice(0, 4).map((casa, index) => (
-                    <div 
-                      key={casa.casa || index} 
-                      className={`recreate-sport-card ${expandedCasa === casa.casa ? 'expanded' : ''}`}
-                    >
-                      <button
-                        onClick={() => setExpandedCasa(expandedCasa === casa.casa ? null : casa.casa)}
-                        className="recreate-sport-button"
-                      >
-                        <div className="recreate-sport-main">
-                          <div className={`recreate-sport-icon ${casa.roi >= 0 ? 'positive' : 'negative'}`}>
-                            🏢
-                          </div>
-                          <div className="recreate-sport-info">
-                            <div className="recreate-sport-name">{casa.casa || 'Outros'}</div>
-                            <div className="recreate-sport-subtitle">{casa.apostas || 0} apostas • {formatPercent(casa.aproveitamento)}% vitórias</div>
-                          </div>
-                        </div>
-
-                        <div className="recreate-sport-metrics">
-                          <div className="recreate-sport-roi">
-                            <div className={`recreate-sport-roi-value ${casa.roi >= 0 ? 'positive' : 'negative'}`}>
-                              {casa.roi >= 0 ? '+' : ''}{formatPercent(casa.roi)}
-                            </div>
-                            <div className="recreate-sport-roi-label">ROI</div>
-                          </div>
-
-                          <div className="recreate-sport-profit">
-                            <div className={`recreate-sport-profit-value ${casa.lucro >= 0 ? 'positive' : 'negative'}`}>
-                              {casa.lucro >= 0 ? '+' : ''}{formatCurrency(casa.lucro)}
-                            </div>
-                            <div className="recreate-sport-profit-label">Lucro</div>
-                          </div>
-
-                          <div className={`recreate-sport-expand ${expandedCasa === casa.casa ? 'rotated' : ''}`}>
-                            <span className="recreate-sport-expand-icon">▼</span>
-                          </div>
-                        </div>
-                      </button>
-
-                      {expandedCasa === casa.casa && (
-                        <div className="recreate-sport-expanded">
-                          {/* Stats Summary */}
-                          <div className="recreate-stats-grid">
-                            <div className="recreate-stat-item">
-                              <div className="recreate-stat-label">Apostas</div>
-                              <div className="recreate-stat-value">{casa.apostas}</div>
-                            </div>
-                            <div className="recreate-stat-item">
-                              <div className="recreate-stat-label">Verdes</div>
-                              <div className="recreate-stat-value positive">{casa.ganhas}</div>
-                              <div className="recreate-stat-subtitle">{formatPercent(casa.aproveitamento)}%</div>
-                            </div>
-                            <div className="recreate-stat-item">
-                              <div className="recreate-stat-label">Apostado</div>
-                              <div className="recreate-stat-value">{formatCurrency(casa.stakeMedia * casa.apostas)}</div>
-                            </div>
-                            <div className="recreate-stat-item">
-                              <div className="recreate-stat-label">ROI</div>
-                              <div className={`recreate-stat-value ${casa.roi >= 0 ? 'positive' : 'negative'}`}>
-                                {casa.roi >= 0 ? '+' : ''}{formatPercent(casa.roi)}
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Recent Activity */}
-                          <div className="recreate-recent-activity">
-                            <h3 className="recreate-activity-title">Atividade Recente</h3>
-                            
-                            <div className="recreate-activity-table">
-                              {/* Table Header */}
-                              <div className="recreate-table-header">
-                                <div className="recreate-header-col">Descrição</div>
-                                <div className="recreate-header-col">Aposta</div>
-                                <div className="recreate-header-col">Lucro</div>
-                                <div className="recreate-header-col">Status</div>
-                              </div>
-
-                              {/* Sample Table Rows */}
-                              <div className="recreate-table-row">
-                                <div className="recreate-table-desc">Exemplo de aposta - {casa.casa}</div>
-                                <div className="recreate-table-amount">R$ 50,00</div>
-                                <div className={`recreate-table-profit ${casa.roi >= 0 ? 'positive' : 'negative'}`}>
-                                  {casa.roi >= 0 ? '+' : '-'}R$ 25,00
-                                </div>
-                                <div className="recreate-table-status">
-                                  <span className={`recreate-status-badge ${casa.roi >= 0 ? 'win' : 'loss'}`}>
-                                    {casa.roi >= 0 ? 'Ganhou' : 'Perdeu'}
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="dashboard-new-empty-state">
-                  <p className="dashboard-new-empty-text">Nenhum dado por casa de apostas disponível</p>
+                  </FilterPopover>
                 </div>
               )}
             </div>
           </div>
         </div>
       </div>
+
+      <section className="grid gap-5 lg:grid-cols-4">
+        <div
+          className={cn(
+            'col-span-1 space-y-6 rounded-lg border border-border/30 p-6 text-[#f2f2f2] shadow-card lg:col-span-2',
+            'bg-bank-hero'
+          )}
+        >
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p className="text-sm text-white/80">Saldo da banca</p>
+              <p className="text-4xl font-semibold tracking-tight">{formatCurrency(metricas.saldoBanca)}</p>
+            </div>
+            <span className="inline-flex items-center gap-2 rounded-2xl border border-white/30 bg-white/10 px-3 py-1 text-sm font-semibold">
+              <TrendingUp size={16} />
+              {formatSignedPercent(metricas.roi)}
+            </span>
+          </div>
+
+          <div className="grid gap-6 text-sm md:grid-cols-3">
+            <div>
+              <p className="text-white/70">Lucro total</p>
+              <p className="text-2xl font-semibold">{formatCurrency(metricas.lucroTotal)}</p>
+            </div>
+            <div>
+              <p className="text-white/70">Depósitos</p>
+              <p className="text-lg font-semibold">{formatCurrency(metricas.totalDepositado)}</p>
+            </div>
+            <div>
+              <p className="text-white/70">Saques</p>
+              <p className="text-lg font-semibold">{formatCurrency(metricas.totalSacado)}</p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-between gap-4 text-sm text-white/75">
+            <div className="flex flex-wrap gap-6">
+              <span>Total investido: {formatCurrency(metricas.totalInvestido)}</span>
+              <span>ROI médio: {formatSignedPercent(metricas.roi)}</span>
+            </div>
+            <button className="inline-flex items-center gap-2 rounded-2xl border border-white/30 bg-white/10 px-4 py-2 text-sm font-semibold text-[#f2f2f2] transition hover:bg-white/20">
+              Ver detalhes <ArrowUpRight size={16} />
+            </button>
+          </div>
+        </div>
+
+        <div className={cn(sectionCardClass, 'space-y-4 lg:col-span-2')}>
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-emerald/15 text-brand-emerald">
+                <Trophy className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-foreground">Taxa de acerto</p>
+                <p className={cn('text-xs text-foreground-muted', softLabelTextClass)}>Taxa atual</p>
+              </div>
+            </div>
+            <span className="text-3xl font-semibold text-foreground">{accuracyPercentLabel}</span>
+          </div>
+          <div className="grid gap-4 rounded-2xl border border-white/5 bg-white/5 p-4 text-sm text-foreground sm:grid-cols-3">
+            <div>
+              <p className={cn('text-2xs uppercase tracking-[0.3em] text-foreground-muted', softLabelTextClass)}>Apostas</p>
+              <p className="mt-1 text-xl font-semibold text-foreground">{totalApostas}</p>
+            </div>
+            <div>
+              <p className={cn('text-2xs uppercase tracking-[0.3em] text-foreground-muted', softLabelTextClass)}>Greens</p>
+              <p className="mt-1 text-xl font-semibold text-emerald-400">{apostasGanhas}</p>
+            </div>
+            <div>
+              <p className={cn('text-2xs uppercase tracking-[0.3em] text-foreground-muted', softLabelTextClass)}>Reds</p>
+              <p className="mt-1 text-xl font-semibold text-rose-400">{derrotasCalculadas}</p>
+            </div>
+          </div>
+          <div className="rounded-full bg-foreground/10 p-0.5">
+            <div
+              className="h-3 rounded-full bg-gradient-to-r from-[#10ad7b] via-[#11b08f] to-[#12b4a8] shadow-[0_0_10px_rgba(16,185,129,0.25)] transition-[width] duration-500"
+              style={{ width: `${(accuracyPercent * 100).toFixed(1)}%` }}
+            />
+          </div>
+          <p className={cn('text-xs text-foreground-muted', softLabelTextClass)}>{accuracyPercentLabel} ({accuracyDetailText})</p>
+        </div>
+
+      </section>
+
+      <section className="grid gap-6 xl:grid-cols-[2fr_1fr]">
+        <div className={cn(sectionCardClass, 'space-y-6')}>
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <h3 className="text-lg font-semibold text-foreground">Evolução do lucro</h3>
+              <p className={cn('text-sm text-foreground-muted', labelTextClass)}>Desempenho diário e acumulado</p>
+            </div>
+            <div className="flex items-center gap-2 rounded-2xl border border-white/5 bg-white/5 p-1">
+              {timeframeOptions.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  className={cn(
+                    'rounded-2xl px-3 py-1 text-xs font-semibold uppercase tracking-wide transition',
+                    periodoGrafico === option.value
+                      ? 'bg-brand-emerald text-slate-950 shadow-glow'
+                      : cn('text-foreground-muted hover:text-foreground', softLabelTextClass)
+                  )}
+                  onClick={() => setPeriodoGrafico(option.value)}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-3">
+            <div className="rounded-2xl border border-white/5 bg-white/5 p-4">
+              <p className={cn('text-sm text-foreground-muted', labelTextClass)}>Total acumulado</p>
+              <p className="text-2xl font-semibold text-foreground">{formatCurrency(lucroPeriodo)}</p>
+              <p className="flex items-center gap-1 text-xs text-brand-emerald">
+                <TrendingUp size={14} /> {formatSignedPercent(crescimentoPercentual)} nos últimos {periodoDiasLabel}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-white/5 bg-white/5 p-4">
+              <p className={cn('text-sm text-foreground-muted', labelTextClass)}>Melhor dia</p>
+              <p className="text-2xl font-semibold text-foreground">{formatCurrency(melhorDia.valor)}</p>
+              <p className={cn('text-xs text-foreground-muted', softLabelTextClass)}>{melhorDia.data || 'Sem histórico'}</p>
+            </div>
+            <div className="rounded-2xl border border-white/5 bg-white/5 p-4">
+              <p className={cn('text-sm text-foreground-muted', labelTextClass)}>Média diária</p>
+              <p className="text-2xl font-semibold text-foreground">{formatCurrency(mediaDiaria || 0)}</p>
+              <p className={cn('text-xs text-foreground-muted', softLabelTextClass)}>Últimos {periodoGrafico} dias</p>
+            </div>
+          </div>
+
+          <div className="h-64 w-full">
+            {evolucaoBancaChart.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%" minWidth={200} minHeight={200}>
+                <LineChart data={evolucaoBancaChart} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+                  <CartesianGrid stroke="rgba(255,255,255,0.08)" strokeDasharray="3 3" />
+                  <XAxis
+                    dataKey="date"
+                    stroke="rgba(255,255,255,0.2)"
+                    tick={{ ...chartTheme.axisTick, fill: 'rgba(255,255,255,0.65)' }}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    stroke="rgba(255,255,255,0.2)"
+                    tick={{ ...chartTheme.axisTick, fill: 'rgba(255,255,255,0.65)' }}
+                    tickFormatter={(value) => `R$ ${value}`}
+                    tickLine={false}
+                  />
+                  <Tooltip
+                    contentStyle={chartTheme.tooltipDark}
+                    formatter={(value: number, name: string) => [formatCurrency(value), name === 'diário' ? 'Lucro diário' : 'Acumulado']}
+                  />
+                  <Line type="monotone" dataKey="diário" stroke={chartTheme.colors.linePrimary} strokeWidth={2} dot={false} />
+                  <Line type="monotone" dataKey="acumulado" stroke={chartTheme.colors.lineSecondary} strokeWidth={3} dot={false} />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex h-full items-center justify-center rounded-2xl border border-dashed border-white/10 text-sm text-foreground-muted">
+                Nenhum dado disponível para o período selecionado.
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className={cn(sectionCardClass, 'space-y-5')}>
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-semibold text-foreground">Performance recente</h3>
+              <p className={cn('text-sm text-foreground-muted', labelTextClass)}>Últimas 5 apostas registradas</p>
+            </div>
+            <TrendingUp size={18} className="text-brand-emerald" />
+          </div>
+
+          {loadingApostasRecentes ? (
+            <div className={cn('flex h-48 items-center justify-center text-foreground-muted', softLabelTextClass)}>
+              <Loader2 className="h-5 w-5 animate-spin" />
+            </div>
+          ) : apostasRecentes.length === 0 ? (
+            <div className={cn('flex h-48 items-center justify-center text-sm text-foreground-muted', labelTextClass)}>Nenhuma aposta recente.</div>
+          ) : (
+            <div className="space-y-3">
+              {apostasRecentes.slice(0, 5).map((aposta) => {
+                const status = aposta.status?.toUpperCase() ?? 'PENDENTE';
+                const positive = status === 'GANHOU';
+                const negative = status === 'PERDEU';
+                const statusClass = positive
+                  ? 'border border-emerald-500/20 bg-emerald-500/10 text-emerald-200'
+                  : negative
+                  ? 'border border-rose-500/20 bg-rose-500/10 text-rose-200'
+                  : 'border border-white/10 bg-white/5 text-white/70';
+                const valueClass = positive ? 'text-emerald-400' : negative ? 'text-rose-400' : 'text-foreground';
+                const rawDate = aposta.dataJogo ? new Date(aposta.dataJogo) : null;
+                const formattedDate = rawDate && !Number.isNaN(rawDate.getTime())
+                  ? rawDate.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })
+                  : '—';
+                const description = aposta.evento ?? 'Aposta sem descrição';
+                const oddLabel = aposta.odd ?? '-';
+                const bettingHouse = aposta.casaDeAposta ?? 'Casa desconhecida';
+
+                return (
+                  <div
+                    key={aposta.id}
+                    className="flex items-center justify-between rounded-2xl border border-white/5 bg-white/5 px-4 py-3 text-sm"
+                  >
+                    <div className="space-y-0.5">
+                      <p className="font-semibold text-foreground">{description}</p>
+                      <p className={cn('text-xs text-foreground-muted', softLabelTextClass)}>
+                        {formattedDate} · Odd {oddLabel} · {bettingHouse}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className={cn('rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide', statusClass)}>
+                        {status}
+                      </span>
+                      <span className={cn('text-base font-semibold', valueClass)}>
+                        {formatSignedCurrency(aposta.lucro ?? 0)}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </section>
+
+      <section className="grid gap-6 xl:grid-cols-2">
+        <div className={cn(sectionCardClass, 'space-y-5')}>
+          <div>
+            <h3 className="text-lg font-semibold">Desempenho por esporte</h3>
+            <p className={cn('text-sm text-foreground-muted', labelTextClass)}>Descubra onde a banca performa melhor</p>
+          </div>
+          <BreakdownList
+            items={sportBreakdown}
+            expandedId={expandedSport}
+            onToggle={setExpandedSport}
+            emptyMessage="Nenhum esporte registrado no período."
+          />
+        </div>
+
+        <div className={cn(sectionCardClass, 'space-y-5')}>
+          <div>
+            <h3 className="text-lg font-semibold">Desempenho por casa</h3>
+            <p className={cn('text-sm text-foreground-muted', labelTextClass)}>Veja quais casas oferecem melhor ROI</p>
+          </div>
+          <BreakdownList
+            items={casaBreakdown}
+            expandedId={expandedCasa}
+            onToggle={setExpandedCasa}
+            emptyMessage="Nenhum histórico por casa disponível."
+          />
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function BreakdownList({ items, expandedId, onToggle, emptyMessage }: BreakdownListProps) {
+  if (items.length === 0) {
+    return (
+      <div className={cn('rounded-2xl border border-dashed border-white/10 px-4 py-10 text-center text-sm text-foreground-muted', labelTextClass)}>
+        {emptyMessage}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {items.map((item) => {
+        const isExpanded = expandedId === item.id;
+        const positiveRoi = item.roi >= 0;
+        const positiveLucro = item.lucro >= 0;
+
+        return (
+          <div
+            key={item.id}
+            className={cn(
+              'rounded-2xl border border-white/5 bg-[#102f2b] text-foreground shadow-[0_20px_40px_rgba(0,0,0,0.2)] backdrop-blur-sm',
+              isExpanded && 'border-brand-emerald/40 shadow-glow'
+            )}
+          >
+            <button
+              type="button"
+              onClick={() => onToggle(isExpanded ? null : item.id)}
+              className="flex w-full items-center gap-4 px-4 py-3 text-left"
+            >
+              <div className={cn('flex h-12 w-12 items-center justify-center rounded-2xl text-xl', positiveRoi ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400')}>
+                {item.icon}
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-foreground">{item.name}</p>
+                <p className={cn('text-xs text-foreground-muted', softLabelTextClass)}>{item.subtitle}</p>
+              </div>
+              <div className="text-right">
+                <p className={cn('text-sm font-semibold', positiveLucro ? 'text-emerald-400' : 'text-rose-400')}>
+                  {formatSignedCurrency(item.lucro)}
+                </p>
+                <p className="text-xs text-foreground-muted">Lucro</p>
+              </div>
+              <ChevronDown className={cn('h-5 w-5 text-foreground-muted transition', isExpanded && 'rotate-180 text-foreground')} />
+            </button>
+
+            {isExpanded && (
+              <div className="border-t border-border/20 px-4 py-4">
+                <div className="grid gap-4 text-sm text-foreground sm:grid-cols-2 lg:grid-cols-5">
+                  <BreakdownStat label="Apostas" value={item.apostas.toString()} />
+                  <BreakdownStat label="Verdes" value={item.ganhas.toString()} helper={`${formatPercent(item.aproveitamento)} de aproveitamento`} />
+                  <BreakdownStat label="Stake médio" value={formatCurrency(item.stake)} />
+                  <BreakdownStat
+                    label="ROI"
+                    value={formatSignedPercent(item.roi)}
+                    highlight={item.roi >= 0 ? 'positive' : 'negative'}
+                  />
+                  <BreakdownStat
+                    label="Lucro"
+                    value={formatSignedCurrency(item.lucro)}
+                    highlight={item.lucro >= 0 ? 'positive' : 'negative'}
+                  />
+                  {item.extraStats?.map((extra) => (
+                    <BreakdownStat
+                      key={`${item.id}-${extra.label}`}
+                      label={extra.label}
+                      value={extra.value}
+                      helper={extra.helper}
+                      highlight={extra.highlight}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function BreakdownStat({
+  label,
+  value,
+  helper,
+  highlight,
+}: {
+  label: string;
+  value: string;
+  helper?: string;
+  highlight?: 'positive' | 'negative';
+}) {
+  return (
+    <div>
+      <p className={cn('text-2xs uppercase tracking-[0.3em] text-foreground-muted', softLabelTextClass)}>{label}</p>
+      <p
+        className={cn(
+          'mt-1 text-base font-semibold text-foreground',
+          highlight === 'positive' && 'text-emerald-400',
+          highlight === 'negative' && 'text-rose-400'
+        )}
+      >
+        {value}
+      </p>
+      {helper && <p className={cn('text-xs text-foreground-muted', softLabelTextClass)}>{helper}</p>}
     </div>
   );
 }

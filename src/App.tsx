@@ -19,25 +19,10 @@ const TelegramStatus = lazy(() => import('./pages/TelegramStatus'));
 
 // Componente de loading simples para Suspense
 const PageLoader = () => (
-  <div style={{
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: '100vh',
-    background: 'var(--bg)',
-    color: 'var(--text)'
-  }}>
-    <div style={{ textAlign: 'center' }}>
-      <div style={{
-        width: '40px',
-        height: '40px',
-        border: '4px solid var(--border)',
-        borderTopColor: 'var(--primary)',
-        borderRadius: '50%',
-        animation: 'spin 1s linear infinite',
-        margin: '0 auto 16px'
-      }} />
-      <p style={{ margin: 0, color: 'var(--muted)' }}>Carregando...</p>
+  <div className="flex min-h-screen items-center justify-center bg-background text-foreground">
+    <div className="text-center">
+      <div className="mx-auto mb-4 h-10 w-10 rounded-full border-4 border-border/60 border-t-brand-emerald animate-spin" />
+      <p className="text-sm text-foreground-muted">Carregando...</p>
     </div>
   </div>
 );

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { Filter, Plus, Pencil, Clock, CheckCircle, XCircle, RefreshCw, TrendingUp, TrendingDown, Zap, Upload, Trash2 } from 'lucide-react';
+import { useSearchParams, useLocation, useNavigate } from 'react-router-dom';
+import { Filter, Plus, Pencil, Upload, Trash2 } from 'lucide-react';
 import PageHeader from '../components/PageHeader';
 import StatCard from '../components/StatCard';
 import EmptyState from '../components/EmptyState';
@@ -9,14 +9,20 @@ import FilterPopover from '../components/FilterPopover';
 import DateInput from '../components/DateInput';
 import { CASAS_APOSTAS } from '../constants/casasApostas';
 import { STATUS_APOSTAS } from '../constants/statusApostas';
+import {
+  betStatusPillBaseClass,
+  betStatusPillVariants,
+  getBetStatusIcon,
+} from '../constants/betStatusStyles';
 import { ESPORTES } from '../constants/esportes';
 import { STATUS_SALVAMENTO } from '../constants/statusSalvamento';
 import { TIPOS_APOSTA } from '../constants/tiposAposta';
-import api from '../lib/api';
+import { apostaService, apiClient, type ApostasFilter, type ApostaStatus } from '../services/api';
+import { eventBus } from '../utils/eventBus';
 import { formatCurrency as formatCurrencyUtil, formatDate as formatDateUtil } from '../utils/formatters';
 import { useTipsters } from '../hooks/useTipsters';
 import { useBancas } from '../hooks/useBancas';
-import '../styles/pages/atualizar.css';
+import { cn } from '../components/ui/utils';
 // Tesseract será carregado dinamicamente apenas quando necessário (biblioteca pesada ~2MB)
 import { type ApiBetWithBank, type ApiError, type ApiUploadTicketResponse } from '../types/api';
 
@@ -24,6 +30,18 @@ const VITE_API_URL: unknown = import.meta.env.VITE_API_URL;
 const API_BASE_URL = (typeof VITE_API_URL === 'string' && VITE_API_URL.length > 0 ? VITE_API_URL : 'http://localhost:3001/api').replace(/\/$/, '');
 
 const STATUS_WITH_RETURNS = ['Ganha', 'Meio Ganha', 'Cashout'];
+
+const statusGlowClassMap: Record<string, string> = {
+  Pendente: 'ring-[rgba(245,158,11,0.55)] shadow-[0_0_30px_rgba(245,158,11,0.45)]',
+  Ganha: 'ring-[rgba(16,185,129,0.55)] shadow-[0_0_30px_rgba(16,185,129,0.45)]',
+  Perdida: 'ring-[rgba(239,68,68,0.55)] shadow-[0_0_30px_rgba(239,68,68,0.45)]',
+  'Meio Ganha': 'ring-[rgba(34,197,94,0.55)] shadow-[0_0_30px_rgba(34,197,94,0.45)]',
+  'Meio Perdida': 'ring-[rgba(249,115,22,0.55)] shadow-[0_0_30px_rgba(249,115,22,0.45)]',
+  Cashout: 'ring-[rgba(168,85,247,0.55)] shadow-[0_0_30px_rgba(168,85,247,0.45)]',
+  Reembolsada: 'ring-[rgba(59,130,246,0.55)] shadow-[0_0_30px_rgba(59,130,246,0.45)]',
+  Void: 'ring-[rgba(148,163,184,0.55)] shadow-[0_0_30px_rgba(148,163,184,0.45)]',
+  default: 'ring-[rgba(255,255,255,0.35)] shadow-[0_0_25px_rgba(255,255,255,0.25)]',
+};
 
 type UploadTicketData = NonNullable<ApiUploadTicketResponse['data']>;
 
@@ -55,10 +73,53 @@ interface StatusFormState {
   retornoObtido: string;
 }
 
+interface FiltersState {
+  bancaId: string;
+  esporte: string;
+  status: string;
+  statusSalvamento: string;
+  tipster: string;
+  casaDeAposta: string;
+  dataDe: string;
+  dataAte: string;
+  searchText: string;
+  oddMin: string;
+  oddMax: string;
+}
+
+const pageShellClass = 'space-y-10 text-foreground';
+const statGridClass = 'grid gap-6 md:grid-cols-2 xl:grid-cols-4';
+const glassCardClass = 'rounded-3xl border border-border/40 bg-background-card/80 p-6 shadow-card backdrop-blur';
+const dashboardCardShellClass = 'rounded-lg border border-white/5 bg-[#0f2d29] p-6 text-white shadow-[0_25px_45px_rgba(0,0,0,0.25)] backdrop-blur-sm';
+const buttonVariants = {
+  primary:
+    'inline-flex items-center gap-2 rounded-full bg-brand-emerald px-4 py-2 text-sm font-semibold text-white shadow-glow transition hover:bg-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-emerald/40 disabled:cursor-not-allowed disabled:opacity-60',
+  ghost:
+    'inline-flex items-center gap-2 rounded-full border border-border/40 bg-background/40 px-3 py-2 text-sm font-semibold text-foreground transition hover:border-foreground/40 hover:bg-background/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-emerald/30',
+  destructive:
+    'inline-flex items-center gap-2 rounded-full border border-rose-400/60 bg-rose-500/10 px-3 py-2 text-sm font-semibold text-rose-400 transition hover:bg-rose-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400/40'
+} as const;
+const tableActionButtonClass =
+  'inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-white/15 bg-white/5 text-white/80 transition hover:border-brand-emerald/40 hover:bg-white/10 hover:text-brand-emerald focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-emerald/30';
+const tableActionButtonDangerClass =
+  'inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-rose-400/40 bg-rose-500/10 text-rose-200 transition hover:bg-rose-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400/40';
+const filterButtonClass = 'inline-flex items-center gap-2 rounded-full border border-border/40 bg-background px-4 py-2 text-sm font-semibold text-foreground shadow-sm transition hover:text-brand-emerald focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-emerald/40';
+const filterCountClass = 'rounded-full bg-foreground/10 px-2 py-0.5 text-xs font-semibold text-foreground';
+const formGridClass = 'grid gap-4 md:grid-cols-2';
+const formFieldClass = 'flex flex-col gap-2';
+const labelClass = 'text-sm font-semibold text-foreground/80';
+const inputClass = 'w-full rounded-2xl border border-border/40 bg-background px-4 py-3 text-sm text-foreground placeholder:text-foreground/50 focus-visible:border-brand-emerald focus-visible:ring-2 focus-visible:ring-brand-emerald/30 outline-none transition';
+const inlineInputClass = 'grid gap-3 sm:grid-cols-2';
+const errorTextClass = 'text-xs font-semibold text-rose-400';
+
+
 export default function Atualizar() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [filters, setFilters] = useState({
+  const [filters, setFilters] = useState<FiltersState>({
+    bancaId: '',
     esporte: '',
     status: '',
     statusSalvamento: '',
@@ -78,16 +139,24 @@ export default function Atualizar() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [ocrText, setOcrText] = useState('');
   const [ocrExtracting, setOcrExtracting] = useState(false);
-  const ocrCancelledRef = useRef(false);
-  const uploadAbortControllerRef = useRef<AbortController | null>(null);
-  const tesseractInstanceRef = useRef<typeof import('tesseract.js') | null>(null);
   const [selectedApostaForStatus, setSelectedApostaForStatus] = useState<ApiBetWithBank | null>(null);
   const [editingAposta, setEditingAposta] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [apostas, setApostas] = useState<ApiBetWithBank[]>([]);
-  const { bancas } = useBancas();
+  const { bancas, refetch: refetchBancas } = useBancas();
   const { tipsters } = useTipsters();
-  const todayISO = new Date().toISOString().split('T')[0];
+  const autoSyncBancaRef = useRef(true);
+  const ocrCancelledRef = useRef(false);
+  const uploadAbortControllerRef = useRef<AbortController | null>(null);
+  const tesseractInstanceRef = useRef<typeof import('tesseract.js') | null>(null);
+  const preferredBancaId = useMemo(() => {
+    if (bancas.length === 0) {
+      return '';
+    }
+    const bancaPadrao = bancas.find((banca) => banca.padrao);
+    return bancaPadrao?.id ?? bancas[0].id;
+  }, [bancas]);
+  const todayISO = useMemo(() => new Date().toISOString().split('T')[0], []);
   const [formData, setFormData] = useState<ApostaFormState>({
     bancaId: '',
     esporte: '',
@@ -136,13 +205,42 @@ export default function Atualizar() {
     return Number.isFinite(parsed) ? parsed : undefined;
   };
 
+  const formatOptionalCellText = (value?: string | null) => {
+    if (typeof value !== 'string') {
+      return '-';
+    }
+    const trimmed = value.trim();
+    return trimmed === '' ? '-' : trimmed;
+  };
+
+  const resetFormState = useCallback(() => {
+    setFormData({
+      bancaId: preferredBancaId || '',
+      esporte: '',
+      jogo: '',
+      torneio: '',
+      pais: 'Mundo',
+      mercado: '',
+      tipoAposta: '',
+      valorApostado: '',
+      odd: '',
+      bonus: '0',
+      dataJogo: todayISO,
+      tipster: '',
+      status: 'Pendente',
+      casaDeAposta: '',
+      retornoObtido: ''
+    });
+    setRetornoManual(false);
+  }, [preferredBancaId, todayISO]);
+
   // Função para normalizar o esporte do banco para o formato da lista do frontend
   const normalizeEsporte = (esporteFromDb: string): string => {
     if (!esporteFromDb) return '';
-    
+
     // Normalizar: remover emojis, converter para minúsculo, remover espaços extras
     const normalized = esporteFromDb.toLowerCase().trim();
-    
+
     // Mapear variações comuns para o formato correto da lista
     const esporteMap: Record<string, string> = {
       'basquete': 'Basquete 🏀',
@@ -166,34 +264,72 @@ export default function Atualizar() {
       'outros': 'Outros',
       'outros esportes': 'Outros Esportes'
     };
-    
+
     // Verificar se há mapeamento direto
     if (esporteMap[normalized]) {
       return esporteMap[normalized];
     }
-    
+
     // Tentar encontrar correspondência parcial na lista (case-insensitive, sem emojis)
     const esporteEncontrado = ESPORTES.find(esp => {
       const espNormalized = esp.toLowerCase().replace(/[🏀⚽🏈🎾⚾🏒🏇🥌🎮]/gu, '').trim();
       return espNormalized === normalized || espNormalized.includes(normalized) || normalized.includes(espNormalized);
     });
-    
+
     if (esporteEncontrado) {
       return esporteEncontrado;
     }
-    
+
     // Se não encontrou, retornar o valor original (pode não estar na lista)
     return esporteFromDb;
   };
 
   const fetchApostas = useCallback(async () => {
     try {
-      const { data } = await api.get<ApiBetWithBank[]>('/apostas');
-      setApostas(data);
+      if (!filters.bancaId) {
+        if (!preferredBancaId) {
+          setApostas([]);
+        }
+        return;
+      }
+      const params: ApostasFilter = {};
+      params.bancaId = filters.bancaId;
+      if (filters.status && filters.status !== 'Tudo') {
+        params.status = filters.status as ApostaStatus;
+      }
+      if (filters.esporte) {
+        params.esporte = filters.esporte;
+      }
+      if (filters.casaDeAposta) {
+        params.casaDeAposta = filters.casaDeAposta;
+      }
+      if (filters.tipster) {
+        params.tipster = filters.tipster;
+      }
+      if (filters.dataDe) {
+        params.dataInicio = filters.dataDe;
+      }
+      if (filters.dataAte) {
+        params.dataFim = filters.dataAte;
+      }
+
+      const response = await apostaService.getAll(params);
+      const apostasData = response.apostas;
+      setApostas(Array.isArray(apostasData) ? apostasData : []);
     } catch (error) {
       console.error('Erro ao buscar apostas:', error);
+      setApostas([]);
     }
-  }, []);
+  }, [
+    filters.bancaId,
+    filters.status,
+    filters.esporte,
+    filters.casaDeAposta,
+    filters.tipster,
+    filters.dataDe,
+    filters.dataAte,
+    preferredBancaId,
+  ]);
 
   const seedTestBets = useCallback(async () => {
     try {
@@ -201,9 +337,7 @@ export default function Atualizar() {
         return;
       }
 
-      const bancaPadrao = bancas.find((banca) => banca.ePadrao) ?? bancas.at(0);
-      const defaultBancaId = bancaPadrao?.id ?? '';
-      if (!defaultBancaId) {
+      if (!preferredBancaId) {
         alert('Nenhuma banca encontrada para associar às apostas de teste.');
         return;
       }
@@ -214,7 +348,7 @@ export default function Atualizar() {
 
       const today = new Date();
 
-      const promises: Promise<unknown>[] = [];
+      const payloads: Record<string, unknown>[] = [];
 
       for (let i = 0; i < 200; i += 1) {
         const esporte = esportesList[i % esportesList.length];
@@ -228,7 +362,7 @@ export default function Atualizar() {
         const dataJogoISO = date.toISOString();
 
         const payload: Record<string, unknown> = {
-          bancaId: defaultBancaId,
+          bancaId: preferredBancaId,
           esporte,
           jogo: `Jogo de teste #${i + 1}`,
           torneio: 'Liga de Teste',
@@ -249,32 +383,108 @@ export default function Atualizar() {
           payload.retornoObtido = valorApostado * odd;
         }
 
-        promises.push(api.post('/apostas', payload));
+        payloads.push(payload);
       }
 
-      // Enviar em lotes para não sobrecarregar
-      const chunkSize = 20;
-      for (let i = 0; i < promises.length; i += chunkSize) {
-        await Promise.all(promises.slice(i, i + chunkSize));
+      let createdCount = 0;
+      let limitReachedMessage: string | null = null;
+      let aborted = false;
+
+      for (const payload of payloads) {
+        try {
+          await apostaService.create(payload);
+          createdCount += 1;
+        } catch (error) {
+          const apiError = error as ApiError & { response?: { status?: number } };
+          const statusCode = apiError.response?.status;
+          if (statusCode === 403) {
+            const errorMessage = apiError.response?.data?.error;
+            limitReachedMessage =
+              typeof errorMessage === 'string'
+                ? errorMessage
+                : 'Limite diário de apostas atingido.';
+          } else {
+            console.error('Erro ao criar apostas de teste:', error);
+            alert('Erro ao criar apostas de teste. Confira o console para mais detalhes.');
+          }
+          aborted = true;
+          break;
+        }
       }
 
-      await fetchApostas();
-      window.dispatchEvent(new Event('apostas-updated'));
-      alert('200 apostas de teste criadas com sucesso.');
+      if (createdCount > 0) {
+        await fetchApostas();
+        window.dispatchEvent(new Event('apostas-updated'));
+      }
+
+      if (limitReachedMessage) {
+        alert(`Foram geradas ${createdCount} apostas antes do limite diário.
+${limitReachedMessage}`);
+        return;
+      }
+
+      if (aborted) {
+        return;
+      }
+
+      alert(`${createdCount} apostas de teste criadas com sucesso.`);
     } catch (error) {
       console.error('Erro ao criar apostas de teste:', error);
       alert('Erro ao criar apostas de teste. Confira o console para mais detalhes.');
     }
-  }, [bancas, fetchApostas]);
+  }, [preferredBancaId, fetchApostas]);
 
-  // Buscar banca padrão e apostas
+  // Sincronizar formulário e filtros com a banca atual
   useEffect(() => {
-    if (bancas.length > 0 && !formData.bancaId) {
-      const bancaPadrao = bancas.find((banca) => banca.ePadrao) ?? bancas.at(0);
-      if (!bancaPadrao) return;
-      setFormData((prev) => ({ ...prev, bancaId: bancaPadrao.id }));
+    if (!preferredBancaId || formData.bancaId) {
+      return;
     }
-  }, [bancas, formData.bancaId]);
+    setFormData((prev) => ({ ...prev, bancaId: preferredBancaId }));
+  }, [preferredBancaId, formData.bancaId]);
+
+  useEffect(() => {
+    if (!preferredBancaId) {
+      return;
+    }
+    setFilters((prev) => {
+      const bancaExists = prev.bancaId ? bancas.some((banca) => banca.id === prev.bancaId) : false;
+      const shouldForceSync = !prev.bancaId || !bancaExists || autoSyncBancaRef.current;
+
+      if (!shouldForceSync && prev.bancaId === preferredBancaId) {
+        autoSyncBancaRef.current = true;
+        return prev;
+      }
+
+      if (!shouldForceSync) {
+        return prev;
+      }
+
+      if (prev.bancaId === preferredBancaId) {
+        autoSyncBancaRef.current = true;
+        return prev;
+      }
+
+      autoSyncBancaRef.current = true;
+      return { ...prev, bancaId: preferredBancaId };
+    });
+  }, [preferredBancaId, bancas]);
+
+  useEffect(() => {
+    const unsubscribes = [
+      eventBus.on('banca:updated', () => {
+        void refetchBancas(true);
+      }),
+      eventBus.on('banca:created', () => {
+        void refetchBancas(true);
+      }),
+      eventBus.on('banca:deleted', () => {
+        void refetchBancas(true);
+      }),
+    ];
+    return () => {
+      unsubscribes.forEach((unsubscribe) => unsubscribe());
+    };
+  }, [refetchBancas]);
 
   useEffect(() => {
     void fetchApostas();
@@ -296,7 +506,8 @@ export default function Atualizar() {
   useEffect(() => {
     const editParam = searchParams.get('edit');
     const statusParam = searchParams.get('status');
-    
+    const novaParamState = location.state as { openNovaAposta?: boolean } | null;
+
     if (editParam && apostas.length > 0) {
       const aposta = apostas.find(a => a.id === editParam);
       if (aposta) {
@@ -331,7 +542,7 @@ export default function Atualizar() {
         setSearchParams(searchParams, { replace: true });
       }
     }
-    
+
     if (statusParam && apostas.length > 0) {
       const aposta = apostas.find(a => a.id === statusParam);
       if (aposta) {
@@ -347,7 +558,16 @@ export default function Atualizar() {
         setSearchParams(searchParams, { replace: true });
       }
     }
-  }, [searchParams, setSearchParams, apostas]);
+
+    if (novaParamState?.openNovaAposta) {
+      setEditingAposta(null);
+      setFormErrors({});
+      setFormNotice('');
+      resetFormState();
+      setModalOpen(true);
+      navigate(location.pathname, { replace: true });
+    }
+  }, [searchParams, setSearchParams, apostas, location, navigate, resetFormState]);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -428,7 +648,7 @@ export default function Atualizar() {
     }
 
     try {
-      await api.delete(`/apostas/${aposta.id}`);
+      await apostaService.remove(aposta.id);
       // Recarregar apostas após deletar
       await fetchApostas();
       // Disparar evento para atualizar dashboard
@@ -446,7 +666,7 @@ export default function Atualizar() {
     const dataJogo = new Date(aposta.dataJogo).toISOString().split('T')[0];
     // Normalizar o esporte para corresponder ao formato da lista
     const esporteNormalizado = normalizeEsporte(aposta.esporte);
-    
+
     setFormData({
       bancaId: aposta.bancaId,
       esporte: esporteNormalizado,
@@ -476,27 +696,7 @@ export default function Atualizar() {
     setEditingAposta(null);
     setFormErrors({});
     setFormNotice('');
-    // Resetar formulário
-    const bancaPadrao = bancas.find((banca) => banca.ePadrao) ?? bancas.at(0);
-    const defaultBancaId = bancaPadrao?.id ?? '';
-    setFormData({
-      bancaId: defaultBancaId,
-      esporte: '',
-      jogo: '',
-      torneio: '',
-      pais: 'Mundo',
-      mercado: '',
-      tipoAposta: '',
-      valorApostado: '',
-      odd: '',
-      bonus: '0',
-      dataJogo: todayISO,
-      tipster: '',
-      status: 'Pendente',
-      casaDeAposta: '',
-      retornoObtido: ''
-    });
-    setRetornoManual(false);
+    resetFormState();
   };
 
   const validateForm = (): boolean => {
@@ -591,10 +791,10 @@ export default function Atualizar() {
 
       if (editingAposta) {
         // Atualizar aposta existente
-        await api.put(`/apostas/${editingAposta}`, payload);
+        await apostaService.update(editingAposta, payload);
       } else {
         // Criar nova aposta
-        await api.post('/apostas', payload);
+        await apostaService.create(payload);
       }
 
       // Limpar formulário e fechar modal
@@ -602,7 +802,7 @@ export default function Atualizar() {
 
       // Recarregar apostas e atualizar estatísticas
       await fetchApostas();
-      
+
       // Recarregar dados do dashboard (pode ser feito via contexto ou refetch)
       window.dispatchEvent(new Event('apostas-updated'));
     } catch (error) {
@@ -637,7 +837,7 @@ export default function Atualizar() {
       const tesseractModule = await import('tesseract.js');
       const Tesseract = tesseractModule.default;
       tesseractInstanceRef.current = tesseractModule;
-      
+
       const { data } = await Tesseract.recognize(file, 'por+eng', {
         logger: (m) => {
           if (m.status === 'recognizing text' && typeof m.progress === 'number') {
@@ -695,7 +895,7 @@ export default function Atualizar() {
   // Função para lidar com colagem de imagem (Ctrl+V)
   const handlePaste = useCallback((e: ClipboardEvent) => {
     if (!uploadModalOpen) return;
-    
+
     const items = e.clipboardData?.items;
     if (!items) return;
 
@@ -740,7 +940,7 @@ export default function Atualizar() {
       const controller = new AbortController();
       uploadAbortControllerRef.current = controller;
 
-      const { data } = await api.post<ApiUploadTicketResponse>('/upload/bilhete', formData, {
+      const { data } = await apiClient.post<ApiUploadTicketResponse>('/upload/bilhete', formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         },
@@ -749,10 +949,9 @@ export default function Atualizar() {
 
       if (data.success && data.data) {
         const extractedData: UploadTicketData = data.data;
-        
+
         // Preencher formulário com dados extraídos
-        const bancaPadrao = bancas.find((b) => b.ePadrao) ?? bancas.at(0);
-        const defaultBancaId = bancaPadrao?.id ?? '';
+        const defaultBancaId = preferredBancaId || '';
         const normalizedDate = extractedData.dataJogo ? extractedData.dataJogo.split('T')[0] : todayISO;
         setFormData({
           bancaId: defaultBancaId,
@@ -778,7 +977,7 @@ export default function Atualizar() {
         setEditingAposta(null);
         setRetornoManual(false);
         setFormNotice('Dados extraídos com sucesso! Revise e ajuste os campos antes de salvar.');
-        
+
         // Limpar upload
         setSelectedFile(null);
         setUploadPreview(null);
@@ -796,15 +995,15 @@ export default function Atualizar() {
         errorData?.message ??
         apiError.message ??
         'Erro ao processar imagem. Tente novamente.';
-      
+
       // Mensagem mais detalhada para erro de quota
       if (errorMessage.includes('Quota') || errorMessage.includes('quota') || errorMessage.includes('excedida')) {
         const isGemini = errorMessage.includes('Gemini');
         const apiName = isGemini ? 'Google Gemini' : 'OpenAI';
-        const billingUrl = isGemini 
+        const billingUrl = isGemini
           ? 'https://aistudio.google.com/app/apikey'
           : 'https://platform.openai.com/account/billing';
-        
+
         alert(
           `⚠️ Quota da API ${apiName} Excedida\n\n` +
           `Você excedeu a cota atual da sua conta ${apiName}.\n\n` +
@@ -835,7 +1034,7 @@ export default function Atualizar() {
       // Terminar OCR se Tesseract foi carregado
       if (tesseractInstanceRef.current) {
         const terminable = tesseractInstanceRef.current.default as { terminate?: () => void };
-      terminable.terminate?.();
+        terminable.terminate?.();
       }
     } catch (error) {
       console.warn('Falha ao encerrar OCR:', error);
@@ -855,64 +1054,21 @@ export default function Atualizar() {
     return formatDateUtil(dateString);
   }, []);
 
-  const getStatusIcon = (status: string) => {
-    const iconSize = 14;
-    switch (status) {
-      case 'Pendente':
-        return <Clock size={iconSize} />;
-      case 'Ganha':
-        return <CheckCircle size={iconSize} />;
-      case 'Perdida':
-        return <XCircle size={iconSize} />;
-      case 'Reembolsada':
-        return <RefreshCw size={iconSize} />;
-      case 'Meio Ganha':
-        return <TrendingUp size={iconSize} />;
-      case 'Meio Perdida':
-        return <TrendingDown size={iconSize} />;
-      case 'Cashout':
-        return <Zap size={iconSize} />;
-      default:
-        return <Clock size={iconSize} />;
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'Pendente':
-        return { bg: 'var(--color-warning-light)', text: 'var(--color-text-white)' };
-      case 'Ganha':
-        return { bg: 'var(--color-success)', text: 'var(--color-text-white)' };
-      case 'Perdida':
-        return { bg: 'var(--color-danger)', text: 'var(--color-text-white)' };
-      case 'Reembolsada':
-        return { bg: 'var(--color-chart-primary)', text: 'var(--color-text-white)' };
-      case 'Meio Ganha':
-        return { bg: 'var(--color-success-light)', text: 'var(--color-text-white)' };
-      case 'Meio Perdida':
-        return { bg: 'var(--color-bank-palette-3)', text: 'var(--color-text-white)' };
-      case 'Cashout':
-        return { bg: 'var(--color-secondary)', text: 'var(--color-text-white)' };
-      default:
-        return { bg: 'var(--color-text-muted)', text: 'var(--color-text-white)' };
-    }
-  };
-
   // Calcular retorno obtido automaticamente baseado no status
   const calcularRetornoObtido = useCallback((status: string, valorApostado: number, odd: number, retornoManualValue?: number): number | null => {
     switch (status) {
       case 'Ganha':
         // Retorno = valor apostado * odd
         return valorApostado * odd;
-      
+
       case 'Meio Ganha':
         // Retorno = (valor apostado * odd) / 2 + valor apostado / 2
         return (valorApostado * odd) / 2 + valorApostado / 2;
-      
+
       case 'Cashout':
         // Para cashout, usar valor manual se fornecido, senão calcular baseado na odd
         return retornoManualValue ?? valorApostado * odd * 0.7; // 70% do retorno potencial como padrão
-      
+
       case 'Perdida':
       case 'Meio Perdida':
       case 'Reembolsada':
@@ -962,11 +1118,11 @@ export default function Atualizar() {
         dataToSend.retornoObtido = null;
       }
 
-      await api.put(`/apostas/${selectedApostaForStatus.id}`, dataToSend);
+      await apostaService.update(selectedApostaForStatus.id, dataToSend);
 
       // Atualizar lista e estatísticas
       await fetchApostas();
-      
+
       // Fechar modal
       setStatusModalOpen(false);
       setSelectedApostaForStatus(null);
@@ -997,39 +1153,42 @@ export default function Atualizar() {
 
   // Calcular estatísticas (recalcula automaticamente quando apostas mudam)
   const stats = useMemo(() => {
-    const totalInvestido = apostas.reduce((sum, aposta) => sum + aposta.valorApostado, 0);
-    const ganhos = apostas
+    // Defensive check: ensure apostas is always an array
+    const apostasArray = Array.isArray(apostas) ? apostas : [];
+
+    const totalInvestido = apostasArray.reduce((sum, aposta) => sum + aposta.valorApostado, 0);
+    const ganhos = apostasArray
       .filter(
         (aposta): aposta is ApiBetWithBank & { retornoObtido: number } =>
           aposta.status !== 'Pendente' && typeof aposta.retornoObtido === 'number'
       )
       .reduce((sum, aposta) => sum + aposta.retornoObtido, 0);
-    const pendente = apostas
+    const pendente = apostasArray
       .filter((aposta) => aposta.status === 'Pendente')
       .reduce((sum, aposta) => sum + aposta.valorApostado, 0);
 
     return [
-      { 
-        title: 'Total Apostas', 
-        value: apostas.length.toString(), 
+      {
+        title: 'Total Apostas',
+        value: apostasArray.length.toString(),
         helper: 'apostas registradas',
         color: 'blue' as const
       },
-      { 
-        title: 'Valor Investido', 
-        value: formatCurrency(totalInvestido), 
+      {
+        title: 'Valor Investido',
+        value: formatCurrency(totalInvestido),
         helper: 'total investido',
         color: 'purple' as const
       },
-      { 
-        title: 'Ganhos', 
-        value: formatCurrency(ganhos), 
+      {
+        title: 'Ganhos',
+        value: formatCurrency(ganhos),
         helper: 'lucro obtido',
         color: 'emerald' as const
       },
-      { 
-        title: 'Pendente', 
-        value: formatCurrency(pendente), 
+      {
+        title: 'Pendente',
+        value: formatCurrency(pendente),
         helper: 'aguardando resultado',
         color: 'amber' as const
       }
@@ -1037,9 +1196,14 @@ export default function Atualizar() {
   }, [apostas, formatCurrency]);
 
   const filteredApostas = useMemo(() => {
-    return apostas.filter((aposta) => {
+    // Defensive check: ensure apostas is always an array
+    const apostasArray = Array.isArray(apostas) ? apostas : [];
+    const normalizedStatus = filters.status && filters.status !== 'Tudo' ? filters.status : '';
+
+    return apostasArray.filter((aposta) => {
+      if (filters.bancaId && aposta.bancaId !== filters.bancaId) return false;
       if (filters.esporte && aposta.esporte !== filters.esporte) return false;
-      if (filters.status && aposta.status !== filters.status) return false;
+      if (normalizedStatus && aposta.status !== normalizedStatus) return false;
       if (filters.tipster && aposta.tipster !== filters.tipster) return false;
       if (filters.casaDeAposta && aposta.casaDeAposta !== filters.casaDeAposta) return false;
 
@@ -1078,6 +1242,7 @@ export default function Atualizar() {
 
   const activeFilterCount = useMemo(() => {
     return Object.values({
+      bancaId: filters.bancaId,
       esporte: filters.esporte,
       status: filters.status,
       statusSalvamento: filters.statusSalvamento,
@@ -1094,230 +1259,36 @@ export default function Atualizar() {
   const manualRetornoValue = parseNullableNumber(statusFormData.retornoObtido);
   const retornoPreview = STATUS_WITH_RETURNS.includes(statusFormData.status)
     ? (manualRetornoValue ??
-        calcularRetornoObtido(
-          statusFormData.status,
-          selectedApostaForStatus?.valorApostado ?? 0,
-          selectedApostaForStatus?.odd ?? 0,
-          manualRetornoValue
-        ) ??
-        0)
+      calcularRetornoObtido(
+        statusFormData.status,
+        selectedApostaForStatus?.valorApostado ?? 0,
+        selectedApostaForStatus?.odd ?? 0,
+        manualRetornoValue
+      ) ??
+      0)
     : 0;
 
   return (
-    <div className="atualizar-page">
+    <div className={pageShellClass}>
       <PageHeader
-        title="Apostas"
-        subtitle="Gerencie suas apostas e acompanhe resultados"
+        title="Atualizar Apostas"
+        subtitle="Gerencie seus bilhetes, aplique filtros avançados e mantenha o histórico sincronizado"
         actions={
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <button 
+          <div className="flex flex-wrap items-center gap-3 relative">
+            <button
               type="button"
-              className="btn" 
-              onClick={() => setUploadModalOpen(true)}
+              className={filterButtonClass}
+              onClick={() => setFiltersOpen(true)}
             >
-              <Upload size={16} /> Upload
+              <Filter size={16} />
+              Filtros
+              {activeFilterCount > 0 && (
+                <span className={filterCountClass}>{activeFilterCount}</span>
+              )}
             </button>
-            <div className="filter-trigger-wrapper">
-              <button className="filter-trigger" onClick={() => setFiltersOpen((prev) => !prev)}>
-                <Filter size={16} /> Filtros{' '}
-                {activeFilterCount > 0 && <span className="filter-count">{activeFilterCount}</span>}
-              </button>
-              <FilterPopover
-                open={filtersOpen}
-                onClose={() => setFiltersOpen(false)}
-                onClear={() => {
-                  setFilters({
-                    esporte: '',
-                    status: '',
-                    statusSalvamento: '',
-                    tipster: '',
-                    casaDeAposta: '',
-                    dataDe: '',
-                    dataAte: '',
-                    searchText: '',
-                    oddMin: '',
-                    oddMax: ''
-                  });
-                  setFiltersOpen(false);
-                }}
-                footer={
-                  <button className="btn" onClick={() => setFiltersOpen(false)}>
-                    Aplicar Filtros
-                  </button>
-                }
-              >
-                <div className="filters-panel filters-panel--plain">
-                  <div className="field">
-                    <label>Esporte</label>
-                    <select
-                      value={filters.esporte}
-                      onChange={(e) => setFilters((prev) => ({ ...prev, esporte: e.target.value }))}
-                      style={{ color: filters.esporte ? 'var(--text)' : 'var(--muted)' }}
-                    >
-                      <option value="" disabled hidden>Selecione…</option>
-                      {ESPORTES.map((esporte) => (
-                        <option key={esporte} value={esporte}>
-                          {esporte}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="field">
-                    <label>Status</label>
-                    <select
-                      value={filters.status}
-                      onChange={(e) => setFilters((prev) => ({ ...prev, status: e.target.value }))}
-                      style={{ color: filters.status ? 'var(--text)' : 'var(--muted)' }}
-                    >
-                      <option value="" disabled hidden>Selecione um status</option>
-                      {STATUS_APOSTAS.map((status) => (
-                        <option key={status} value={status}>
-                          {status}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="field">
-                    <label>Status Salvamento</label>
-                    <select
-                      value={filters.statusSalvamento}
-                      onChange={(e) => setFilters((prev) => ({ ...prev, statusSalvamento: e.target.value }))}
-                      style={{ color: filters.statusSalvamento ? 'var(--text)' : 'var(--muted)' }}
-                    >
-                      <option value="" disabled hidden>Selecione…</option>
-                      {STATUS_SALVAMENTO.map((status) => (
-                        <option key={status} value={status}>
-                          {status}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="field">
-                    <label>Tipster</label>
-                    <select
-                      value={filters.tipster}
-                      onChange={(e) => setFilters((prev) => ({ ...prev, tipster: e.target.value }))}
-                      style={{ color: filters.tipster ? 'var(--text)' : 'var(--muted)' }}
-                    >
-                      <option value="" disabled hidden>Selecione…</option>
-                      {tipsters.filter(t => t.ativo).map((tipster) => (
-                        <option key={tipster.id} value={tipster.nome}>
-                          {tipster.nome}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="field">
-                    <label>Casa de Aposta</label>
-                    <select
-                      value={filters.casaDeAposta}
-                      onChange={(e) => setFilters((prev) => ({ ...prev, casaDeAposta: e.target.value }))}
-                      style={{ color: filters.casaDeAposta ? 'var(--text)' : 'var(--muted)' }}
-                    >
-                      <option value="" disabled hidden>Selecione…</option>
-                      {CASAS_APOSTAS.map((casa) => (
-                        <option key={casa} value={casa}>
-                          {casa}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="field">
-                    <label>Data do Jogo (De)</label>
-                    <DateInput
-                      value={filters.dataDe}
-                      onChange={(value) => setFilters((prev) => ({ ...prev, dataDe: value }))}
-                      placeholder="dd/mm/aaaa"
-                      className="date-input-modern"
-                      style={{
-                        width: '100%',
-                        padding: '10px 14px',
-                        fontSize: '0.9rem',
-                        border: '1.5px solid var(--border)',
-                        borderRadius: '8px',
-                        background: 'var(--surface)',
-                        color: 'var(--text)',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s'
-                      }}
-                      onFocus={(e) => {
-                        e.target.style.borderColor = 'var(--color-border-input-focus)';
-                        e.target.style.boxShadow = 'var(--color-shadow-input-focus)';
-                      }}
-                      onBlur={(e) => {
-                        e.target.style.borderColor = 'var(--border)';
-                        e.target.style.boxShadow = 'none';
-                      }}
-                    />
-                  </div>
-                  <div className="field">
-                    <label>Data do Jogo (Até)</label>
-                    <DateInput
-                      value={filters.dataAte}
-                      onChange={(value) => setFilters((prev) => ({ ...prev, dataAte: value }))}
-                      placeholder="dd/mm/aaaa"
-                      className="date-input-modern"
-                      style={{
-                        width: '100%',
-                        padding: '10px 14px',
-                        fontSize: '0.9rem',
-                        border: '1.5px solid var(--border)',
-                        borderRadius: '8px',
-                        background: 'var(--surface)',
-                        color: 'var(--text)',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s'
-                      }}
-                      onFocus={(e) => {
-                        e.target.style.borderColor = 'var(--color-border-input-focus)';
-                        e.target.style.boxShadow = 'var(--color-shadow-input-focus)';
-                      }}
-                      onBlur={(e) => {
-                        e.target.style.borderColor = 'var(--border)';
-                        e.target.style.boxShadow = 'none';
-                      }}
-                    />
-                    <p style={{ 
-                      margin: '8px 0 0 0', 
-                      fontSize: '0.75rem', 
-                      color: 'var(--muted)',
-                      lineHeight: '1.4'
-                    }}>
-                      Se só preencher "De", será filtrado apenas nesta data. Se preencher "Até", será considerado como intervalo.
-                    </p>
-                  </div>
-                  <div className="field">
-                    <label>Evento, Mercado, Aposta</label>
-                    <input
-                      type="text"
-                      placeholder="Digite o nome do evento, mercado ou aposta"
-                      value={filters.searchText}
-                      onChange={(e) => setFilters((prev) => ({ ...prev, searchText: e.target.value }))}
-                    />
-                  </div>
-                  <div className="field">
-                    <label>ODD</label>
-                    <div className="field-inline">
-                      <input
-                        type="number"
-                        placeholder="Mínimo"
-                        value={filters.oddMin}
-                        onChange={(e) => setFilters((prev) => ({ ...prev, oddMin: e.target.value }))}
-                      />
-                      <input
-                        type="number"
-                        placeholder="Máximo"
-                        value={filters.oddMax}
-                        onChange={(e) => setFilters((prev) => ({ ...prev, oddMax: e.target.value }))}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </FilterPopover>
-            </div>
-            <button 
+            <button
               type="button"
-              className="btn" 
+              className={buttonVariants.primary}
               onClick={() => {
                 setEditingAposta(null);
                 setModalOpen(true);
@@ -1327,24 +1298,194 @@ export default function Atualizar() {
             >
               <Plus size={16} /> Nova Aposta
             </button>
+            {filtersOpen && (
+              <div className="absolute right-0 top-full mt-2 z-50">
+                <FilterPopover
+                  open={filtersOpen}
+                  onClose={() => setFiltersOpen(false)}
+                  footer={
+                    <button className={buttonVariants.primary} onClick={() => setFiltersOpen(false)}>
+                      Aplicar Filtros
+                    </button>
+                  }
+                >
+                  <div className={cn(formGridClass, 'w-[min(560px,80vw)]')}>
+                    <div className={formFieldClass}>
+                      <label className={labelClass}>Banca</label>
+                      <select
+                        className={inputClass}
+                        value={filters.bancaId}
+                        onChange={(e) => {
+                          autoSyncBancaRef.current = false;
+                          setFilters((prev) => ({ ...prev, bancaId: e.target.value }));
+                        }}
+                      >
+                        <option value="" disabled hidden>Selecione uma banca</option>
+                        {bancas.map((banca) => (
+                          <option key={banca.id} value={banca.id}>
+                            {banca.nome}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className={formFieldClass}>
+                      <label className={labelClass}>Esporte</label>
+                      <select
+                        className={inputClass}
+                        value={filters.esporte}
+                        onChange={(e) => setFilters((prev) => ({ ...prev, esporte: e.target.value }))}
+                      >
+                        <option value="" disabled hidden>Selecione…</option>
+                        {ESPORTES.map((esporte) => (
+                          <option key={esporte} value={esporte}>
+                            {esporte}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className={formFieldClass}>
+                      <label className={labelClass}>Status</label>
+                      <select
+                        className={inputClass}
+                        value={filters.status}
+                        onChange={(e) => setFilters((prev) => ({ ...prev, status: e.target.value }))}
+                      >
+                        <option value="" disabled hidden>Selecione um status</option>
+                        {STATUS_APOSTAS.map((status) => (
+                          <option key={status} value={status}>
+                            {status}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className={formFieldClass}>
+                      <label className={labelClass}>Status Salvamento</label>
+                      <select
+                        className={inputClass}
+                        value={filters.statusSalvamento}
+                        onChange={(e) => setFilters((prev) => ({ ...prev, statusSalvamento: e.target.value }))}
+                      >
+                        <option value="" disabled hidden>Selecione…</option>
+                        {STATUS_SALVAMENTO.map((status) => (
+                          <option key={status} value={status}>
+                            {status}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className={formFieldClass}>
+                      <label className={labelClass}>Tipster</label>
+                      <select
+                        className={inputClass}
+                        value={filters.tipster}
+                        onChange={(e) => setFilters((prev) => ({ ...prev, tipster: e.target.value }))}
+                      >
+                        <option value="" disabled hidden>Selecione…</option>
+                        {tipsters
+                          .filter((tipster) => tipster.ativo)
+                          .map((tipster) => (
+                            <option key={tipster.id} value={tipster.nome}>
+                              {tipster.nome}
+                            </option>
+                          ))}
+                      </select>
+                    </div>
+
+                    <div className={formFieldClass}>
+                      <label className={labelClass}>Casa de Aposta</label>
+                      <select
+                        className={inputClass}
+                        value={filters.casaDeAposta}
+                        onChange={(e) => setFilters((prev) => ({ ...prev, casaDeAposta: e.target.value }))}
+                      >
+                        <option value="" disabled hidden>Selecione…</option>
+                        {CASAS_APOSTAS.map((casa) => (
+                          <option key={casa} value={casa}>
+                            {casa}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className={formFieldClass}>
+                      <label className={labelClass}>Data do Jogo (De)</label>
+                      <DateInput
+                        value={filters.dataDe}
+                        onChange={(value) => setFilters((prev) => ({ ...prev, dataDe: value }))}
+                        placeholder="dd/mm/aaaa"
+                        className={inputClass}
+                      />
+                    </div>
+
+                    <div className={formFieldClass}>
+                      <label className={labelClass}>Data do Jogo (Até)</label>
+                      <DateInput
+                        value={filters.dataAte}
+                        onChange={(value) => setFilters((prev) => ({ ...prev, dataAte: value }))}
+                        placeholder="dd/mm/aaaa"
+                        className={inputClass}
+                      />
+                      <p className="text-xs text-foreground/60">
+                        Se só preencher "De", filtramos somente este dia. Com "Até", usamos o intervalo.
+                      </p>
+                    </div>
+
+                    <div className={formFieldClass}>
+                      <label className={labelClass}>Evento, Mercado, Aposta</label>
+                      <input
+                        className={inputClass}
+                        type="text"
+                        placeholder="Digite o nome do evento, mercado ou aposta"
+                        value={filters.searchText}
+                        onChange={(e) => setFilters((prev) => ({ ...prev, searchText: e.target.value }))}
+                      />
+                    </div>
+
+                    <div className={formFieldClass}>
+                      <label className={labelClass}>ODD</label>
+                      <div className={inlineInputClass}>
+                        <input
+                          className={inputClass}
+                          type="number"
+                          placeholder="Mínimo"
+                          value={filters.oddMin}
+                          onChange={(e) => setFilters((prev) => ({ ...prev, oddMin: e.target.value }))}
+                        />
+                        <input
+                          className={inputClass}
+                          type="number"
+                          placeholder="Máximo"
+                          value={filters.oddMax}
+                          onChange={(e) => setFilters((prev) => ({ ...prev, oddMax: e.target.value }))}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </FilterPopover>
+              </div>
+            )}
           </div>
         }
       />
 
-      <div className="stat-grid">
+      <div className={statGridClass}>
         {stats.map((stat) => (
           <StatCard key={stat.title} title={stat.title} value={stat.value} helper={stat.helper} color={stat.color} />
         ))}
       </div>
 
-      <div className="card">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h3 style={{ marginTop: 0 }}>Apostas</h3>
-          <div style={{ display: 'flex', gap: 8 }}>
+      <div className={cn(dashboardCardShellClass, 'space-y-6')}>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h3 className="text-lg font-semibold text-white">Apostas</h3>
+          <div className="flex items-center gap-2">
             {isDev && (
               <button
                 type="button"
-                className="btn ghost"
+                className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm font-semibold text-white/80 transition hover:border-brand-emerald/50 hover:text-brand-emerald focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-emerald/30"
                 onClick={() => {
                   void seedTestBets();
                 }}
@@ -1355,7 +1496,7 @@ export default function Atualizar() {
             )}
             <button
               type="button"
-              className="btn ghost"
+              className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm font-semibold text-white/80 transition hover:border-brand-emerald/50 hover:text-brand-emerald focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-emerald/30"
               onClick={() => setBetsExpanded((prev) => !prev)}
             >
               {betsExpanded ? 'Recolher' : 'Expandir'}
@@ -1366,104 +1507,66 @@ export default function Atualizar() {
         {apostas.length === 0 ? (
           <EmptyState title="Nenhuma aposta" description="Cadastre uma nova aposta para começar a acompanhar resultados." />
         ) : (
-          <div
-            style={{
-              maxHeight: betsExpanded ? 'none' : '420px',
-              overflowY: betsExpanded ? 'visible' : 'auto',
-              marginTop: '8px'
-            }}
-          >
-            <table>
-              <thead>
+          <div className={cn('overflow-hidden rounded-2xl border border-white/10', betsExpanded ? '' : 'max-h-[420px] overflow-y-auto')}>
+            <table className="w-full table-auto border-collapse text-left text-sm text-white">
+              <thead className="bg-white/5">
                 <tr>
-                  <th>Casa de Aposta</th>
-                  <th>Tipster</th>
-                  <th>Data</th>
-                  <th>Esporte</th>
-                  <th>Partida</th>
-                  <th>Mercado</th>
-                  <th>Stake</th>
-                  <th>Status</th>
-                  <th>Retorno Obtido</th>
-                  <th>Ações</th>
+                  {['Casa de Aposta', 'Tipster', 'Data', 'Esporte', 'Partida', 'Mercado', 'Stake', 'Status', 'Retorno Obtido', 'Ações'].map((column) => (
+                    <th key={column} className="px-4 py-3 text-[0.7rem] uppercase tracking-[0.18em] text-white/60">
+                      {column}
+                    </th>
+                  ))}
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-white/10">
                 {filteredApostas.map((aposta) => (
-                  <tr key={aposta.id}>
-                    <td>{aposta.casaDeAposta ?? '-'}</td>
-                    <td>{aposta.tipster ?? '-'}</td>
-                    <td>{formatDate(aposta.dataJogo)}</td>
-                    <td>{aposta.esporte}</td>
-                    <td>{aposta.jogo}</td>
-                    <td>{aposta.mercado}</td>
-                    <td>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                        <span>{formatCurrency(aposta.valorApostado)}</span>
-                        <span style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>Odd: {aposta.odd}</span>
+                  <tr key={aposta.id} className="text-white">
+                    <td className="px-4 py-3 align-top text-sm font-medium text-white">{formatOptionalCellText(aposta.casaDeAposta)}</td>
+                    <td className="px-4 py-3 align-top text-sm text-white/80">{formatOptionalCellText(aposta.tipster)}</td>
+                    <td className="px-4 py-3 align-top text-sm text-white/80">{formatDate(aposta.dataJogo)}</td>
+                    <td className="px-4 py-3 align-top text-sm text-white/80">{aposta.esporte}</td>
+                    <td className="px-4 py-3 align-top text-sm text-white">{aposta.jogo}</td>
+                    <td className="px-4 py-3 align-top text-sm text-white/80">{aposta.mercado}</td>
+                    <td className="px-4 py-3 align-top text-sm text-white">
+                      <div className="flex flex-col gap-1 text-sm">
+                        <span className="font-semibold text-white">{formatCurrency(aposta.valorApostado)}</span>
+                        <span className="text-xs text-white/60">Odd: {aposta.odd}</span>
                       </div>
                     </td>
-                    <td>
+                    <td className="px-4 py-3 align-top">
                       <button
                         type="button"
                         onClick={() => handleOpenStatusModal(aposta)}
-                        style={{
-                          padding: '6px 12px',
-                          borderRadius: '20px',
-                          border: 'none',
-                          background: getStatusColor(aposta.status).bg,
-                          color: getStatusColor(aposta.status).text,
-                          cursor: 'pointer',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          fontSize: '0.875rem',
-                          fontWeight: 600,
-                          transition: 'all 0.2s'
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.opacity = '0.8';
-                          e.currentTarget.style.transform = 'scale(1.05)';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.opacity = '1';
-                          e.currentTarget.style.transform = 'scale(1)';
-                        }}
+                        className={cn(
+                          betStatusPillBaseClass,
+                          'text-xs',
+                          betStatusPillVariants[aposta.status] ?? betStatusPillVariants.default
+                        )}
                       >
-                        {getStatusIcon(aposta.status)}
+                        {getBetStatusIcon(aposta.status)}
                         {aposta.status}
                       </button>
                     </td>
-                    <td>{aposta.retornoObtido != null ? formatCurrency(aposta.retornoObtido) : '-'}</td>
-                    <td>
-                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <td className="px-4 py-3 align-top text-sm text-white">
+                      {aposta.retornoObtido != null ? formatCurrency(aposta.retornoObtido) : '-'}
+                    </td>
+                    <td className="px-4 py-3 align-top">
+                      <div className="flex items-center gap-2 text-white">
                         <button
                           type="button"
-                          className="btn ghost"
+                          className={tableActionButtonClass}
                           onClick={() => handleEditAposta(aposta)}
-                          style={{ padding: '4px 8px', fontSize: '0.875rem' }}
                           title="Editar aposta"
                         >
-                          <Pencil size={14} />
+                          <Pencil size={16} />
                         </button>
                         <button
                           type="button"
-                          className="btn ghost"
+                          className={tableActionButtonDangerClass}
                           onClick={() => handleDeleteAposta(aposta)}
-                          style={{ 
-                            padding: '4px 8px', 
-                            fontSize: '0.875rem',
-                            color: 'var(--color-danger)'
-                          }}
                           title="Deletar aposta"
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.background = 'var(--color-bg-danger-light)';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.background = 'transparent';
-                          }}
                         >
-                          <Trash2 size={14} />
+                          <Trash2 size={16} />
                         </button>
                       </div>
                     </td>
@@ -1477,46 +1580,35 @@ export default function Atualizar() {
 
       <Modal isOpen={modalOpen} onClose={handleCloseModal} title={editingAposta ? "Editar Aposta" : "Nova Aposta"}>
         {formNotice && (
-          <div
-            style={{
-              marginBottom: '16px',
-              padding: '12px 16px',
-              borderRadius: '12px',
-              background: 'var(--color-bg-active)',
-              border: '1px solid var(--color-border-nav-active-dark)',
-              color: 'var(--color-text-secondary-dark)',
-              fontSize: '0.9rem',
-              lineHeight: 1.4
-            }}
-          >
+          <div className="mb-4 rounded-2xl border border-border/30 bg-background/80 p-4 text-sm text-foreground">
             {formNotice}
           </div>
         )}
-        <form onSubmit={handleSubmit} className="filters-panel" style={{ gridTemplateColumns: '1fr 1fr' }}>
+        <form onSubmit={handleSubmit} className={cn(formGridClass, 'mt-6')}>
           {bancas.length > 0 && (
-            <div className="field" style={{ gridColumn: 'span 2' }}>
-              <label>Banca *</label>
-              <select 
+            <div className={cn(formFieldClass, 'md:col-span-2')}>
+              <label className={labelClass}>Banca *</label>
+              <select
+                className={inputClass}
                 value={formData.bancaId}
                 onChange={(e) => handleFormChange('bancaId', e.target.value)}
-                style={{ color: formData.bancaId ? 'var(--text)' : 'var(--muted)' }}
               >
                 <option value="" disabled hidden>Selecione uma banca</option>
                 {bancas.map((banca) => (
                   <option key={banca.id} value={banca.id}>
-                    {banca.nome} {banca.ePadrao ? '(Padrão)' : ''}
+                    {banca.nome} {banca.padrao ? '(Padrão)' : ''}
                   </option>
                 ))}
               </select>
-              {formErrors.bancaId && <span className="field-error">{formErrors.bancaId}</span>}
+              {formErrors.bancaId && <span className={errorTextClass}>{formErrors.bancaId}</span>}
             </div>
           )}
-          <div className="field">
-            <label>Esporte *</label>
-            <select 
+          <div className={formFieldClass}>
+            <label className={labelClass}>Esporte *</label>
+            <select
+              className={inputClass}
               value={formData.esporte}
               onChange={(e) => handleFormChange('esporte', e.target.value)}
-              style={{ color: formData.esporte ? 'var(--text)' : 'var(--muted)' }}
             >
               <option value="" disabled hidden>Selecione uma opção…</option>
               {ESPORTES.map((esporte) => (
@@ -1525,52 +1617,56 @@ export default function Atualizar() {
                 </option>
               ))}
             </select>
-            {formErrors.esporte && <span className="field-error">{formErrors.esporte}</span>}
+            {formErrors.esporte && <span className={errorTextClass}>{formErrors.esporte}</span>}
           </div>
-          <div className="field">
-            <label>Jogo *</label>
-            <input 
-              type="text" 
+          <div className={formFieldClass}>
+            <label className={labelClass}>Jogo *</label>
+            <input
+              className={inputClass}
+              type="text"
               value={formData.jogo}
               onChange={(e) => handleFormChange('jogo', e.target.value)}
-              placeholder="Digite o jogo" 
+              placeholder="Digite o jogo"
             />
-            {formErrors.jogo && <span className="field-error">{formErrors.jogo}</span>}
+            {formErrors.jogo && <span className={errorTextClass}>{formErrors.jogo}</span>}
           </div>
-          <div className="field">
-            <label>Torneio</label>
-            <input 
-              type="text" 
+          <div className={formFieldClass}>
+            <label className={labelClass}>Torneio</label>
+            <input
+              className={inputClass}
+              type="text"
               value={formData.torneio}
               onChange={(e) => handleFormChange('torneio', e.target.value)}
-              placeholder="Torneio" 
+              placeholder="Torneio"
             />
           </div>
-          <div className="field">
-            <label>País</label>
-            <input 
-              type="text" 
+          <div className={formFieldClass}>
+            <label className={labelClass}>País</label>
+            <input
+              className={inputClass}
+              type="text"
               value={formData.pais}
               onChange={(e) => handleFormChange('pais', e.target.value)}
-              placeholder="Mundo" 
+              placeholder="Mundo"
             />
           </div>
-          <div className="field">
-            <label>Mercado *</label>
-            <input 
-              type="text" 
+          <div className={formFieldClass}>
+            <label className={labelClass}>Mercado *</label>
+            <input
+              className={inputClass}
+              type="text"
               value={formData.mercado}
               onChange={(e) => handleFormChange('mercado', e.target.value)}
-              placeholder="Mercado" 
+              placeholder="Mercado"
             />
-            {formErrors.mercado && <span className="field-error">{formErrors.mercado}</span>}
+            {formErrors.mercado && <span className={errorTextClass}>{formErrors.mercado}</span>}
           </div>
-          <div className="field">
-            <label>Tipo de Aposta *</label>
-            <select 
+          <div className={formFieldClass}>
+            <label className={labelClass}>Tipo de Aposta *</label>
+            <select
+              className={inputClass}
               value={formData.tipoAposta}
               onChange={(e) => handleFormChange('tipoAposta', e.target.value)}
-              style={{ color: formData.tipoAposta ? 'var(--text)' : 'var(--muted)' }}
             >
               <option value="" disabled hidden>Selecione o tipo</option>
               {TIPOS_APOSTA.map((tipo) => (
@@ -1579,83 +1675,62 @@ export default function Atualizar() {
                 </option>
               ))}
             </select>
-            {formErrors.tipoAposta && <span className="field-error">{formErrors.tipoAposta}</span>}
+            {formErrors.tipoAposta && <span className={errorTextClass}>{formErrors.tipoAposta}</span>}
           </div>
-          <div className="field">
-            <label>Valor Apostado *</label>
-            <input 
-              type="number" 
+          <div className={formFieldClass}>
+            <label className={labelClass}>Valor Apostado *</label>
+            <input
+              className={inputClass}
+              type="number"
               value={formData.valorApostado}
               onChange={(e) => handleFormChange('valorApostado', e.target.value)}
-              placeholder="0" 
+              placeholder="0"
               step="0.01"
               min="0.01"
             />
-            {formErrors.valorApostado && <span className="field-error">{formErrors.valorApostado}</span>}
+            {formErrors.valorApostado && <span className={errorTextClass}>{formErrors.valorApostado}</span>}
           </div>
-          <div className="field">
-            <label>Odd *</label>
-            <input 
-              type="number" 
+          <div className={formFieldClass}>
+            <label className={labelClass}>Odd *</label>
+            <input
+              className={inputClass}
+              type="number"
               value={formData.odd}
               onChange={(e) => handleFormChange('odd', e.target.value)}
-              placeholder="0" 
+              placeholder="0"
               step="0.01"
               min="1.01"
             />
-            {formErrors.odd && <span className="field-error">{formErrors.odd}</span>}
+            {formErrors.odd && <span className={errorTextClass}>{formErrors.odd}</span>}
           </div>
-          <div className="field">
-            <label>Bônus</label>
-            <input 
-              type="number" 
+          <div className={formFieldClass}>
+            <label className={labelClass}>Bônus</label>
+            <input
+              className={inputClass}
+              type="number"
               value={formData.bonus}
               onChange={(e) => handleFormChange('bonus', e.target.value)}
-              placeholder="0" 
+              placeholder="0"
               step="0.01"
               min="0"
             />
           </div>
-          <div className="field">
-            <label>Data do Jogo *</label>
+          <div className={formFieldClass}>
+            <label className={labelClass}>Data do Jogo *</label>
             <DateInput
               value={formData.dataJogo}
               onChange={(value) => handleFormChange('dataJogo', value)}
               placeholder="dd/mm/aaaa"
-              className="date-input-modern"
-              style={{
-                width: '100%',
-                padding: '10px 14px',
-                fontSize: '0.9rem',
-                border: '1.5px solid var(--border)',
-                borderRadius: '8px',
-                background: 'var(--surface)',
-                color: 'var(--text)',
-                cursor: 'pointer',
-                transition: 'all 0.2s'
-              }}
-              onFocus={(e) => {
-                const root = getComputedStyle(document.documentElement);
-                const bankColorValue = root.getPropertyValue('--bank-color').trim();
-                const bankColorLightValue = root.getPropertyValue('--bank-color-light').trim();
-                const bankColor = bankColorValue === '' ? getComputedStyle(document.documentElement).getPropertyValue('--color-chart-primary').trim() : bankColorValue;
-                const bankColorLight = bankColorLightValue === '' ? getComputedStyle(document.documentElement).getPropertyValue('--color-bg-hover').trim() : bankColorLightValue;
-                e.target.style.borderColor = bankColor;
-                e.target.style.boxShadow = `0 0 0 3px ${bankColorLight}`;
-              }}
-              onBlur={(e) => {
-                e.target.style.borderColor = 'var(--border)';
-                e.target.style.boxShadow = 'none';
-              }}
+              className={inputClass}
             />
-            {formErrors.dataJogo && <span className="field-error">{formErrors.dataJogo}</span>}
+            {formErrors.dataJogo && <span className={errorTextClass}>{formErrors.dataJogo}</span>}
           </div>
-          <div className="field">
-            <label>Tipster</label>
-            <select 
+          <div className={formFieldClass}>
+            <label className={labelClass}>Tipster</label>
+            <select
+              className={inputClass}
               value={formData.tipster}
               onChange={(e) => handleFormChange('tipster', e.target.value)}
-              style={{ color: formData.tipster ? 'var(--text)' : 'var(--muted)' }}
             >
               <option value="" disabled hidden>Selecione…</option>
               {tipsters.filter(t => t.ativo).map((tipster) => (
@@ -1665,9 +1740,10 @@ export default function Atualizar() {
               ))}
             </select>
           </div>
-          <div className="field">
-            <label>Status *</label>
-            <select 
+          <div className={formFieldClass}>
+            <label className={labelClass}>Status *</label>
+            <select
+              className={inputClass}
               value={formData.status}
               onChange={(e) => {
                 const value = e.target.value;
@@ -1679,7 +1755,6 @@ export default function Atualizar() {
                   ));
                 }
               }}
-              style={{ color: formData.status ? 'var(--text)' : 'var(--muted)' }}
             >
               {STATUS_APOSTAS.filter((status) => status !== 'Tudo').map((status) => (
                 <option key={status} value={status}>
@@ -1688,12 +1763,12 @@ export default function Atualizar() {
               ))}
             </select>
           </div>
-          <div className="field">
-            <label>Casa de Aposta *</label>
-            <select 
+          <div className={formFieldClass}>
+            <label className={labelClass}>Casa de Aposta *</label>
+            <select
+              className={inputClass}
               value={formData.casaDeAposta}
               onChange={(e) => handleFormChange('casaDeAposta', e.target.value)}
-              style={{ color: formData.casaDeAposta ? 'var(--text)' : 'var(--muted)' }}
             >
               <option value="" disabled hidden>Selecione uma opção…</option>
               {CASAS_APOSTAS.map((casa) => (
@@ -1702,30 +1777,30 @@ export default function Atualizar() {
                 </option>
               ))}
             </select>
-            {formErrors.casaDeAposta && <span className="field-error">{formErrors.casaDeAposta}</span>}
+            {formErrors.casaDeAposta && <span className={errorTextClass}>{formErrors.casaDeAposta}</span>}
           </div>
           {STATUS_WITH_RETURNS.includes(formData.status) && (
-            <div className="field">
-              <label>Retorno Obtido *</label>
-              <input 
-                type="number" 
+            <div className={formFieldClass}>
+              <label className={labelClass}>Retorno Obtido *</label>
+              <input
+                className={inputClass}
+                type="number"
                 value={formData.retornoObtido}
                 onChange={(e) => {
                   const value = e.target.value;
                   setRetornoManual(value !== '');
                   handleFormChange('retornoObtido', value);
                 }}
-                placeholder="0" 
+                placeholder="0"
                 step="0.01"
                 min="0.01"
               />
-              {formErrors.retornoObtido && <span className="field-error">{formErrors.retornoObtido}</span>}
+              {formErrors.retornoObtido && <span className={errorTextClass}>{formErrors.retornoObtido}</span>}
             </div>
           )}
-          <button 
-            type="submit" 
-            className="btn" 
-            style={{ gridColumn: 'span 2', justifyContent: 'center' }}
+          <button
+            type="submit"
+            className={cn(buttonVariants.primary, 'md:col-span-2 justify-center')}
             disabled={saving}
           >
             {saving ? 'Salvando...' : editingAposta ? 'Salvar Alterações' : 'Criar Aposta'}
@@ -1735,108 +1810,67 @@ export default function Atualizar() {
 
       {/* Modal de Upload */}
       <Modal isOpen={uploadModalOpen} onClose={handleCloseUploadModal} title="Upload de Bilhete">
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <div className="flex flex-col gap-5">
           <div>
-            <label style={{ 
-              display: 'block', 
-              marginBottom: '8px', 
-              fontWeight: 600, 
-              fontSize: '0.9rem' 
-            }}>
+            <label className="mb-2 block text-sm font-semibold text-foreground/80">
               Selecione uma imagem do bilhete de aposta
             </label>
-            <input
+                       <input
               type="file"
               accept="image/*"
               onChange={handleFileSelect}
-              style={{ display: 'none' }}
+              className="sr-only"
               id="file-upload"
             />
             <label
               htmlFor="file-upload"
-              style={{
-                display: 'block',
-                padding: '20px',
-                border: '2px dashed var(--border)',
-                borderRadius: '12px',
-                textAlign: 'center',
-                cursor: 'pointer',
-                background: 'var(--card-bg)',
-                transition: 'all 0.2s'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = 'var(--color-border-input-focus)';
-                e.currentTarget.style.background = 'var(--color-bg-selected)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = 'var(--border)';
-                e.currentTarget.style.background = 'var(--card-bg)';
-              }}
+              className="group block cursor-pointer rounded-3xl border-2 border-dashed border-border/50 bg-background-card/50 p-6 text-center transition hover:border-brand-emerald/70 hover:bg-background-card/70"
             >
               {uploadPreview ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', alignItems: 'center' }}>
-                  <img 
-                    src={uploadPreview} 
-                    alt="Preview" 
-                    style={{ 
-                      maxWidth: '100%', 
-                      maxHeight: '300px', 
-                      borderRadius: '8px',
-                      border: '1px solid var(--border)'
-                    }} 
+                <div className="flex flex-col items-center gap-3">
+                  <img
+                    src={uploadPreview}
+                    alt="Preview do bilhete"
+                    className="max-h-[300px] w-full max-w-full rounded-2xl border border-border/40 object-contain shadow-inner"
                   />
-                  <span style={{ color: 'var(--muted)', fontSize: '0.85rem' }}>
+                  <span className="text-sm text-foreground/60">
                     Clique para selecionar outra imagem
                   </span>
-    </div>
+                </div>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center' }}>
-                  <Upload size={48} style={{ color: 'var(--muted)' }} />
-                  <span style={{ color: 'var(--text)', fontWeight: 600 }}>
-                    Clique para selecionar uma imagem
-                  </span>
-                  <span style={{ color: 'var(--muted)', fontSize: '0.85rem' }}>
-                    PNG, JPG ou JPEG (máx. 10MB)
-                  </span>
-                  <span style={{ color: 'var(--muted)', fontSize: '0.75rem', marginTop: '4px' }}>
-                    ou pressione Ctrl+V para colar
-                  </span>
+                <div className="flex flex-col items-center gap-2">
+                  <Upload size={48} className="text-foreground/50" />
+                  <span className="font-semibold text-foreground">Clique para selecionar uma imagem</span>
+                  <span className="text-sm text-foreground/60">PNG, JPG ou JPEG (máx. 10MB)</span>
+                  <span className="text-xs text-foreground/50">ou pressione Ctrl+V para colar</span>
                 </div>
               )}
             </label>
           </div>
 
           {uploadPreview && (
-            <>
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+            <div className="flex justify-end gap-3">
               <button
                 type="button"
-                className="btn ghost"
+                className={buttonVariants.ghost}
                 onClick={handleCloseUploadModal}
               >
                 Cancelar
               </button>
               <button
                 type="button"
-                className="btn"
+                className={buttonVariants.primary}
                 onClick={handleUpload}
-                  disabled={uploading || ocrExtracting}
+                disabled={uploading || ocrExtracting}
               >
-                  {ocrExtracting ? 'Preparando...' : uploading ? 'Processando...' : 'Processar Bilhete'}
+                {ocrExtracting ? 'Preparando...' : uploading ? 'Processando...' : 'Processar Bilhete'}
               </button>
             </div>
-            </>
           )}
           {uploading && (
-            <div style={{ 
-              padding: '16px', 
-              background: 'var(--color-bg-hover)', 
-              borderRadius: '8px',
-              textAlign: 'center',
-              color: 'var(--text)'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                <RefreshCw size={16} style={{ animation: 'spin 1s linear infinite' }} />
+            <div className="rounded-2xl border border-border/30 bg-background/60 p-4 text-center text-sm text-foreground">
+              <div className="flex items-center justify-center gap-2">
+                <RefreshCw size={16} className="animate-spin text-foreground/70" />
                 <span>Analisando bilhete com IA...</span>
               </div>
             </div>
@@ -1844,19 +1878,15 @@ export default function Atualizar() {
         </div>
       </Modal>
 
-      <Modal isOpen={statusModalOpen} onClose={handleCloseStatusModal} title="Atualizar Status">
-        <div style={{ padding: '8px 0' }}>
-          <p style={{ margin: '0 0 20px 0', color: 'var(--muted)', fontSize: '0.9rem' }}>
+      <Modal isOpen={statusModalOpen} onClose={handleCloseStatusModal} title="Atualizar Status" size="sm">
+        <div className="space-y-6 py-2">
+          <p className="text-sm text-foreground/60">
             {selectedApostaForStatus?.jogo ?? 'Aposta'}
           </p>
 
-          <div style={{ marginBottom: '24px' }}>
-            <h4 style={{ margin: '0 0 12px 0', fontSize: '0.95rem', fontWeight: 600 }}>Status da Aposta</h4>
-            <div style={{ 
-              display: 'grid', 
-              gridTemplateColumns: 'repeat(3, 1fr)', 
-              gap: '12px' 
-            }}>
+          <div className="space-y-4">
+            <h4 className="text-sm font-semibold text-foreground/80">Status da Aposta</h4>
+            <div className="flex flex-wrap items-center justify-center gap-3 text-center">
               {STATUS_APOSTAS.filter(s => s !== 'Tudo').map((status) => {
                 const handleStatusClick = () => {
                   const novoRetorno = calcularRetornoObtido(
@@ -1864,85 +1894,51 @@ export default function Atualizar() {
                     selectedApostaForStatus?.valorApostado ?? 0,
                     selectedApostaForStatus?.odd ?? 0
                   );
-                  setStatusFormData(prev => ({ 
-                    ...prev, 
+                  setStatusFormData(prev => ({
+                    ...prev,
                     status,
                     retornoObtido: novoRetorno ? novoRetorno.toString() : ''
                   }));
                 };
-                
+                const isSelected = statusFormData.status === status;
+                const variantClass =
+                  betStatusPillVariants[status as keyof typeof betStatusPillVariants] ??
+                  betStatusPillVariants.default;
+                const selectedGlowClass = statusGlowClassMap[status] ?? statusGlowClassMap.default;
+
                 return (
-                <button
-                  key={status}
-                  type="button"
-                  onClick={handleStatusClick}
-                  style={{
-                    padding: '16px',
-                    borderRadius: '12px',
-                    border: statusFormData.status === status 
-                      ? '2px solid var(--color-border-input-focus)' 
-                      : '1px solid var(--border)',
-                    background: statusFormData.status === status 
-                      ? 'var(--color-bg-hover)' 
-                      : 'transparent',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: '8px',
-                    transition: 'all 0.2s',
-                    color: 'var(--text)'
-                  }}
-                  onMouseEnter={(e) => {
-                    if (statusFormData.status !== status) {
-                      e.currentTarget.style.background = 'var(--color-bg-selected)';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (statusFormData.status !== status) {
-                      e.currentTarget.style.background = 'transparent';
-                    }
-                  }}
-                >
-                  <div style={{ 
-                    color: getStatusColor(status).bg,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                  }}>
-                    {getStatusIcon(status)}
-                  </div>
-                  <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>{status}</span>
-                </button>
+                  <button
+                    key={status}
+                    type="button"
+                    onClick={handleStatusClick}
+                    className={cn(
+                      betStatusPillBaseClass,
+                      'text-xs sm:text-sm w-full sm:w-auto sm:flex-none min-w-[120px]',
+                      variantClass,
+                      isSelected
+                        ? cn('border-white/60 ring-4 scale-[1.04]', selectedGlowClass)
+                        : 'border-white/15 opacity-90 hover:opacity-100'
+                    )}
+                  >
+                    {getBetStatusIcon(status)}
+                    {status}
+                  </button>
                 );
               })}
             </div>
           </div>
 
           {(statusFormData.status === 'Ganha' || statusFormData.status === 'Meio Ganha' || statusFormData.status === 'Cashout') && (
-            <div style={{ marginBottom: '24px' }}>
-              <h4 style={{ margin: '0 0 12px 0', fontSize: '0.95rem', fontWeight: 600 }}>Valor Resultado</h4>
-              <div style={{ 
-                padding: '16px', 
-                borderRadius: '8px', 
-                background: 'var(--color-bg-hover)',
-                border: '1px solid var(--color-border-nav-active-dark)',
-                marginBottom: '12px'
-              }}>
-                <div
-                  style={{
-                    fontSize: '1.5rem',
-                    fontWeight: 700,
-                    color: 'var(--color-chart-primary)',
-                    textAlign: 'center'
-                  }}
-                >
+            <div className="space-y-4">
+              <h4 className="text-sm font-semibold text-foreground/80">Valor Resultado</h4>
+              <div className="rounded-2xl border border-brand-emerald/20 bg-brand-emerald/5 p-6 text-center shadow-inner">
+                <div className="text-3xl font-bold text-brand-emerald">
                   {formatCurrency(retornoPreview)}
                 </div>
-                <p style={{ margin: '8px 0 0 0', color: 'var(--muted)', fontSize: '0.8rem', textAlign: 'center' }}>
-                  {statusFormData.status === 'Cashout' 
+                <p className="mt-2 text-xs text-foreground/60">
+                  {statusFormData.status === 'Cashout'
                     ? 'Valor calculado automaticamente. Você pode ajustar manualmente abaixo se necessário.'
-                    : 'Valor calculado automaticamente baseado no valor apostado e odd'
+                    : 'Valor calculado automaticamente baseado no valor apostado e na odd.'
                   }
                 </p>
               </div>
@@ -1955,17 +1951,9 @@ export default function Atualizar() {
                     value={statusFormData.retornoObtido}
                     onChange={(e) => setStatusFormData(prev => ({ ...prev, retornoObtido: e.target.value }))}
                     placeholder="Ajustar manualmente (opcional)"
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      borderRadius: '8px',
-                      border: '1px solid var(--border)',
-                      background: 'var(--surface)',
-                      color: 'var(--text)',
-                      fontSize: '1rem'
-                    }}
+                    className={inputClass}
                   />
-                  <p style={{ margin: '8px 0 0 0', color: 'var(--muted)', fontSize: '0.8rem' }}>
+                  <p className="text-xs text-foreground/60">
                     Deixe vazio para usar o valor calculado automaticamente
                   </p>
                 </>
@@ -1973,15 +1961,10 @@ export default function Atualizar() {
             </div>
           )}
 
-          <div style={{ 
-            display: 'flex', 
-            gap: '12px', 
-            justifyContent: 'flex-end',
-            marginTop: '24px'
-          }}>
+          <div className="flex justify-end gap-3 pt-2">
             <button
               type="button"
-              className="btn secondary"
+              className={buttonVariants.ghost}
               onClick={handleCloseStatusModal}
               disabled={updatingStatus}
             >
@@ -1989,7 +1972,7 @@ export default function Atualizar() {
             </button>
             <button
               type="button"
-              className="btn"
+              className={buttonVariants.primary}
               onClick={handleUpdateStatus}
               disabled={updatingStatus}
             >

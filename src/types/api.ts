@@ -108,6 +108,7 @@ export interface ApiProfileResponse {
   telegramId?: string | null;
   telegramUsername?: string | null;
   plano: ApiPlan;
+  fotoPerfil?: string | null;
 }
 
 export interface ApiPlanConsumption {

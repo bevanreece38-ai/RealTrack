@@ -9,6 +9,7 @@ export type HeatmapRow = Partial<Record<string, HeatmapCell>>;
 export type HeatmapData = Partial<Record<string, HeatmapRow>>;
 
 export interface AnaliseFilters {
+  bancaId: string;
   status: string;
   tipster: string;
   casa: string;
