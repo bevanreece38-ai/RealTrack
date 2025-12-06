@@ -165,9 +165,7 @@ export default function Atualizar() {
   const { bancas, refetch: refetchBancas } = useBancas();
   const { tipsters } = useTipsters();
   const autoSyncBancaRef = useRef(true);
-  const ocrCancelledRef = useRef(false);
   const uploadAbortControllerRef = useRef<AbortController | null>(null);
-  const tesseractInstanceRef = useRef<typeof import('tesseract.js') | null>(null);
   const preferredBancaId = useMemo(() => {
     if (bancas.length === 0) {
       return '';
@@ -952,40 +950,6 @@ ${limitReachedMessage}`);
     }
   };
 
-  const extractTextFromImage = useCallback(async (file: File) => {
-    setOcrExtracting(true);
-    setOcrText('');
-
-    try {
-      // Carregar Tesseract dinamicamente apenas quando necessário (reduz bundle inicial em ~2MB)
-      const tesseractModule = await import('tesseract.js');
-      const Tesseract = tesseractModule.default;
-      tesseractInstanceRef.current = tesseractModule;
-
-      const { data } = await Tesseract.recognize(file, 'por+eng', {
-        logger: (m) => {
-          if (m.status === 'recognizing text' && typeof m.progress === 'number') {
-            // progresso oculto do usuário
-          }
-        }
-      });
-      if (ocrCancelledRef.current) {
-        return;
-      }
-      const text = data.text.trim();
-      setOcrText(text);
-    } catch (error) {
-      if (ocrCancelledRef.current) {
-        return;
-      }
-      console.error('Erro ao extrair texto do bilhete:', error);
-    } finally {
-      if (!ocrCancelledRef.current) {
-        setOcrExtracting(false);
-      }
-    }
-  }, []);
-
   // Função para processar arquivo de imagem
   const processImageFile = useCallback((file: File): boolean => {
     if (!file.type.startsWith('image/')) {
@@ -1003,10 +967,8 @@ ${limitReachedMessage}`);
       setUploadPreview(reader.result as string);
     };
     reader.readAsDataURL(file);
-    ocrCancelledRef.current = false;
-    void extractTextFromImage(file);
     return true;
-  }, [extractTextFromImage]);
+  }, []);
 
   // Função para lidar com seleção de arquivo
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1046,7 +1008,7 @@ ${limitReachedMessage}`);
   }, [uploadModalOpen, handlePaste]);
 
   // Função para processar upload e extrair dados
-  const handleUpload = async (file: File, ocrText?: string) => {
+  const handleUpload = async (file: File) => {
     if (!file) {
       alert('Por favor, selecione uma imagem');
       return;
@@ -1068,7 +1030,6 @@ ${limitReachedMessage}`);
         currentAttempt += 1;
         try {
           uploadResponse = await apostaService.uploadTicket(file, {
-            ocrText: ocrText?.trim() || undefined,
             signal: controller.signal
           });
           break;
