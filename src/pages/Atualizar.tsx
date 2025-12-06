@@ -1152,15 +1152,12 @@ ${limitReachedMessage}`);
   };
 
   const handleOpenUploadModal = () => {
-    ocrCancelledRef.current = false;
     uploadAbortControllerRef.current?.abort();
     uploadAbortControllerRef.current = null;
     setSelectedFile(null);
     setUploadPreview(null);
-    setOcrText('');
     setUploadError(null);
     setUploading(false);
-    setOcrExtracting(false);
     setUploadModalOpen(true);
   };
 
