@@ -163,27 +163,8 @@ export default function ApostaForm({
         </div>
 
         {/* Torneio */}
-        <div className="flex flex-col gap-2">
-          <label className="text-sm font-semibold text-foreground">Torneio</label>
-          <input 
-            type="text" 
-            value={formData.torneio}
-            onChange={(e) => onChange('torneio', e.target.value)}
-            placeholder="Torneio"
-            className={inputClass}
-          />
-        </div>
 
-        {/* País */}
-        <div className="flex flex-col gap-2">
-          <label className="text-sm font-semibold text-foreground">País</label>
-          <input 
-            type="text" 
-            value={formData.pais}
-            onChange={(e) => onChange('pais', e.target.value)}
-            placeholder="Mundo"
-            className={inputClass}
-          />
+          {/* ...campos removidos: torneio e país... */}
         </div>
 
         {/* Mercado */}

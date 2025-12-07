@@ -344,24 +344,8 @@ export default function TelegramEdit() {
         valorApostado,
         odd,
         bonus,
-        casaDeAposta,
-        status: formData.status
-      };
-
-      // Adicionar campos opcionais apenas se tiverem valor
-      const torneio = formData.torneio.trim();
-      if (torneio) {
-        payload.torneio = torneio;
       }
-
-      const pais = formData.pais.trim();
-      if (pais) {
-        payload.pais = pais;
-      }
-
-      if (dataJogoISO) {
-        payload.dataJogo = dataJogoISO;
-      }
+          {/* ...campos removidos: torneio e país... */}
 
       const tipster = formData.tipster.trim();
       if (tipster) {

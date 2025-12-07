@@ -1777,26 +1777,7 @@ ${limitReachedMessage}`);
             />
             {formErrors.jogo && <span className={errorTextClass}>{formErrors.jogo}</span>}
           </div>
-          <div className={formFieldClass}>
-            <label className={labelClass}>Torneio</label>
-            <input
-              className={inputClass}
-              type="text"
-              value={formData.torneio}
-              onChange={(e) => handleFormChange('torneio', e.target.value)}
-              placeholder="Torneio"
-            />
-          </div>
-          <div className={formFieldClass}>
-            <label className={labelClass}>País</label>
-            <input
-              className={inputClass}
-              type="text"
-              value={formData.pais}
-              onChange={(e) => handleFormChange('pais', e.target.value)}
-              placeholder="Mundo"
-            />
-          </div>
+          {/* ...campos removidos: torneio e país... */}
           <div className={formFieldClass}>
             <label className={labelClass}>Mercado *</label>
             <input

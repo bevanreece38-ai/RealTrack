@@ -172,7 +172,7 @@ export function AnaliseFilters({ value, onChange }: AnaliseFiltersProps) {
             </select>
           </div>
           <div className={fieldClass}>
-            <label className={labelClass}>Evento, Mercado, Aposta, País ou Torneio</label>
+            <label className={labelClass}>Evento, Mercado ou Aposta</label>
             <input
               type="text"
               value={pendingFilters.evento}
