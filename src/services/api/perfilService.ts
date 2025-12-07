@@ -180,7 +180,7 @@ async function getTelegramInfo(): Promise<TelegramInfo> {
  */
 async function disconnectTelegram(): Promise<void> {
   await apiClient.delete('/perfil/telegram');
-  
+
   // Invalidar cache e emitir evento
   invalidateCachePattern('/perfil');
   eventBus.emitProfileUpdated();
@@ -217,14 +217,14 @@ interface ResetAccountResponse {
 }
 
 async function resetAccount(): Promise<ResetAccountResponse> {
-  const response = await apiClient.post<ResetAccountResponse>('/perfil/reset');
-  
+  const response = await apiClient.delete<ResetAccountResponse>('/perfil/reset');
+
   // Invalidar cache
   invalidateCachePattern('/perfil');
   invalidateCachePattern('/bancas');
   invalidateCachePattern('/apostas');
   invalidateCachePattern('/financeiro');
-  
+
   return response.data;
 }
 
@@ -233,11 +233,11 @@ async function resetAccount(): Promise<ResetAccountResponse> {
  */
 async function updateTelegram(telegramId: string | null): Promise<ApiProfileResponse> {
   const response = await apiClient.put<ApiProfileResponse>('/perfil/telegram', { telegramId });
-  
+
   // Invalidar cache e emitir evento
   invalidateCachePattern('/perfil');
   eventBus.emitProfileUpdated();
-  
+
   return response.data;
 }
 
@@ -250,24 +250,24 @@ export const perfilService = {
   get,
   update,
   changePassword,
-  
+
   // Aliases para compatibilidade
   getProfile: get,
   updateProfile: update,
-  
+
   // Consumo e plano
   getConsumo,
-  
+
   // Telegram
   getTelegramInfo,
   disconnectTelegram,
   updateTelegram,
-  
+
   // Reset e exclusão
   resetAccount,
   checkEmailAvailable,
   requestAccountDeletion,
-  
+
   // Mapeadores
   mapPerfilFromApi,
   mapConsumoFromApi,
