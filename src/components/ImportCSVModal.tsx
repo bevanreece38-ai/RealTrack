@@ -102,16 +102,6 @@ export default function ImportCSVModal({
         const stake = parseFloat(row.Stake.replace(',', '.'));
         const status = STATUS_MAP[row.State] || 'Pendente';
 
-        // Calcular retorno para apostas ganhas
-        let retornoObtido: number | undefined;
-        if (status === 'Green') {
-            retornoObtido = stake * odd;
-        } else if (status === 'Red') {
-            retornoObtido = 0;
-        } else if (status === 'Reembolso') {
-            retornoObtido = stake;
-        }
-
         // Converter data do formato "YYYY-MM-DD HH:mm" para ISO 8601
         // Adiciona segundos e timezone para compatibilidade com backend
         const [datePart, timePart] = row.Date.split(' ');
@@ -132,7 +122,6 @@ export default function ImportCSVModal({
             tipster: row.Tipster?.trim() || '',
             status: status as any, // Cast necessário pois status pode ter valores diferentes do enum
             casaDeAposta: row.Bookmaker.trim(),
-            retornoObtido,
         };
     };
 
