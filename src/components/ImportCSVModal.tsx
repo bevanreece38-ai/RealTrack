@@ -159,9 +159,11 @@ export default function ImportCSVModal({
                         };
                     }
 
+                    // Use selectedBancaId current value at parse time
+                    const currentBancaId = selectedBancaId || '';
                     return {
                         row: rowNumber,
-                        data: mapCSVToAposta(row, selectedBancaId),
+                        data: mapCSVToAposta(row, currentBancaId),
                         valid: true,
                         errors: [],
                     };
