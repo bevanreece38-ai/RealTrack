@@ -4,6 +4,7 @@ import { Upload, FileText, AlertCircle, CheckCircle2, Loader2, Download } from '
 import Modal from './Modal';
 import { cn } from './ui/utils';
 import type { CreateApostaPayload } from '../services/api/apostaService';
+import { useToast } from '../contexts/ToastContext';
 
 interface Banca {
     id: string;
@@ -56,6 +57,7 @@ export default function ImportCSVModal({
     defaultBancaId,
     onImportSuccess,
 }: ImportCSVModalProps) {
+    const { showToast } = useToast();
     const [selectedBancaId, setSelectedBancaId] = useState(defaultBancaId || '');
     const [file, setFile] = useState<File | null>(null);
     const [parsedData, setParsedData] = useState<ParsedBet[]>([]);
@@ -145,7 +147,7 @@ export default function ImportCSVModal({
         }
 
         if (selectedFile.type !== 'text/csv' && !selectedFile.name.endsWith('.csv')) {
-            alert('Por favor, selecione um arquivo CSV válido.');
+            showToast('Por favor, selecione um arquivo CSV válido.', 'warning');
             return;
         }
 
@@ -184,7 +186,7 @@ export default function ImportCSVModal({
             },
             error: (error) => {
                 console.error('Erro ao fazer parse do CSV:', error);
-                alert('Erro ao processar arquivo CSV. Verifique o formato do arquivo.');
+                showToast('Erro ao processar arquivo CSV. Verifique o formato do arquivo.', 'error');
             },
         });
     }, [selectedBancaId]);
@@ -211,13 +213,13 @@ export default function ImportCSVModal({
 
     const handleImport = async () => {
         if (!selectedBancaId) {
-            alert('Por favor, selecione uma banca.');
+            showToast('Por favor, selecione uma banca.', 'warning');
             return;
         }
 
         const validBets = parsedData.filter(bet => bet.valid);
         if (validBets.length === 0) {
-            alert('Nenhuma aposta válida para importar.');
+            showToast('Nenhuma aposta válida para importar.', 'warning');
             return;
         }
 
@@ -276,7 +278,7 @@ export default function ImportCSVModal({
             }
         } catch (error) {
             console.error('Erro durante importação:', error);
-            alert('Erro ao importar apostas. Verifique o console para mais detalhes.');
+            showToast('Erro ao importar apostas. Verifique o console para mais detalhes.', 'error');
         } finally {
             setIsImporting(false);
         }

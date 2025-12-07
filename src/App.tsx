@@ -3,6 +3,8 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import { PerfilProvider } from './contexts/PerfilContext';
+import { ToastProvider } from './contexts/ToastContext';
+import ToastContainer from './components/ToastContainer';
 
 // Lazy load de todas as páginas para reduzir bundle inicial
 const Login = lazy(() => import('./pages/Login'));
@@ -29,29 +31,32 @@ const PageLoader = () => (
 
 function App() {
   return (
-    <PerfilProvider>
-      <Suspense fallback={<PageLoader />}>
-      <Routes>
-        <Route index element={<Navigate to="/login" replace />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/cadastro" element={<Cadastro />} />
-        <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/bancas" element={<Bancas />} />
-          <Route path="/financeiro" element={<Financeiro />} />
-          <Route path="/analise" element={<Analise />} />
-          <Route path="/atualizar" element={<Atualizar />} />
-          <Route path="/perfil" element={<Perfil />} />
-          <Route path="/tipsters" element={<Tipsters />} />
-        </Route>
-        {/* Rotas do Telegram Web App (sem Layout) */}
-        <Route element={<ProtectedRoute><div /></ProtectedRoute>}>
-          <Route path="/telegram/edit" element={<TelegramEdit />} />
-          <Route path="/telegram/status" element={<TelegramStatus />} />
-        </Route>
-      </Routes>
-      </Suspense>
-    </PerfilProvider>
+    <ToastProvider>
+      <PerfilProvider>
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            <Route index element={<Navigate to="/login" replace />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/cadastro" element={<Cadastro />} />
+            <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/bancas" element={<Bancas />} />
+              <Route path="/financeiro" element={<Financeiro />} />
+              <Route path="/analise" element={<Analise />} />
+              <Route path="/atualizar" element={<Atualizar />} />
+              <Route path="/perfil" element={<Perfil />} />
+              <Route path="/tipsters" element={<Tipsters />} />
+            </Route>
+            {/* Rotas do Telegram Web App (sem Layout) */}
+            <Route element={<ProtectedRoute><div /></ProtectedRoute>}>
+              <Route path="/telegram/edit" element={<TelegramEdit />} />
+              <Route path="/telegram/status" element={<TelegramStatus />} />
+            </Route>
+          </Routes>
+        </Suspense>
+        <ToastContainer />
+      </PerfilProvider>
+    </ToastProvider>
   );
 }
 
