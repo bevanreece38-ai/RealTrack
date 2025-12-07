@@ -21,7 +21,6 @@ import { TIPOS_APOSTA } from '../constants/tiposAposta';
 import { apostaService, type ApostasFilter, type ApostaStatus } from '../services/api';
 import { eventBus } from '../utils/eventBus';
 import { formatCurrency as formatCurrencyUtil, formatDate as formatDateUtil } from '../utils/formatters';
-import { formatMarketDisplay } from '../utils/marketFormatter';
 import { useTipsters } from '../hooks/useTipsters';
 import { useBancas } from '../hooks/useBancas';
 import { cn } from '../components/ui/utils';
@@ -1674,7 +1673,7 @@ ${limitReachedMessage}`);
                     <td className="px-4 py-3 align-top text-sm text-white/80">{formatDate(aposta.dataJogo)}</td>
                     <td className="px-4 py-3 align-top text-sm text-white/80">{aposta.esporte}</td>
                     <td className="px-4 py-3 align-top text-sm text-white">{aposta.jogo}</td>
-                    <td className="px-4 py-3 align-top text-sm text-white/80">{formatMarketDisplay(aposta.mercado)}</td>
+                    <td className="px-4 py-3 align-top text-sm text-white/80">{aposta.mercado}</td>
                     <td className="px-4 py-3 align-top text-sm text-white">
                       <div className="flex flex-col gap-1 text-sm">
                         <span className="font-semibold text-white">{formatCurrency(aposta.valorApostado)}</span>
