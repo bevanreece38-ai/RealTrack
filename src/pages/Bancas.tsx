@@ -204,11 +204,22 @@ export default function Bancas() {
     setSavingEdit(true);
 
     try {
+      // Parse saldoInicial if provided
+      let saldoInicial: number | undefined;
+      if (editForm.valorInicial.trim()) {
+        const normalized = editForm.valorInicial.replace(/\./g, '').replace(',', '.');
+        const parsed = parseFloat(normalized);
+        if (!isNaN(parsed) && parsed >= 0) {
+          saldoInicial = parsed;
+        }
+      }
+
       await bancaService.update(editBanco.id, {
         nome: editForm.nome,
         descricao: editForm.descricao,
         status: editForm.ativa ? 'Ativa' : 'Inativa',
         ePadrao: editForm.padrao,
+        saldoInicial,
       });
       setEditBanco(null);
       setStatsOverride(null);
