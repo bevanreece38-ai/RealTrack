@@ -232,11 +232,12 @@ export default function ImportCSVModal({
                     } else {
                         errorCount++;
                         const betData = batch[index].data;
-                        console.error('Erro ao importar aposta:', {
-                            error: result.reason,
-                            response: result.reason?.response?.data,
-                            betData: betData
-                        });
+                        console.error('===== ERRO AO IMPORTAR APOSTA =====');
+                        console.error('Dados enviados:', JSON.stringify(betData, null, 2));
+                        console.error('Erro retornado:', result.reason);
+                        console.error('Resposta do servidor:', result.reason?.response?.data);
+                        console.error('Status HTTP:', result.reason?.response?.status);
+                        console.error('===================================');
                     }
                 });
 
