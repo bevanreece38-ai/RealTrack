@@ -10,6 +10,7 @@ import { formatCurrency, formatPercent, getFirstName } from '../utils/formatters
 import { useDashboardData, useTipsters, useBancas, useChartContainer } from '../hooks';
 import { cn } from '../components/ui/utils';
 import { chartTheme } from '../utils/chartTheme';
+import ImportCSVModal from '../components/ImportCSVModal';
 
 const formatSignedPercent = (value: number): string => {
   const normalized = formatPercent(Math.abs(value));
@@ -65,6 +66,7 @@ export default function Dashboard() {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [expandedSport, setExpandedSport] = useState<string | null>(null);
   const [expandedCasa, setExpandedCasa] = useState<string | null>(null);
+  const [importModalOpen, setImportModalOpen] = useState(false);
 
   const {
     loading,
@@ -214,6 +216,7 @@ export default function Dashboard() {
             <button
               type="button"
               className="inline-flex items-center gap-2 rounded-2xl border border-border/40 bg-background px-4 py-2 text-sm font-semibold text-foreground transition hocus:border-brand-emerald/60 hocus:text-brand-emerald"
+              onClick={() => setImportModalOpen(true)}
             >
               <Download size={16} /> Importar dados
             </button>
@@ -521,8 +524,8 @@ export default function Dashboard() {
                 const statusClass = positive
                   ? 'border border-emerald-500/20 bg-emerald-500/10 text-emerald-200'
                   : negative
-                  ? 'border border-rose-500/20 bg-rose-500/10 text-rose-200'
-                  : 'border border-white/10 bg-white/5 text-white/70';
+                    ? 'border border-rose-500/20 bg-rose-500/10 text-rose-200'
+                    : 'border border-white/10 bg-white/5 text-white/70';
                 const valueClass = positive ? 'text-emerald-400' : negative ? 'text-rose-400' : 'text-foreground';
                 const rawDate = aposta.dataJogo ? new Date(aposta.dataJogo) : null;
                 const formattedDate = rawDate && !Number.isNaN(rawDate.getTime())
@@ -586,6 +589,17 @@ export default function Dashboard() {
           />
         </div>
       </section>
+
+      {/* Import Modal */}
+      <ImportCSVModal
+        isOpen={importModalOpen}
+        onClose={() => setImportModalOpen(false)}
+        bancas={userBancas}
+        defaultBancaId={defaultBancaId}
+        onImportSuccess={() => {
+          void fetchDashboardData();
+        }}
+      />
     </div>
   );
 }
