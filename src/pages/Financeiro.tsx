@@ -464,15 +464,19 @@ export default function Financeiro() {
       parts: resultadoParts,
       isNegative: resultadoEhNegativo,
       description: 'Valores finalizados',
+        valueClass: 'text-white',
+        decimalClass: 'text-white/60',
     },
     {
       key: 'pendentes',
       label: 'Aguardando resultado',
       icon: Clock3,
-      accent: 'bg-amber-500/20 text-amber-100',
+        accent: 'bg-amber-500/20 text-amber-100',
       parts: pendenteParts,
       isNegative: false,
       description: 'Entradas pendentes',
+        valueClass: 'text-amber-200',
+        decimalClass: 'text-amber-200/70',
     },
   ];
 
@@ -584,7 +588,7 @@ export default function Financeiro() {
               </div>
               <div className="h-px bg-white/10" />
               <div className="grid gap-3 md:grid-cols-2">
-                {resumoApostasCards.map(({ key, label, icon: ResumoIcon, accent, parts, isNegative, description }) => (
+                {resumoApostasCards.map(({ key, label, icon: ResumoIcon, accent, parts, isNegative, description, valueClass, decimalClass }) => (
                   <div key={key} className="rounded-2xl border border-white/10 bg-white/5 p-4">
                     <div className="flex items-center gap-2 text-sm text-white/70">
                       <span className={cn('inline-flex h-9 w-9 items-center justify-center rounded-2xl', accent)}>
@@ -596,8 +600,8 @@ export default function Financeiro() {
                       <span className="text-base font-semibold text-white/70">{parts.symbol}</span>
                       <div className="flex items-baseline gap-1">
                         {isNegative && <span className="text-3xl font-semibold text-rose-300">-</span>}
-                        <span className="text-3xl font-semibold text-white">{parts.integerPart}</span>
-                        <span className="text-xl font-semibold text-white/60">,{parts.decimalPart}</span>
+                        <span className={cn('text-3xl font-semibold', valueClass ?? 'text-white')}>{parts.integerPart}</span>
+                        <span className={cn('text-xl font-semibold', decimalClass ?? 'text-white/60')}>,{parts.decimalPart}</span>
                       </div>
                     </div>
                     <p className="mt-2 text-xs uppercase tracking-[0.35em] text-white/45">{description}</p>
