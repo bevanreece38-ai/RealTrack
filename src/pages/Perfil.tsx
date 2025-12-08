@@ -283,6 +283,8 @@ export default function Perfil() {
 
   const planVisual = getPlanVisual(profile.plano?.nome);
   const PlanIcon = planVisual.Icon;
+  const normalizedPlanName = profile.plano?.nome?.trim().toLowerCase() ?? '';
+  const isUnlimitedPlan = normalizedPlanName.includes('profissional') || profile.plano.limiteApostasDiarias === 0;
 
   return (
     <div className="space-y-8 text-white">
@@ -313,7 +315,7 @@ export default function Perfil() {
               <div className="space-y-1">
                 <p className="text-xs uppercase tracking-[0.3em] text-white/60">Limite diário</p>
                 <p className="text-lg font-semibold text-white">
-                  {profile.plano.limiteApostasDiarias === 0 ? (
+                  {isUnlimitedPlan ? (
                     <span className="inline-flex items-center gap-1 text-white">
                       <InfinityIcon className="h-4 w-4" /> Ilimitado
                     </span>

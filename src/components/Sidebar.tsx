@@ -166,27 +166,33 @@ const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
   const nickname = perfil?.nomeCompleto || perfil?.email || 'Usuário';
 
   const consumoInfo = useMemo(() => {
+    const planName = (consumoPlano?.plano?.nome ?? perfil?.plano?.nome ?? '').trim().toLowerCase();
+    const isUnlimitedPlan = planName.includes('profissional');
+
     if (!consumoPlano) {
       const limiteFallback = perfil?.plano?.limiteApostasDiarias ?? 0;
-      if (!limiteFallback) {
+      if (isUnlimitedPlan || !limiteFallback) {
         return {
           label: 'Ilimitado',
           percent: 0,
+          isUnlimited: true,
         };
       }
       return {
         label: `0 / ${limiteFallback}`,
         percent: 0,
+        isUnlimited: false,
       };
     }
 
     const limite = consumoPlano.consumo.limite || consumoPlano.plano.limiteDiario;
     const apostasHoje = consumoPlano.consumo.apostasHoje;
 
-    if (!limite) {
+    if (isUnlimitedPlan || !limite) {
       return {
-        label: 'Ilimitado',
+        label: apostasHoje ? `${apostasHoje} / Ilimitado` : 'Ilimitado',
         percent: 0,
+        isUnlimited: true,
       };
     }
 
@@ -194,6 +200,7 @@ const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
     return {
       label: `${apostasHoje} / ${limite}`,
       percent,
+      isUnlimited: false,
     };
   }, [consumoPlano, perfil]);
 
@@ -514,7 +521,7 @@ const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
                   <span className="text-white">{isLoading ? 'Carregando...' : consumoInfo.label}</span>
                 </div>
                 <div className="h-1.5 w-full overflow-hidden rounded-full bg-[#0a2e2a]">
-                  {consumoInfo.label === 'Ilimitado' ? (
+                  {consumoInfo.isUnlimited ? (
                     <div className="h-full w-full rounded-full bg-[#14b8a6]" />
                   ) : (
                     <div
