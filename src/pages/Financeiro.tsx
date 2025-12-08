@@ -466,35 +466,31 @@ export default function Financeiro() {
               </div>
             </div>
 
-            <div className={`${dashboardCardShellClass} h-full`}>
-              <div className="flex h-full items-center justify-between gap-4">
-                <div className="flex flex-col justify-center">
+            <div className={dashboardCardShellClass}>
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="space-y-3">
                   <p className="text-[0.65rem] font-semibold uppercase tracking-[0.35em] text-white/60">Resultado de Apostas</p>
                   <p className="mt-3 text-3xl font-semibold text-white">{formatCurrency(statsData.resultadoApostas)}</p>
                   <p className="mt-4 text-sm text-white/70">Apostas/saldo recebidas</p>
                 </div>
-                <div className="flex h-full items-center">
-                  <span className="text-xs font-semibold text-brand-emerald">
-                    {statsData.apostasConcluidas}{' '}
-                    {statsData.apostasConcluidas === 1 ? 'aposta' : 'apostas'}
-                  </span>
-                </div>
+                <span className="text-xs font-semibold text-brand-emerald sm:self-center">
+                  {statsData.apostasConcluidas}{' '}
+                  {statsData.apostasConcluidas === 1 ? 'aposta' : 'apostas'}
+                </span>
               </div>
             </div>
 
-            <div className={`${dashboardCardShellClass} h-full`}>
-              <div className="flex h-full items-center justify-between gap-4">
-                <div className="flex flex-col justify-center">
+            <div className={dashboardCardShellClass}>
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="space-y-3">
                   <p className="text-[0.65rem] font-semibold uppercase tracking-[0.35em] text-white/60">Apostas Pendentes</p>
                   <p className="mt-3 text-3xl font-semibold text-white">{formatCurrency(statsData.valorApostasPendentes)}</p>
                   <p className="mt-4 text-sm text-white/70">Aguardando resultado</p>
                 </div>
-                <div className="flex h-full items-center">
-                  <span className="text-xs font-semibold text-amber-300">
-                    {statsData.apostasPendentes}{' '}
-                    {statsData.apostasPendentes === 1 ? 'aposta' : 'apostas'}
-                  </span>
-                </div>
+                <span className="text-xs font-semibold text-amber-300 sm:self-center">
+                  {statsData.apostasPendentes}{' '}
+                  {statsData.apostasPendentes === 1 ? 'aposta' : 'apostas'}
+                </span>
               </div>
             </div>
           </>
