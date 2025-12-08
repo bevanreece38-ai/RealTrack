@@ -292,30 +292,30 @@ export default function Bancas() {
               <tbody className="divide-y divide-white/10">
                 {bancas.map((banca) => (
                   <tr key={banca.id} className="transition hover:bg-white/5">
-                    <td className="px-4 py-4 align-top">
+                    <td className="px-4 py-4 align-middle">
                       <div className="space-y-1">
                         <p className="font-semibold text-white">{banca.nome}</p>
                         <p className="text-xs text-white/60">ID: {banca.id}</p>
                       </div>
                     </td>
-                    <td className="px-4 py-4 align-top text-white/70">{banca.descricao}</td>
-                    <td className="px-4 py-4 align-top">
+                    <td className="px-4 py-4 align-middle text-white/70">{banca.descricao}</td>
+                    <td className="px-4 py-4 align-middle">
                       <SwitchControl
                         checked={banca.status === 'Ativa'}
                         onToggle={() => void handleToggleStatus(banca)}
                         label={`Alternar status da banca ${banca.nome}`}
                       />
                     </td>
-                    <td className="px-4 py-4 align-top">
+                    <td className="px-4 py-4 align-middle">
                       <SwitchControl
                         checked={banca.padrao}
                         onToggle={() => void handleTogglePadrao(banca)}
                         label={`Alternar banca padrão para ${banca.nome}`}
                       />
                     </td>
-                    <td className="px-4 py-4 align-top text-white/70">{banca.ultimaVisualizacao}</td>
-                    <td className="px-4 py-4 align-top text-white/70">{banca.criadoEm}</td>
-                    <td className="px-4 py-4 align-top">
+                    <td className="px-4 py-4 align-middle text-white/70">{banca.ultimaVisualizacao}</td>
+                    <td className="px-4 py-4 align-middle text-white/70">{banca.criadoEm}</td>
+                    <td className="px-4 py-4 align-middle">
                       <div className="flex justify-end gap-2">
                         <ActionIconButton
                           label="Ver estatísticas"

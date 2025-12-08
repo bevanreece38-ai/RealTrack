@@ -1668,19 +1668,19 @@ ${limitReachedMessage}`);
               <tbody className="divide-y divide-white/10">
                 {filteredApostas.map((aposta) => (
                   <tr key={aposta.id} className="text-white">
-                    <td className="px-4 py-3 align-top text-sm font-medium text-white">{formatOptionalCellText(aposta.casaDeAposta)}</td>
-                    <td className="px-4 py-3 align-top text-sm text-white/80">{formatOptionalCellText(aposta.tipster)}</td>
-                    <td className="px-4 py-3 align-top text-sm text-white/80">{formatDate(aposta.dataJogo)}</td>
-                    <td className="px-4 py-3 align-top text-sm text-white/80">{aposta.esporte}</td>
-                    <td className="px-4 py-3 align-top text-sm text-white">{aposta.jogo}</td>
-                    <td className="px-4 py-3 align-top text-sm text-white/80">{aposta.mercado}</td>
-                    <td className="px-4 py-3 align-top text-sm text-white">
+                    <td className="px-4 py-3 align-middle text-sm font-medium text-white">{formatOptionalCellText(aposta.casaDeAposta)}</td>
+                    <td className="px-4 py-3 align-middle text-sm text-white/80">{formatOptionalCellText(aposta.tipster)}</td>
+                    <td className="px-4 py-3 align-middle text-sm text-white/80">{formatDate(aposta.dataJogo)}</td>
+                    <td className="px-4 py-3 align-middle text-sm text-white/80">{aposta.esporte}</td>
+                    <td className="px-4 py-3 align-middle text-sm text-white">{aposta.jogo}</td>
+                    <td className="px-4 py-3 align-middle text-sm text-white/80">{aposta.mercado}</td>
+                    <td className="px-4 py-3 align-middle text-sm text-white">
                       <div className="flex flex-col gap-1 text-sm">
                         <span className="font-semibold text-white">{formatCurrency(aposta.valorApostado)}</span>
                         <span className="text-xs text-white/60">Odd: {aposta.odd}</span>
                       </div>
                     </td>
-                    <td className="px-4 py-3 align-top">
+                    <td className="px-4 py-3 align-middle">
                       <button
                         type="button"
                         onClick={() => handleOpenStatusModal(aposta)}
@@ -1694,10 +1694,10 @@ ${limitReachedMessage}`);
                         {aposta.status}
                       </button>
                     </td>
-                    <td className="px-4 py-3 align-top text-sm text-white">
+                    <td className="px-4 py-3 align-middle text-sm text-white">
                       {aposta.retornoObtido != null ? formatCurrency(aposta.retornoObtido) : '-'}
                     </td>
-                    <td className="px-4 py-3 align-top">
+                    <td className="px-4 py-3 align-middle">
                       <div className="flex items-center gap-2 text-white">
                         <button
                           type="button"
