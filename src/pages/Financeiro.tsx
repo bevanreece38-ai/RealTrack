@@ -505,7 +505,7 @@ export default function Financeiro() {
         </div>
       </div>
 
-      <section className="grid gap-4 lg:grid-cols-[2fr_1.3fr]">
+      <section className="grid gap-4 lg:grid-cols-2">
         {statsLoading ? (
           <>
             {[0, 1, 2].map((index) => (
@@ -524,7 +524,7 @@ export default function Financeiro() {
           </>
         ) : (
           <>
-            <div className={cn(dashboardCardShellClass, 'bg-bank-hero text-white shadow-[0_35px_55px_rgba(0,0,0,0.35)]')}>
+            <div className={cn(dashboardCardShellClass, 'bg-bank-hero text-white shadow-[0_35px_55px_rgba(0,0,0,0.35)] flex h-full flex-col')}>
               <div className="flex items-start justify-between">
                 <div className="space-y-3">
                   <p className="text-[0.65rem] font-semibold uppercase tracking-[0.35em] text-white/70">Saldo Atual</p>
@@ -559,7 +559,7 @@ export default function Financeiro() {
               </div>
             </div>
 
-            <div className={cn(dashboardCardShellClass, 'space-y-6')}>
+            <div className={cn(dashboardCardShellClass, 'flex h-full flex-col gap-6')}>
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
                   <h3 className="text-2xl font-semibold text-white">Resumo de Apostas</h3>
@@ -599,7 +599,7 @@ export default function Financeiro() {
                   </div>
                 ))}
               </div>
-              <div className="flex flex-wrap gap-4 border-t border-white/10 pt-4 text-sm">
+              <div className="mt-auto flex flex-wrap gap-4 border-t border-white/10 pt-4 text-sm">
                 <span className="inline-flex items-center gap-2 text-white/70">
                   <span className="h-2 w-2 rounded-full bg-emerald-300" />
                   Taxa de acerto
