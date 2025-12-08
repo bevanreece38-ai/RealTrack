@@ -190,7 +190,7 @@ const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
 
     if (isUnlimitedPlan || !limite) {
       return {
-        label: apostasHoje ? `${apostasHoje} / Ilimitado` : 'Ilimitado',
+        label: 'Ilimitado',
         percent: 0,
         isUnlimited: true,
       };
