@@ -25,9 +25,9 @@
 		--success: rgb(var(--success-rgb) / 1);
 		--success-light: #22c55e;
 		--success-dark: #16a34a;
-		--warning: #f59e0b;
-		--warning-light: #fbbf24;
-		--warning-yellow: #84cc16;
+		--warning: #ff8a00;
+		--warning-light: #ffc857;
+		--warning-yellow: #ffe29a;
 		--danger: #ef4444;
 		--border-success: rgb(var(--success-rgb) / 0.25);
 		--bg-hover: rgba(15, 23, 42, 0.08);
@@ -54,9 +54,9 @@
 		--success: rgb(var(--success-rgb) / 1);
 		--success-light: #22c55e;
 		--success-dark: #10b981;
-		--warning: #f59e0b;
-		--warning-light: #fbbf24;
-		--warning-yellow: #84cc16;
+		--warning: #ff8a00;
+		--warning-light: #ffc857;
+		--warning-yellow: #ffe29a;
 		--danger: #ef4444;
 		--border-success: rgb(var(--success-rgb) / 0.5);
 		--bg-hover: rgba(255, 255, 255, 0.05);
@@ -70,6 +70,13 @@
 
 	body {
 		@apply bg-background text-foreground antialiased min-h-screen font-sans;
+		scrollbar-width: none;
+	}
+
+	body::-webkit-scrollbar {
+		width: 0;
+		height: 0;
+		background: transparent;
 	}
 
 	#root {

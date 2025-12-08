@@ -44,12 +44,12 @@ const colorClasses = {
     valueColor: 'text-purple-900'
   },
   amber: {
-    bg: 'bg-amber-50',
-    border: 'border-amber-200',
-    iconBg: 'bg-amber-500',
-    iconColor: 'text-amber-600',
-    titleColor: 'text-amber-700',
-    valueColor: 'text-amber-900'
+    bg: 'bg-[#fff3e0]',
+    border: 'border-[#ffd199]',
+    iconBg: 'bg-[#ff8a00]',
+    iconColor: 'text-white',
+    titleColor: 'text-[#c45f00]',
+    valueColor: 'text-[#7b3200]'
   },
   cyan: {
     bg: 'bg-cyan-50',

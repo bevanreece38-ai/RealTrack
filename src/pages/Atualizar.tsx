@@ -49,7 +49,7 @@ const toError = (error: unknown): Error => {
 type StatusStyleKey = keyof typeof betStatusPillVariants;
 
 const statusGlowClassMap: Partial<Record<StatusStyleKey, string>> & { default: string } = {
-  Pendente: 'ring-[rgba(245,158,11,0.55)] shadow-[0_0_30px_rgba(245,158,11,0.45)]',
+  Pendente: 'ring-[rgba(255,157,0,0.65)] shadow-[0_0_30px_rgba(255,157,0,0.5)]',
   Ganha: 'ring-[rgba(16,185,129,0.55)] shadow-[0_0_30px_rgba(16,185,129,0.45)]',
   Perdida: 'ring-[rgba(239,68,68,0.55)] shadow-[0_0_30px_rgba(239,68,68,0.45)]',
   'Meio Ganha': 'ring-[rgba(34,197,94,0.55)] shadow-[0_0_30px_rgba(34,197,94,0.45)]',

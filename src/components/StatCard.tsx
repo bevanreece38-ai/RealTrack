@@ -29,8 +29,8 @@ const COLOR_STYLES: Record<StatCardColor, { icon: string; helper: string }> = {
     helper: 'text-violet-200/80',
   },
   amber: {
-    icon: 'border-amber-400/40 bg-amber-400/15 text-amber-300',
-    helper: 'text-amber-200/80',
+    icon: 'border-[#ffb347]/40 bg-[#ff8a00]/20 text-[#ffe6b8]',
+    helper: 'text-[#ffd36b]',
   },
   cyan: {
     icon: 'border-cyan-400/40 bg-cyan-400/15 text-cyan-200',

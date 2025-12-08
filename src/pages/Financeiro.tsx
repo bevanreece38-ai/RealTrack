@@ -471,12 +471,12 @@ export default function Financeiro() {
       key: 'pendentes',
       label: 'Aguardando resultado',
       icon: Clock3,
-        accent: 'bg-amber-500/20 text-amber-100',
+        accent: 'bg-[#ff9a15]/20 text-[#ffe9c7]',
       parts: pendenteParts,
       isNegative: false,
       description: 'Entradas pendentes',
-        valueClass: 'text-amber-200',
-        decimalClass: 'text-amber-200/70',
+        valueClass: 'text-[#ffd36b]',
+        decimalClass: 'text-[#ffdd9c]',
     },
   ];
 
@@ -580,8 +580,8 @@ export default function Financeiro() {
                     {statsData.apostasConcluidas}{' '}
                     {statsData.apostasConcluidas === 1 ? 'finalizada' : 'finalizadas'}
                   </span>
-                  <span className="inline-flex items-center gap-2 rounded-full border border-amber-400/30 bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-100">
-                    <span className="h-2 w-2 rounded-full bg-amber-300" />
+                  <span className="inline-flex items-center gap-2 rounded-full border border-[#ffb347]/40 bg-[#ff8f0f]/15 px-3 py-1 text-xs font-semibold text-[#ffe8c2]">
+                    <span className="h-2 w-2 rounded-full bg-[#ffc764]" />
                     {statsData.apostasPendentes === 1 ? '1 pendente' : `${statsData.apostasPendentes} pendentes`}
                   </span>
                 </div>

@@ -38,7 +38,7 @@ export const betStatusPillBaseClass =
 
 export const betStatusPillVariants: Record<StatusKey, string> = {
   Pendente:
-    'text-white bg-[#f59e0b]',
+    'text-[#1b1202] bg-[#ff9d00]',
   Ganha: 'text-white bg-[#10b981]',
   Perdida: 'text-white bg-[#ef4444]',
   'Meio Ganha': 'text-white bg-[#22c55e]',
@@ -50,7 +50,7 @@ export const betStatusPillVariants: Record<StatusKey, string> = {
 };
 
 export const betStatusAccentClasses: Record<StatusKey, string> = {
-  Pendente: 'text-[#fbbf24]',
+  Pendente: 'text-[#ffb703]',
   Ganha: 'text-[#34d399]',
   Perdida: 'text-[#fb7185]',
   'Meio Ganha': 'text-[#86efac]',
