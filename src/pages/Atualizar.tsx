@@ -35,6 +35,100 @@ const API_HEALTH_URL = `${API_ORIGIN}/health`;
 const API_UPLOAD_URL = `${API_BASE_URL}/upload/bilhete`;
 
 const STATUS_WITH_RETURNS = ['Ganha', 'Meio Ganha', 'Cashout'];
+const MARKET_LABEL_PATTERN = /^(aposta|odd|retorno|retornos?\spotenciais?|valor|stake|cotação|apostas?)[:]?/i;
+const MARKET_CONNECTOR_PATTERN = /^(?:o|e|ou)\s+/i;
+const MARKET_STAT_KEYWORDS = [
+  'ponto',
+  'pontos',
+  'rebote',
+  'rebotes',
+  'assistencia',
+  'assistencias',
+  'assist',
+  'gol',
+  'gols',
+  'escanteio',
+  'escanteios',
+  'cartao',
+  'cartoes',
+  'cartao amarelo',
+  'cartao vermelho',
+  'faltas',
+  'finalizacao',
+  'finalizacoes',
+  'finalizacao no alvo',
+  'finalizacoes no alvo',
+  'arremesso',
+  'arremessos',
+  'chutes',
+  'triplos',
+  'duplos',
+  'p+r',
+  'p+a',
+  'r+a',
+  'rebotes+pontos',
+  'rebotes+assistencias',
+  'pontos+assistencias',
+  'pontos+rebotes',
+  'rebotes+assist',
+  'pontos+rebotes+assistencias',
+  'passes',
+  'tackles',
+  'defesas',
+  'interceptacoes',
+  'steals',
+  'roubos',
+  'bloqueios',
+  'aces',
+  'games',
+  'sets',
+  'breaks',
+  'quebras'
+];
+
+const normalizeMarketKeyword = (value: string): string =>
+  value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9+&\s]/g, '')
+    .trim()
+    .toLowerCase();
+
+const containsStatKeyword = (value: string): boolean => {
+  const normalized = normalizeMarketKeyword(value);
+  if (!normalized) {
+    return false;
+  }
+  return MARKET_STAT_KEYWORDS.some((keyword) => normalized.includes(keyword));
+};
+
+const needsStatDescriptor = (segment: string): boolean => {
+  if (!segment) {
+    return false;
+  }
+  if (containsStatKeyword(segment)) {
+    return false;
+  }
+
+  const normalized = normalizeMarketKeyword(segment);
+  if (!normalized) {
+    return false;
+  }
+
+  const raw = segment.trim();
+  if (/\d+\s*\+$/.test(raw)) {
+    return true;
+  }
+  if (/\b(?:mais|menos|over|under|abaixo|acima)\b/.test(normalized)) {
+    return true;
+  }
+  if (/\b(?:mais|menos)\s+de\b/.test(normalized) && /\d/.test(normalized)) {
+    return true;
+  }
+  return false;
+};
+
+const isStatDescriptor = (segment: string): boolean => containsStatKeyword(segment);
 
 const toError = (error: unknown): Error => {
   if (error instanceof Error) {
@@ -328,9 +422,6 @@ export default function Atualizar() {
       return [];
     }
 
-    const labelPattern = /^(aposta|odd|retorno|retornos?\spotenciais?|valor|stake|cotação|apostas?)[:]?/i;
-    const connectorPattern = /^(?:o|e|ou)\s+/i;
-
     const fragments = normalized
       .replace(/\r/g, '\n')
       .replace(/R\$\s*[\d.,]+/gi, '\n')
@@ -343,7 +434,7 @@ export default function Atualizar() {
           .replace(/\s{2,}/g, ' ')
           .replace(/^[^a-zA-ZÀ-ÿ0-9]+/, '')
           .replace(/^[\d\s.,:;()\-]+/, '')
-          .replace(connectorPattern, '')
+            .replace(MARKET_CONNECTOR_PATTERN, '')
           .trim()
       )
       .filter((segment) => segment.length > 0)
@@ -351,7 +442,7 @@ export default function Atualizar() {
         if (!/[a-zA-ZÀ-ÿ]/.test(segment)) {
           return false;
         }
-        if (labelPattern.test(segment)) {
+          if (MARKET_LABEL_PATTERN.test(segment)) {
           return false;
         }
         if (/^[\d.,]+$/.test(segment.replace(',', '.'))) {
@@ -360,8 +451,20 @@ export default function Atualizar() {
         return true;
       });
 
+    const mergedFragments: string[] = [];
+    for (let i = 0; i < fragments.length; i += 1) {
+      const fragment = fragments[i];
+      const next = fragments[i + 1];
+      if (next && needsStatDescriptor(fragment) && isStatDescriptor(next)) {
+        mergedFragments.push(`${fragment} ${next}`);
+        i += 1;
+        continue;
+      }
+      mergedFragments.push(fragment);
+    }
+
     const deduped: string[] = [];
-    for (const fragment of fragments) {
+    for (const fragment of mergedFragments) {
       const normalizedFragment = fragment.toLowerCase();
       if (!deduped.some((existing) => existing.toLowerCase() === normalizedFragment)) {
         deduped.push(fragment);
