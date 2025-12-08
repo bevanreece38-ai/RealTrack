@@ -318,6 +318,106 @@ export default function Atualizar() {
     return trimmed === '' ? '-' : trimmed;
   };
 
+  const extractMarketSelections = (market?: string | null): string[] => {
+    if (typeof market !== 'string') {
+      return [];
+    }
+
+    const normalized = market.trim();
+    if (normalized === '' || normalized === 'N/D') {
+      return [];
+    }
+
+    const rawLines = normalized
+      .replace(/\r/g, '\n')
+      .split('\n')
+      .map((line) => line)
+      .filter(Boolean);
+
+    const cleaned = rawLines
+      .map((line) =>
+        line
+          .replace(/r\$\s*[\d.,]+/gi, '')
+          .replace(/^[-•\s]+/, '')
+          .replace(/\s{2,}/g, ' ')
+          .trim()
+      )
+      .filter((line) => line.length > 0)
+      .filter((line) => {
+        const numericOnly = /^[\d.,]+$/.test(line.replace(',', '.'));
+        if (numericOnly) {
+          return false;
+        }
+
+        const labelPrefix = /^(aposta|odd|retorno|retornos?\spotenciais?|valor|stake)[:]?/i;
+        if (labelPrefix.test(line)) {
+          return false;
+        }
+
+        return /[a-zA-ZÀ-ÿ]/.test(line);
+      });
+
+    const deduped: string[] = [];
+    for (const line of cleaned) {
+      const normalizedLine = line.toLowerCase();
+      if (!deduped.some((existing) => existing.toLowerCase() === normalizedLine)) {
+        deduped.push(line);
+      }
+    }
+
+    return deduped;
+  };
+
+  const extractMarketSelections = (market?: string | null): string[] => {
+    if (typeof market !== 'string') {
+      return [];
+    }
+
+    const normalized = market.trim();
+    if (normalized === '' || normalized === 'N/D') {
+      return [];
+    }
+
+    const rawLines = normalized
+      .replace(/\r/g, '\n')
+      .split('\n')
+      .map((line) => line)
+      .filter(Boolean);
+
+    const cleaned = rawLines
+      .map((line) =>
+        line
+          .replace(/r\$\s*[\d.,]+/gi, '')
+          .replace(/^[-•\s]+/, '')
+          .replace(/\s{2,}/g, ' ')
+          .trim()
+      )
+      .filter((line) => line.length > 0)
+      .filter((line) => {
+        const numericOnly = /^[\d.,]+$/.test(line.replace(',', '.'));
+        if (numericOnly) {
+          return false;
+        }
+
+        const labelPrefix = /^(aposta|odd|retorno|retornos?\spotenciais?|valor|stake)[:]?/i;
+        if (labelPrefix.test(line)) {
+          return false;
+        }
+
+        return /[a-zA-ZÀ-ÿ]/.test(line);
+      });
+
+    const deduped: string[] = [];
+    for (const line of cleaned) {
+      const normalizedLine = line.toLowerCase();
+      if (!deduped.some((existing) => existing.toLowerCase() === normalizedLine)) {
+        deduped.push(line);
+      }
+    }
+
+    return deduped;
+  };
+
   const describeNetworkFailure = useCallback((error: UploadApiError) => {
     const hints: string[] = [
       'Não foi possível conectar ao serviço de processamento.',
@@ -1545,14 +1645,30 @@ ${limitReachedMessage}`);
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/10">
-                {filteredApostas.map((aposta) => (
-                  <tr key={aposta.id} className="text-white">
+                {filteredApostas.map((aposta) => {
+                  const marketSelections = extractMarketSelections(aposta.mercado);
+
+                  return (
+                    <tr key={aposta.id} className="text-white">
                     <td className="px-4 py-3 align-middle text-sm font-medium text-white">{formatOptionalCellText(aposta.casaDeAposta)}</td>
                     <td className="px-4 py-3 align-middle text-sm text-white/80">{formatOptionalCellText(aposta.tipster)}</td>
                     <td className="px-4 py-3 align-middle text-sm text-white/80">{formatDate(aposta.dataJogo)}</td>
                     <td className="px-4 py-3 align-middle text-sm text-white/80">{normalizeEsporte(aposta.esporte)}</td>
                     <td className="px-4 py-3 align-middle text-sm text-white">{aposta.jogo}</td>
-                    <td className="px-4 py-3 align-middle text-sm text-white/80">{aposta.mercado}</td>
+                    <td className="px-4 py-3 align-middle text-sm text-white/80">
+                      {marketSelections.length > 0 ? (
+                        <ul className="space-y-1">
+                          {marketSelections.map((selection, index) => (
+                            <li key={`${aposta.id}-market-${index}`} className="flex items-start gap-2">
+                              <span className="mt-0.5 text-xs text-white/50">•</span>
+                              <span className="whitespace-pre-line">{selection}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <span>{formatOptionalCellText(aposta.mercado)}</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3 align-middle text-sm text-white">
                       <div className="flex flex-col gap-1 text-sm">
                         <span className="font-semibold text-white">{formatCurrency(aposta.valorApostado)}</span>
@@ -1596,8 +1712,9 @@ ${limitReachedMessage}`);
                         </button>
                       </div>
                     </td>
-                  </tr>
-                ))}
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
