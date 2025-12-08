@@ -32,17 +32,35 @@ export function useChartContainer(options: UseChartContainerOptions = {}) {
       return;
     }
 
-    if (typeof window === 'undefined' || typeof ResizeObserver === 'undefined') {
-      const rect = element.getBoundingClientRect();
-      setDimensions({ width: rect.width, height: rect.height });
-      setHasSize(true);
+    const applySize = (width: number, height: number) => {
+      setDimensions({ width, height });
+      setHasSize(width >= minWidth && height >= minHeight);
+    };
+
+    if (typeof window === 'undefined') {
       return undefined;
     }
 
+    if (typeof ResizeObserver === 'undefined') {
+      const updateSize = () => {
+        const rect = element.getBoundingClientRect();
+        applySize(rect.width ?? 0, rect.height ?? 0);
+      };
+
+      updateSize();
+      window.addEventListener('resize', updateSize);
+
+      return () => {
+        window.removeEventListener('resize', updateSize);
+      };
+    }
+
+    const initialRect = element.getBoundingClientRect();
+    applySize(initialRect.width ?? 0, initialRect.height ?? 0);
+
     const observer = new ResizeObserver(([entry]) => {
       const { width, height } = entry.contentRect;
-      setDimensions({ width, height });
-      setHasSize(width >= minWidth && height >= minHeight);
+      applySize(width, height);
     });
 
     observer.observe(element);

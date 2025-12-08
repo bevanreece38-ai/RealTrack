@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { LineChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid } from 'recharts';
+import { LineChart, Line, Tooltip, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { ArrowUpRight, ChevronDown, Download, Filter, Loader2, Plus, TrendingUp, Trophy } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import FilterPopover from '../components/FilterPopover';
@@ -89,7 +89,13 @@ export default function Dashboard() {
     fetchDashboardData,
   } = useDashboardData();
 
-  const { containerRef: evolucaoChartRef, hasSize: evolucaoChartReady } = useChartContainer({ minHeight: 200, minWidth: 200 });
+  const {
+    containerRef: evolucaoChartRef,
+    hasSize: evolucaoChartReady,
+    dimensions: evolucaoChartDimensions,
+  } = useChartContainer({ minHeight: 200, minWidth: 200 });
+  const evolucaoChartWidth = Math.max(evolucaoChartDimensions.width, 0);
+  const evolucaoChartHeight = Math.max(evolucaoChartDimensions.height, 0);
 
   const { tipsters } = useTipsters();
   const { bancas: userBancas, loading: bancasLoading } = useBancas();
@@ -469,29 +475,32 @@ export default function Dashboard() {
                 Preparando gráfico...
               </div>
             ) : evolucaoBancaChart.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%" minWidth={0}>
-                <LineChart data={evolucaoBancaChart} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
-                  <CartesianGrid stroke="rgba(255,255,255,0.08)" strokeDasharray="3 3" />
-                  <XAxis
-                    dataKey="date"
-                    stroke="rgba(255,255,255,0.2)"
-                    tick={{ ...chartTheme.axisTick, fill: 'rgba(255,255,255,0.65)' }}
-                    tickLine={false}
-                  />
-                  <YAxis
-                    stroke="rgba(255,255,255,0.2)"
-                    tick={{ ...chartTheme.axisTick, fill: 'rgba(255,255,255,0.65)' }}
-                    tickFormatter={(value) => `R$ ${value}`}
-                    tickLine={false}
-                  />
-                  <Tooltip
-                    contentStyle={chartTheme.tooltipDark}
-                    formatter={(value: number, name: string) => [formatCurrency(value), name === 'diário' ? 'Lucro diário' : 'Acumulado']}
-                  />
-                  <Line type="monotone" dataKey="diário" stroke={chartTheme.colors.linePrimary} strokeWidth={2} dot={false} />
-                  <Line type="monotone" dataKey="acumulado" stroke={chartTheme.colors.lineSecondary} strokeWidth={3} dot={false} />
-                </LineChart>
-              </ResponsiveContainer>
+              <LineChart
+                width={evolucaoChartWidth}
+                height={evolucaoChartHeight}
+                data={evolucaoBancaChart}
+                margin={{ top: 10, right: 20, left: 0, bottom: 0 }}
+              >
+                <CartesianGrid stroke="rgba(255,255,255,0.08)" strokeDasharray="3 3" />
+                <XAxis
+                  dataKey="date"
+                  stroke="rgba(255,255,255,0.2)"
+                  tick={{ ...chartTheme.axisTick, fill: 'rgba(255,255,255,0.65)' }}
+                  tickLine={false}
+                />
+                <YAxis
+                  stroke="rgba(255,255,255,0.2)"
+                  tick={{ ...chartTheme.axisTick, fill: 'rgba(255,255,255,0.65)' }}
+                  tickFormatter={(value) => `R$ ${value}`}
+                  tickLine={false}
+                />
+                <Tooltip
+                  contentStyle={chartTheme.tooltipDark}
+                  formatter={(value: number, name: string) => [formatCurrency(value), name === 'diário' ? 'Lucro diário' : 'Acumulado']}
+                />
+                <Line type="monotone" dataKey="diário" stroke={chartTheme.colors.linePrimary} strokeWidth={2} dot={false} />
+                <Line type="monotone" dataKey="acumulado" stroke={chartTheme.colors.lineSecondary} strokeWidth={3} dot={false} />
+              </LineChart>
             ) : (
               <div className="flex h-full items-center justify-center rounded-2xl border border-dashed border-white/10 text-sm text-foreground-muted">
                 Nenhum dado disponível para o período selecionado.
