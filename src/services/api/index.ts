@@ -100,6 +100,7 @@ export {
   type UpdatePerfilPayload,
   type ChangePasswordPayload,
   type TelegramInfo,
+  type RedeemPromoResult,
 } from './perfilService';
 
 // ============================================

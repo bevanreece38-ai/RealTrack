@@ -106,6 +106,10 @@ export default function Perfil() {
   const [resetModalOpen, setResetModalOpen] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [resetError, setResetError] = useState('');
+  const [promoModalOpen, setPromoModalOpen] = useState(false);
+  const [promoCode, setPromoCode] = useState('realteste');
+  const [redeemingPromo, setRedeemingPromo] = useState(false);
+  const [promoError, setPromoError] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -220,6 +224,33 @@ export default function Perfil() {
     }
   };
 
+  const handleRedeemPromo = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!promoCode.trim()) {
+      setPromoError('Informe o código.');
+      return;
+    }
+
+    try {
+      setRedeemingPromo(true);
+      setPromoError('');
+      const result = await perfilService.redeemPromoCode(promoCode.trim());
+      setProfile(result.profile);
+      toast.success(result.message);
+      setPromoModalOpen(false);
+      setPromoCode('realteste');
+    } catch (error: any) {
+      const message =
+        typeof error?.response?.data?.error === 'string'
+          ? error.response.data.error
+          : error?.response?.data?.message ?? 'Não foi possível aplicar o código.';
+      setPromoError(message);
+      toast.error(message);
+    } finally {
+      setRedeemingPromo(false);
+    }
+  };
+
   const copyToClipboard = (text: string) => {
     void navigator.clipboard
       .writeText(text)
@@ -285,6 +316,9 @@ export default function Perfil() {
   const PlanIcon = planVisual.Icon;
   const normalizedPlanName = profile.plano?.nome?.trim().toLowerCase() ?? '';
   const isUnlimitedPlan = normalizedPlanName.includes('profissional') || profile.plano.limiteApostasDiarias === 0;
+  const promoExpiryDate = profile.promoExpiresAt ? new Date(profile.promoExpiresAt) : null;
+  const promoActive = promoExpiryDate ? promoExpiryDate.getTime() > Date.now() : false;
+  const promoRemainingText = promoActive && promoExpiryDate ? formatTimeRemaining(promoExpiryDate) : null;
 
   return (
     <div className="space-y-8 text-white">
@@ -330,6 +364,59 @@ export default function Perfil() {
               </div>
             </div>
           </div>
+        </div>
+      </section>
+
+      <section className={cn(gradientCardClass, 'relative overflow-hidden border border-brand-emerald/40 bg-[#0b2f28]')}>
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-center">
+          <div className="flex flex-1 items-center gap-4">
+            <div className={iconBadgeClass}>
+              <Gift className="h-5 w-5" />
+            </div>
+            <div>
+              <p className={labelClass}>Plano promocional</p>
+              <p className={gradientTitleClass}>Teste Profissional</p>
+            </div>
+          </div>
+          <div className="flex flex-col gap-3 text-sm text-white/70">
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="rounded-2xl border border-white/15 bg-white/5 px-4 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-white/80">
+                realteste
+              </span>
+              <span className="text-white/60">Libera 7 dias completos do Plano Profissional</span>
+            </div>
+            {promoActive && promoExpiryDate ? (
+              <div className="rounded-2xl border border-brand-emerald/40 bg-brand-emerald/10 px-4 py-3 text-sm text-brand-emerald">
+                <p className="font-semibold">Plano promocional ativo</p>
+                <p>
+                  Expira em {formatDate(profile.promoExpiresAt)} {promoRemainingText ? `· ${promoRemainingText}` : ''}
+                </p>
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/80">
+                Receba acesso total ao Plano Profissional por 7 dias aplicando o código acima. Promoção limitada aos
+                primeiros usuários.
+              </div>
+            )}
+          </div>
+        </div>
+        <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:items-center">
+          <button
+            type="button"
+            className={cn(primaryButtonClass, 'flex-1 sm:max-w-xs')}
+            onClick={() => {
+              setPromoError('');
+              if (!promoCode) {
+                setPromoCode('realteste');
+              }
+              setPromoModalOpen(true);
+            }}
+            disabled={promoActive || redeemingPromo}
+          >
+            <Gift className="h-4 w-4" />
+            {promoActive ? 'Plano promocional ativo' : redeemingPromo ? 'Aplicando...' : 'Liberar 7 dias grátis'}
+          </button>
+          {!promoActive && <p className="text-xs text-white/50">Disponível enquanto houver vagas promocionais.</p>}
         </div>
       </section>
 
@@ -610,6 +697,35 @@ export default function Perfil() {
         </div>
       </section>
 
+      <Modal isOpen={promoModalOpen} onClose={() => setPromoModalOpen(false)} title="Ativar plano promocional" size="sm">
+        <form className="space-y-4" onSubmit={handleRedeemPromo}>
+          <p className="text-sm text-white/70">
+            Utilize o código <span className="font-semibold uppercase tracking-[0.3em] text-white">realteste</span> para
+            liberar 7 dias do Plano Profissional.
+          </p>
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-white">Código promocional</label>
+            <input
+              type="text"
+              className={inputClass}
+              value={promoCode}
+              onChange={(event) => setPromoCode(event.target.value)}
+            />
+          </div>
+          {promoError && (
+            <div className="rounded-2xl border border-danger/40 bg-danger/10 px-4 py-2 text-sm text-danger">{promoError}</div>
+          )}
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <button type="button" className={cn(neutralButtonClass, 'flex-1')} onClick={() => setPromoModalOpen(false)}>
+              Cancelar
+            </button>
+            <button type="submit" className={cn(primaryButtonClass, 'flex-1')} disabled={redeemingPromo}>
+              {redeemingPromo ? 'Aplicando...' : 'Aplicar código'}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
       <Modal isOpen={resetModalOpen} onClose={() => setResetModalOpen(false)} title="Resetar conta" size="sm">
         <p className="text-sm text-white">
           Confirme para remover definitivamente todas as suas bancas, apostas e transações. Esta operação não pode ser
@@ -646,6 +762,26 @@ function formatCurrency(value?: number | null) {
 function formatDate(value?: string | null) {
   if (!value) return '—';
   return formatDateUtil(value);
+}
+
+function formatTimeRemaining(date: Date) {
+  const diff = date.getTime() - Date.now();
+  if (diff <= 0) return '';
+
+  const totalMinutes = Math.floor(diff / (1000 * 60));
+  const days = Math.floor(totalMinutes / (60 * 24));
+  const hours = Math.floor((totalMinutes - days * 24 * 60) / 60);
+  const minutes = totalMinutes % 60;
+
+  if (days > 0) {
+    return hours > 0 ? `${days}d ${hours}h restantes` : `${days}d restantes`;
+  }
+
+  if (hours > 0) {
+    return minutes > 0 ? `${hours}h ${minutes}min restantes` : `${hours}h restantes`;
+  }
+
+  return `${minutes}min restantes`;
 }
 
 interface InfoRowProps {

@@ -107,6 +107,7 @@ export interface ApiProfileResponse {
   updatedAt: string;
   telegramId?: string | null;
   telegramUsername?: string | null;
+  promoExpiresAt?: string | null;
   plano: ApiPlan;
   fotoPerfil?: string | null;
 }

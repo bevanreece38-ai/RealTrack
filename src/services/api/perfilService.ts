@@ -29,6 +29,7 @@ export interface Perfil {
   telegramId?: string | null;
   telegramUsername?: string | null;
   fotoPerfil?: string | null;
+  promoExpiresAt?: string | null;
   plano: Plano;
 }
 
@@ -81,6 +82,7 @@ const mapPerfilFromApi = (data: ApiProfileResponse): Perfil => ({
   telegramId: data.telegramId,
   telegramUsername: data.telegramUsername,
   fotoPerfil: data.fotoPerfil,
+  promoExpiresAt: data.promoExpiresAt,
   plano: {
     id: data.plano.id,
     nome: data.plano.nome,
@@ -241,6 +243,39 @@ async function updateTelegram(telegramId: string | null): Promise<ApiProfileResp
   return response.data;
 }
 
+interface RedeemPromoCodeResponse {
+  message: string;
+  expiresAt: string;
+  remainingUses: number;
+  profile: ApiProfileResponse;
+}
+
+export interface RedeemPromoResult {
+  message: string;
+  expiresAt: string;
+  remainingUses: number;
+  profile: Perfil;
+}
+
+async function redeemPromoCode(code: string): Promise<RedeemPromoResult> {
+  const response = await apiClient.post<RedeemPromoCodeResponse>('/perfil/promo-code', { code });
+  const mappedProfile = mapPerfilFromApi(response.data.profile);
+
+  invalidateCachePattern('/perfil');
+  eventBus.emitProfileUpdated({
+    id: mappedProfile.id,
+    nomeCompleto: mappedProfile.nomeCompleto,
+    email: mappedProfile.email,
+  });
+
+  return {
+    message: response.data.message,
+    expiresAt: response.data.expiresAt,
+    remainingUses: response.data.remainingUses,
+    profile: mappedProfile,
+  };
+}
+
 // ============================================
 // Export
 // ============================================
@@ -262,6 +297,7 @@ export const perfilService = {
   getTelegramInfo,
   disconnectTelegram,
   updateTelegram,
+  redeemPromoCode,
 
   // Reset e exclusão
   resetAccount,
