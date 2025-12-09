@@ -692,73 +692,144 @@ export default function Dashboard() {
 function BreakdownList({ items, expandedId, onToggle, emptyMessage }: BreakdownListProps) {
   if (items.length === 0) {
     return (
-      <div className={cn('rounded-2xl border border-dashed border-white/10 px-4 py-10 text-center text-sm text-foreground-muted', labelTextClass)}>
+      <div
+        className={cn(
+          'rounded-2xl border border-dashed border-white/10 bg-[#0b1f1f]/60 px-4 py-10 text-center text-sm text-white/60 backdrop-blur',
+          labelTextClass
+        )}
+      >
         {emptyMessage}
       </div>
     );
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {items.map((item) => {
         const isExpanded = expandedId === item.id;
-        const positiveRoi = item.roi >= 0;
-        const positiveLucro = item.lucro >= 0;
+        const lucroPositive = item.lucro > 0;
+        const lucroNeutral = item.lucro === 0;
+        const rawWinPercent = Number.isFinite(item.aproveitamento) ? item.aproveitamento : 0;
+        const clampedWinPercent = Math.min(Math.max(rawWinPercent, 0), 100);
+        const stakeValue = Number.isFinite(item.stake) ? item.stake : 0;
+        const roiValue = Number.isFinite(item.roi) ? item.roi : 0;
+        const progressColor =
+          clampedWinPercent >= 50
+            ? 'from-emerald-500 to-teal-400'
+            : clampedWinPercent >= 30
+              ? 'from-amber-500 to-orange-400'
+              : 'from-rose-500 to-red-500';
+        const roiBadgeClass =
+          roiValue > 0
+            ? 'border border-emerald-500/30 bg-emerald-500/15 text-emerald-300'
+            : roiValue < 0
+              ? 'border border-rose-500/30 bg-rose-500/15 text-rose-300'
+              : 'border border-white/10 bg-white/5 text-white/70';
+        const lucroClass = lucroPositive ? 'text-emerald-300' : lucroNeutral ? 'text-white/70' : 'text-rose-300';
+        const roiNormalized = Math.max(0, Math.min(100, (roiValue + 100) / 2));
 
         return (
           <div
             key={item.id}
             className={cn(
-              'rounded-2xl border border-white/5 bg-[#102f2b] text-foreground shadow-[0_20px_40px_rgba(0,0,0,0.2)] backdrop-blur-sm',
-              isExpanded && 'border-brand-emerald/40 shadow-glow'
+              'rounded-2xl border bg-[#0b1f1f] text-foreground shadow-[0_25px_35px_rgba(0,0,0,0.35)] transition duration-300 backdrop-blur-sm',
+              isExpanded ? 'border-emerald-500/40 shadow-emerald-500/10' : 'border-white/5 hover:border-white/20'
             )}
           >
             <button
               type="button"
               onClick={() => onToggle(isExpanded ? null : item.id)}
-              className="flex w-full items-center gap-4 px-4 py-3 text-left"
+              className="flex w-full items-center gap-4 px-4 py-4 text-left"
+              aria-expanded={isExpanded}
             >
-              <div className={cn('flex h-12 w-12 items-center justify-center rounded-2xl text-xl', positiveRoi ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400')}>
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-white/10 bg-gradient-to-br from-[#1b3a37] to-[#132826] text-2xl">
                 {item.icon}
               </div>
               <div className="flex-1">
-                <p className="text-sm font-semibold text-foreground">{item.name}</p>
-                <p className={cn('text-xs text-foreground-muted', softLabelTextClass)}>{item.subtitle}</p>
+                <p className="text-base font-semibold text-white">{item.name}</p>
+                <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-white/60">
+                  <span>{item.apostas} apostas</span>
+                  <span>•</span>
+                  <span className={cn(rawWinPercent >= 40 ? 'text-emerald-300' : rawWinPercent === 0 ? 'text-white/60' : 'text-rose-300')}>
+                    {formatPercent(clampedWinPercent)} win
+                  </span>
+                </div>
               </div>
+              <div className={cn('rounded-lg px-3 py-1.5 text-sm font-semibold', roiBadgeClass)}>{formatSignedPercent(roiValue)}</div>
               <div className="text-right">
-                <p className={cn('text-sm font-semibold', positiveLucro ? 'text-emerald-400' : 'text-rose-400')}>
-                  {formatSignedCurrency(item.lucro)}
-                </p>
-                <p className="text-xs text-foreground-muted">Lucro</p>
+                <p className={cn('text-base font-semibold', lucroClass)}>{formatSignedCurrency(item.lucro)}</p>
+                <p className="text-xs uppercase tracking-wide text-white/50">Lucro</p>
               </div>
-              <ChevronDown className={cn('h-5 w-5 text-foreground-muted transition', isExpanded && 'rotate-180 text-foreground')} />
+              <ChevronDown className={cn('ml-2 h-5 w-5 text-white/50 transition', isExpanded && 'rotate-180 text-white/80')} />
             </button>
 
             {isExpanded && (
-              <div className="border-t border-border/20 px-4 py-4">
-                <div className="grid gap-4 text-sm text-foreground sm:grid-cols-2 lg:grid-cols-5">
+              <div className="border-t border-white/10 bg-white/5 px-4 pb-5 pt-4">
+                <div className="grid gap-3 pt-2 text-sm text-white sm:grid-cols-2 lg:grid-cols-4">
                   <BreakdownStat label="Apostas" value={item.apostas.toString()} />
-                  <BreakdownStat label="Verdes" value={item.ganhas.toString()} helper={`${formatPercent(item.aproveitamento)} de aproveitamento`} />
-                  <BreakdownStat label="Stake médio" value={formatCurrency(item.stake)} />
                   <BreakdownStat
-                    label="ROI"
-                    value={formatSignedPercent(item.roi)}
-                    highlight={item.roi >= 0 ? 'positive' : 'negative'}
+                    label="Vitórias"
+                    value={item.ganhas.toString()}
+                    helper={`${formatPercent(clampedWinPercent)} de aproveitamento`}
+                    highlight={rawWinPercent >= 50 ? 'positive' : rawWinPercent <= 30 ? 'negative' : undefined}
                   />
+                  <BreakdownStat label="Stake médio" value={formatCurrency(stakeValue)} helper="média" />
                   <BreakdownStat
-                    label="Lucro"
+                    label="Lucro total"
                     value={formatSignedCurrency(item.lucro)}
                     highlight={item.lucro >= 0 ? 'positive' : 'negative'}
                   />
-                  {item.extraStats?.map((extra) => (
-                    <BreakdownStat
-                      key={`${item.id}-${extra.label}`}
-                      label={extra.label}
-                      value={extra.value}
-                      helper={extra.helper}
-                      highlight={extra.highlight}
+                </div>
+
+                {item.extraStats?.length ? (
+                  <div className="mt-3 grid gap-3 text-sm text-white sm:grid-cols-2 lg:grid-cols-4">
+                    {item.extraStats.map((extra) => (
+                      <BreakdownStat
+                        key={`${item.id}-${extra.label}`}
+                        label={extra.label}
+                        value={extra.value}
+                        helper={extra.helper}
+                        highlight={extra.highlight}
+                      />
+                    ))}
+                  </div>
+                ) : null}
+
+                <div className="mt-5">
+                  <div className="flex items-center justify-between text-xs text-white/60">
+                    <span>Taxa de aproveitamento</span>
+                    <span>{formatPercent(clampedWinPercent)}</span>
+                  </div>
+                  <div className="mt-2 h-2 rounded-full border border-white/10 bg-[#071312]">
+                    <div
+                      className={cn('h-full rounded-full bg-gradient-to-r transition-all duration-500', progressColor)}
+                      style={{ width: `${clampedWinPercent}%` }}
                     />
-                  ))}
+                  </div>
+                </div>
+
+                <div className="mt-4 flex flex-col gap-3 text-xs text-white/60 sm:flex-row sm:items-center sm:justify-between">
+                  <span>Retorno sobre investimento</span>
+                  <div className="flex items-center gap-3">
+                    <div className="flex gap-1">
+                      {[...Array(5)].map((_, index) => {
+                        const threshold = (index + 1) * 20;
+                        const filled = roiNormalized >= threshold;
+                        const fillClass = filled
+                          ? roiNormalized >= 60
+                            ? 'bg-emerald-500'
+                            : roiNormalized >= 40
+                              ? 'bg-amber-500'
+                              : 'bg-rose-500'
+                          : 'bg-white/10';
+
+                        return <span key={`${item.id}-roi-${index}`} className={cn('h-6 w-1.5 rounded-sm transition', fillClass)} />;
+                      })}
+                    </div>
+                    <span className={cn('text-sm font-semibold', roiValue > 0 ? 'text-emerald-300' : roiValue < 0 ? 'text-rose-300' : 'text-white/70')}>
+                      {formatSignedPercent(roiValue)}
+                    </span>
+                  </div>
                 </div>
               </div>
             )}
@@ -781,18 +852,18 @@ function BreakdownStat({
   highlight?: 'positive' | 'negative';
 }) {
   return (
-    <div>
-      <p className={cn('text-2xs uppercase tracking-[0.3em] text-foreground-muted', softLabelTextClass)}>{label}</p>
+    <div className="rounded-xl border border-white/10 bg-[#0d2424] p-3">
+      <p className="text-[10px] uppercase tracking-[0.25em] text-white/45">{label}</p>
       <p
         className={cn(
-          'mt-1 text-base font-semibold text-foreground',
-          highlight === 'positive' && 'text-emerald-400',
-          highlight === 'negative' && 'text-rose-400'
+          'mt-2 text-xl font-semibold text-white',
+          highlight === 'positive' && 'text-emerald-300',
+          highlight === 'negative' && 'text-rose-300'
         )}
       >
         {value}
       </p>
-      {helper && <p className={cn('text-xs text-foreground-muted', softLabelTextClass)}>{helper}</p>}
+      {helper && <p className="text-xs text-white/60">{helper}</p>}
     </div>
   );
 }
