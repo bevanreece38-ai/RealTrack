@@ -302,6 +302,9 @@ export default function TelegramEdit() {
         }
       }
 
+      const torneio = formData.torneio.trim();
+      const pais = formData.pais.trim();
+
       const payload: Record<string, unknown> = {
         bancaId: formData.bancaId,
         esporte,
@@ -311,8 +314,25 @@ export default function TelegramEdit() {
         valorApostado,
         odd,
         bonus,
+        casaDeAposta,
+        status: formData.status,
+      };
+
+      if (torneio) {
+        payload.torneio = torneio;
+      } else {
+        payload.torneio = null;
       }
-          {/* ...campos removidos: torneio e país... */}
+
+      if (pais) {
+        payload.pais = pais;
+      } else {
+        payload.pais = null;
+      }
+
+      if (dataJogoISO) {
+        payload.dataJogo = dataJogoISO;
+      }
 
       const tipster = formData.tipster.trim();
       if (tipster) {

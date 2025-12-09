@@ -17,6 +17,7 @@ import FilterPopover from '../components/FilterPopover';
 import DateInput from '../components/DateInput';
 import { CASAS_APOSTAS } from '../constants/casasApostas';
 import { STATUS_APOSTAS } from '../constants/statusApostas';
+import { stripEsporteEmoji } from '../constants/esportes';
 import { formatCurrency, formatPercent, getFirstName } from '../utils/formatters';
 import { useDashboardData, useTipsters, useBancas, useChartContainer } from '../hooks';
 import { cn } from '../components/ui/utils';
@@ -50,7 +51,11 @@ const timeframeOptions = [
 
 const labelTextClass = 'text-white/65';
 const softLabelTextClass = 'text-white/55';
-const normalizeKey = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+const normalizeKey = (value: string) =>
+  stripEsporteEmoji(value)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
 const SPORT_ICON_MAP: Record<string, string> = {
   basquetebol: '⚽️',
   'futebol americano': '🏈',
