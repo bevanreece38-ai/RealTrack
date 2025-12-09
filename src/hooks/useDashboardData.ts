@@ -121,6 +121,8 @@ const initialMetricas: DashboardMetricas = {
   apostasPendentes: 0,
 };
 
+const isDevEnv = import.meta.env.DEV;
+
 // ============================================
 // Helpers
 // ============================================
@@ -428,7 +430,7 @@ export function useDashboardData(
     const bancaId = filtersRef.current.bancaId;
     const hasBanca = Boolean(bancaId);
 
-    if (import.meta.env.DEV) {
+    if (isDevEnv) {
       console.log('[DEBUG] fetchDashboardData chamado');
       console.trace('[DEBUG] fetchDashboardData stack');
     }
@@ -439,7 +441,9 @@ export function useDashboardData(
     }
 
     const params = buildParams(filtersRef.current);
-    console.log('[EVOLUÇÃO] Parâmetros da API:', params);
+    if (isDevEnv) {
+      console.log('[EVOLUÇÃO] Parâmetros da API:', params);
+    }
     setLoading(true);
     setError(null);
 
@@ -447,9 +451,11 @@ export function useDashboardData(
       const response = await apiClient.get<DashboardResponse>('/analise/dashboard', { params });
       const data = response.data;
 
-      console.log('[EVOLUÇÃO] Resposta completa da API:', data);
-      console.log('[EVOLUÇÃO] lucroAcumulado recebido:', data.lucroAcumulado);
-      console.log('[EVOLUÇÃO] Quantidade de itens em lucroAcumulado:', data.lucroAcumulado?.length);
+      if (isDevEnv) {
+        console.log('[EVOLUÇÃO] Resposta completa da API:', data);
+        console.log('[EVOLUÇÃO] lucroAcumulado recebido:', data.lucroAcumulado);
+        console.log('[EVOLUÇÃO] Quantidade de itens em lucroAcumulado:', data.lucroAcumulado?.length);
+      }
 
       setMetricas(data.metricas);
       setLucroAcumulado(data.lucroAcumulado);
@@ -457,13 +463,19 @@ export function useDashboardData(
       setResumoPorEsporte(data.resumoPorEsporte);
       setResumoPorCasa(data.resumoPorCasa);
 
-      console.log('[EVOLUÇÃO] Dados salvos com sucesso');
+      if (isDevEnv) {
+        console.log('[EVOLUÇÃO] Dados salvos com sucesso');
+      }
     } catch (err) {
       const apiError = err as { response?: { status?: number } };
-      console.error('[EVOLUÇÃO] Erro ao carregar dados:', err);
-      console.error('[EVOLUÇÃO] Status do erro:', apiError.response?.status);
+      if (isDevEnv) {
+        console.error('[EVOLUÇÃO] Erro ao carregar dados:', err);
+        console.error('[EVOLUÇÃO] Status do erro:', apiError.response?.status);
+      }
       if (apiError.response?.status !== 429) {
-        console.error('Erro ao carregar dados do dashboard:', err);
+        if (isDevEnv) {
+          console.error('Erro ao carregar dados do dashboard:', err);
+        }
         setError(err instanceof Error ? err : new Error('Erro ao carregar dashboard'));
       }
     } finally {
@@ -486,7 +498,9 @@ export function useDashboardData(
 
   // Refetch completo
   const refetch = useCallback(() => {
-    console.log('[DEBUG] refetch chamado');
+    if (isDevEnv) {
+      console.log('[DEBUG] refetch chamado');
+    }
     void fetchDashboardData();
     void fetchApostasRecentes();
   }, [fetchDashboardData, fetchApostasRecentes]);
@@ -501,12 +515,16 @@ export function useDashboardData(
 
     // Evita fetch duplicado
     if (hasFetchedRef.current) {
-      console.log('[DEBUG] fetch inicial ignorado - já foi feito');
+      if (isDevEnv) {
+        console.log('[DEBUG] fetch inicial ignorado - já foi feito');
+      }
       return;
     }
     hasFetchedRef.current = true;
 
-    console.log('[DEBUG] fetch inicial executado');
+    if (isDevEnv) {
+      console.log('[DEBUG] fetch inicial executado');
+    }
     void fetchDashboardData();
     void fetchApostasRecentes();
     void fetchProfile();
@@ -528,9 +546,13 @@ export function useDashboardData(
     }
     prevFiltersRef.current = currentFilters;
 
-    console.log('[DEBUG] filtros mudaram, agendando fetch');
+    if (isDevEnv) {
+      console.log('[DEBUG] filtros mudaram, agendando fetch');
+    }
     const timeoutId = setTimeout(() => {
-      console.log('[DEBUG] fetch por mudança de filtros');
+      if (isDevEnv) {
+        console.log('[DEBUG] fetch por mudança de filtros');
+      }
       void fetchDashboardData();
       void fetchApostasRecentes();
     }, debounceMs);
@@ -547,17 +569,23 @@ export function useDashboardData(
 
   useEffect(() => {
     const unsubscribeProfile = eventBus.on('profile:updated', () => {
-      console.log('[DEBUG] evento profile:updated');
+      if (isDevEnv) {
+        console.log('[DEBUG] evento profile:updated');
+      }
       void fetchProfileRef.current();
     });
 
     const unsubscribeBanca = eventBus.on('banca:updated', () => {
-      console.log('[DEBUG] evento banca:updated');
+      if (isDevEnv) {
+        console.log('[DEBUG] evento banca:updated');
+      }
       refetchRef.current();
     });
 
     const unsubscribeApostas = eventBus.on('apostas:updated', () => {
-      console.log('[DEBUG] evento apostas:updated');
+      if (isDevEnv) {
+        console.log('[DEBUG] evento apostas:updated');
+      }
       refetchRef.current();
     });
 

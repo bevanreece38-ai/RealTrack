@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, useCallback, useMemo } 
 import type { ReactNode } from 'react';
 import { perfilService } from '../services/api';
 import { AuthManager } from '../lib/auth';
+import { eventBus } from '../utils/eventBus';
 
 export interface Perfil {
   id: string;
@@ -73,6 +74,28 @@ export const PerfilProvider = ({ children }: { children: ReactNode }) => {
     } else {
       setLoading(false);
     }
+  }, [atualizarPerfil]);
+
+  useEffect(() => {
+    const unsubscribe = AuthManager.subscribe(({ isAuthenticated }) => {
+      if (isAuthenticated && !window.location.pathname.startsWith('/telegram/')) {
+        void atualizarPerfil();
+        return;
+      }
+
+      setPerfil(null);
+      setLoading(false);
+    });
+
+    return unsubscribe;
+  }, [atualizarPerfil]);
+
+  useEffect(() => {
+    const unsubscribe = eventBus.on('profile:updated', () => {
+      void atualizarPerfil();
+    });
+
+    return unsubscribe;
   }, [atualizarPerfil]);
 
   // Memoizar valor do contexto para evitar re-renders quando valores não mudam

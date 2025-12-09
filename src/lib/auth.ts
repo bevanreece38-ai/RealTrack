@@ -17,10 +17,35 @@ interface JwtPayload {
   [key: string]: unknown;
 }
 
+interface AuthChangeEvent {
+  isAuthenticated: boolean;
+}
+
+type AuthListener = (event: AuthChangeEvent) => void;
+
 const ACCESS_TOKEN_KEY = 'at';
 const REFRESH_TOKEN_KEY = 'rt';
 const EXPIRES_KEY = 'exp';
 const DEFAULT_API_URL = 'http://localhost:3001/api';
+
+const authListeners = new Set<AuthListener>();
+
+const notifyAuthListeners = (isAuthenticated: boolean): void => {
+  authListeners.forEach((listener) => {
+    try {
+      listener({ isAuthenticated });
+    } catch (error) {
+      console.error('Auth listener error:', error);
+    }
+  });
+};
+
+const subscribeToAuthChanges = (listener: AuthListener): (() => void) => {
+  authListeners.add(listener);
+  return () => {
+    authListeners.delete(listener);
+  };
+};
 
 const resolveApiBaseUrl = (): string => {
   const envUrl = typeof import.meta.env.VITE_API_URL === 'string' ? import.meta.env.VITE_API_URL : undefined;
@@ -61,6 +86,7 @@ const setTokens = (tokens: AuthTokens): void => {
   localStorage.setItem(ACCESS_TOKEN_KEY, tokens.accessToken);
   localStorage.setItem(REFRESH_TOKEN_KEY, tokens.refreshToken);
   localStorage.setItem(EXPIRES_KEY, tokens.expiresAt.toString());
+  notifyAuthListeners(true);
 };
 
 const clearTokens = (): void => {
@@ -75,6 +101,8 @@ const clearTokens = (): void => {
   }).catch(() => {
     /* Falha silenciosa para manter UX */
   });
+
+  notifyAuthListeners(false);
 };
 
 const getAccessToken = (): string | null => {
@@ -112,6 +140,7 @@ export const AuthManager = {
   getAccessToken,
   isTokenValid,
   clearTokens,
+  subscribe: subscribeToAuthChanges,
 } as const;
 
 /**
@@ -133,6 +162,15 @@ export function useAuth() {
     };
 
     checkAuth();
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = AuthManager.subscribe(({ isAuthenticated }) => {
+      setIsAuthenticated(isAuthenticated);
+      setIsLoading(false);
+    });
+
+    return unsubscribe;
   }, []);
 
   const login = (tokens: AuthTokens) => {
