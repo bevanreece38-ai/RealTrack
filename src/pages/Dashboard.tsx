@@ -51,6 +51,7 @@ const timeframeOptions = [
 
 const labelTextClass = 'text-white/65';
 const softLabelTextClass = 'text-white/55';
+const ESPORTE_EMOJI_REGEX = /\p{Extended_Pictographic}/u;
 const normalizeKey = (value: string) =>
   stripEsporteEmoji(value)
     .normalize('NFD')
@@ -68,15 +69,23 @@ const SPORT_ICON_MAP: Record<string, string> = {
 const SPORT_NAME_MAP: Record<string, string> = {
   basquetebol: 'Basquete',
 };
+const extractEmoji = (value?: string) => {
+  if (!value) return null;
+  const match = value.match(ESPORTE_EMOJI_REGEX);
+  return match ? match[0] : null;
+};
 const getSportIcon = (name?: string) => {
   if (!name) return '🏅';
+  const emoji = extractEmoji(name);
+  if (emoji) return emoji;
   const key = normalizeKey(name);
   return SPORT_ICON_MAP[key] ?? '🏅';
 };
 const getSportDisplayName = (name?: string) => {
   if (!name) return undefined;
-  const key = normalizeKey(name);
-  return SPORT_NAME_MAP[key] ?? name;
+  const baseName = stripEsporteEmoji(name);
+  const key = normalizeKey(baseName);
+  return SPORT_NAME_MAP[key] ?? baseName;
 };
 
 interface BreakdownCardItem {
@@ -203,21 +212,18 @@ export default function Dashboard() {
 
   const casaBreakdown = useMemo<BreakdownCardItem[]>(
     () =>
-      resumoPorEsporte.slice(0, 4).map((item, index) => {
-        const sportName = getSportDisplayName(item.esporte);
-        return {
-          id: item.esporte || `esporte-${index}`,
-          icon: getSportIcon(item.esporte),
-          name: sportName || 'Outros',
-          subtitle: `${item.apostas} apostas \u2022 ${formatPercent(item.aproveitamento)} de vit\u00F3rias`,
-          roi: item.roi,
-          lucro: item.lucro,
-          apostas: item.apostas,
-          ganhas: item.ganhas,
-          aproveitamento: item.aproveitamento,
-          stake: item.stakeMedia,
-        };
-      }),
+      resumoPorCasa.slice(0, 4).map((item, index) => ({
+        id: item.casa || `casa-${index}`,
+        icon: '🏦',
+        name: item.casa || 'Outras casas',
+        subtitle: `${item.apostas} apostas \u2022 ${formatPercent(item.aproveitamento)} de vit\u00F3rias`,
+        roi: item.roi,
+        lucro: item.lucro,
+        apostas: item.apostas,
+        ganhas: item.ganhas,
+        aproveitamento: item.aproveitamento,
+        stake: item.stakeMedia,
+        extraStats: [
           {
             label: 'Saldo',
             value: formatCurrency(item.saldo),
