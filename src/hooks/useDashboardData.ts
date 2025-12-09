@@ -427,7 +427,11 @@ export function useDashboardData(
   const fetchDashboardData = useCallback(async () => {
     const bancaId = filtersRef.current.bancaId;
     const hasBanca = Boolean(bancaId);
-    console.log('[DEBUG] fetchDashboardData chamado', new Error().stack);
+
+    if (import.meta.env.DEV) {
+      console.log('[DEBUG] fetchDashboardData chamado');
+      console.trace('[DEBUG] fetchDashboardData stack');
+    }
     if (!hasBanca) {
       clearDashboardData();
       setLoading(false);

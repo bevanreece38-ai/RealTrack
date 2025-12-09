@@ -550,7 +550,7 @@ const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
           </div>
         )}
 
-        <div className={`${sectionPadding} pb-16`}>
+        <div className={`${sectionPadding} pb-6`}>
           <div className={`flex items-center ${collapsed ? 'justify-center' : 'justify-between'}`}>
             <div className="flex items-center gap-3">
               {perfil?.fotoPerfil ? (
