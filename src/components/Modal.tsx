@@ -5,6 +5,7 @@ import { cn } from './ui/utils';
 
 const SIZE_MAP = {
   sm: 'max-w-md',
+  form: 'max-w-xl',
   md: 'max-w-2xl',
   lg: 'max-w-3xl',
   xl: 'max-w-5xl',

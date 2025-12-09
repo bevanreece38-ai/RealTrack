@@ -1777,7 +1777,12 @@ ${limitReachedMessage}`);
         )}
       </div>
 
-      <Modal isOpen={modalOpen} onClose={handleCloseModal} title={editingAposta ? "Editar Aposta" : "Nova Aposta"}>
+      <Modal
+        isOpen={modalOpen}
+        onClose={handleCloseModal}
+        title={editingAposta ? "Editar Aposta" : "Nova Aposta"}
+        size="form"
+      >
         {formNotice && (
           <div className="mb-4 rounded-2xl border border-border/30 bg-background/80 p-4 text-sm text-foreground">
             {formNotice}
