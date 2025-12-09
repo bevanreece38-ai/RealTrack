@@ -318,7 +318,6 @@ export default function Perfil() {
   const isUnlimitedPlan = normalizedPlanName.includes('profissional') || profile.plano.limiteApostasDiarias === 0;
   const promoExpiryDate = profile.promoExpiresAt ? new Date(profile.promoExpiresAt) : null;
   const promoActive = promoExpiryDate ? promoExpiryDate.getTime() > Date.now() : false;
-  const promoRemainingText = promoActive && promoExpiryDate ? formatTimeRemaining(promoExpiryDate) : null;
 
   return (
     <div className="space-y-8 text-white">
@@ -329,8 +328,8 @@ export default function Perfil() {
       )}
 
       <section className={heroCardClass}>
-        <div className="flex flex-wrap items-center gap-6">
-          <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-start gap-6">
+          <div className="flex flex-1 items-center gap-4">
             <div className={cn(planIconBadgeBaseClass, planVisual.badgeClass)}>
               <PlanIcon className={cn('h-6 w-6', planVisual.iconClass)} />
             </div>
@@ -340,75 +339,14 @@ export default function Perfil() {
             </div>
           </div>
 
-          <div className="flex flex-1 justify-center text-center text-white">
-            <div className="flex w-full max-w-3xl items-center justify-between gap-10">
-              <div className="space-y-1">
-                <p className="text-xs uppercase tracking-[0.3em] text-white/60">Preço mensal</p>
-                <p className="text-lg font-semibold text-white">{formatCurrency(profile.plano.preco)}</p>
-              </div>
-              <div className="space-y-1">
-                <p className="text-xs uppercase tracking-[0.3em] text-white/60">Limite diário</p>
-                <p className="text-lg font-semibold text-white">
-                  {isUnlimitedPlan ? (
-                    <span className="inline-flex items-center gap-1 text-white">
-                      <InfinityIcon className="h-4 w-4" /> Ilimitado
-                    </span>
-                  ) : (
-                    `${profile.plano.limiteApostasDiarias} apostas`
-                  )}
-                </p>
-              </div>
-              <div className="space-y-1">
-                <p className="text-xs uppercase tracking-[0.3em] text-white/60">Renovação</p>
-                <p className="text-lg font-semibold text-white">{formatDate(new Date().toISOString())}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className={cn(gradientCardClass, 'relative overflow-hidden border border-brand-emerald/40 bg-[#0b2f28]')}>
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-center">
-          <div className="flex flex-1 items-center gap-4">
-            <div className={iconBadgeClass}>
-              <Gift className="h-5 w-5" />
-            </div>
-            <div>
-              <p className={labelClass}>Plano promocional</p>
-              <p className={gradientTitleClass}>Teste Profissional</p>
-            </div>
-          </div>
-          <div className="flex flex-col gap-3 text-sm text-white/70">
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="rounded-2xl border border-white/15 bg-white/5 px-4 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-white/80">
-                realteste
-              </span>
-              <span className="text-white/60">Libera 7 dias completos do Plano Profissional</span>
-            </div>
-            {promoActive && promoExpiryDate ? (
-              <div className="rounded-2xl border border-brand-emerald/40 bg-brand-emerald/10 px-4 py-3 text-sm text-brand-emerald">
-                <p className="font-semibold">Plano promocional ativo</p>
-                <p>
-                  Expira em {formatDate(profile.promoExpiresAt)} {promoRemainingText ? `· ${promoRemainingText}` : ''}
-                </p>
-              </div>
-            ) : (
-              <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/80">
-                Receba acesso total ao Plano Profissional por 7 dias aplicando o código acima. Promoção limitada aos
-                primeiros usuários.
-              </div>
-            )}
-          </div>
-        </div>
-        <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:items-center">
           <button
             type="button"
-            className={cn(primaryButtonClass, 'flex-1 sm:max-w-xs')}
+            className={cn(primaryButtonClass, 'w-auto whitespace-nowrap px-6 py-2')}
             onClick={() => {
-              setPromoError('');
-              if (!promoCode) {
-                setPromoCode('realteste');
+              if (promoActive) {
+                return;
               }
+              setPromoError('');
               setPromoModalOpen(true);
             }}
             disabled={promoActive || redeemingPromo}
@@ -416,7 +354,31 @@ export default function Perfil() {
             <Gift className="h-4 w-4" />
             {promoActive ? 'Plano promocional ativo' : redeemingPromo ? 'Aplicando...' : 'Liberar 7 dias grátis'}
           </button>
-          {!promoActive && <p className="text-xs text-white/50">Disponível enquanto houver vagas promocionais.</p>}
+        </div>
+
+        <div className="mt-6 flex flex-1 justify-center text-center text-white">
+          <div className="flex w-full max-w-3xl items-center justify-between gap-10">
+            <div className="space-y-1">
+              <p className="text-xs uppercase tracking-[0.3em] text-white/60">Preço mensal</p>
+              <p className="text-lg font-semibold text-white">{formatCurrency(profile.plano.preco)}</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs uppercase tracking-[0.3em] text-white/60">Limite diário</p>
+              <p className="text-lg font-semibold text-white">
+                {isUnlimitedPlan ? (
+                  <span className="inline-flex items-center gap-1 text-white">
+                    <InfinityIcon className="h-4 w-4" /> Ilimitado
+                  </span>
+                ) : (
+                  `${profile.plano.limiteApostasDiarias} apostas`
+                )}
+              </p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs uppercase tracking-[0.3em] text-white/60">Renovação</p>
+              <p className="text-lg font-semibold text-white">{formatDate(new Date().toISOString())}</p>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -762,26 +724,6 @@ function formatCurrency(value?: number | null) {
 function formatDate(value?: string | null) {
   if (!value) return '—';
   return formatDateUtil(value);
-}
-
-function formatTimeRemaining(date: Date) {
-  const diff = date.getTime() - Date.now();
-  if (diff <= 0) return '';
-
-  const totalMinutes = Math.floor(diff / (1000 * 60));
-  const days = Math.floor(totalMinutes / (60 * 24));
-  const hours = Math.floor((totalMinutes - days * 24 * 60) / 60);
-  const minutes = totalMinutes % 60;
-
-  if (days > 0) {
-    return hours > 0 ? `${days}d ${hours}h restantes` : `${days}d restantes`;
-  }
-
-  if (hours > 0) {
-    return minutes > 0 ? `${hours}h ${minutes}min restantes` : `${hours}h restantes`;
-  }
-
-  return `${minutes}min restantes`;
 }
 
 interface InfoRowProps {
