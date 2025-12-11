@@ -238,20 +238,7 @@ export default function ApostaForm({
           {errors.jogo && <span className="text-sm text-danger">{errors.jogo}</span>}
         </div>
 
-        {/* Aposta */}
-        <div className="flex flex-col gap-2">
-          <label className="text-sm font-semibold text-foreground">Aposta *</label>
-          <input 
-            type="text" 
-            value={formData.aposta}
-            onChange={(e) => onChange('aposta', e.target.value)}
-            placeholder="Ex: Flagg, Cooper 7+ (Ressaltos) / 20+ (Pontos) / 5+ (Assistências)"
-            className={inputClass}
-          />
-          {errors.aposta && <span className="text-sm text-danger">{errors.aposta}</span>}
-        </div>
-          {errors.odd && <span className="text-sm text-danger">{errors.odd}</span>}
-        </div>
+
 
         {/* Bônus */}
         <div className="flex flex-col gap-2">
