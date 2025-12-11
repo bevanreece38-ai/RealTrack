@@ -6,6 +6,7 @@ import StatCard from '../components/StatCard';
 import EmptyState from '../components/EmptyState';
 import Modal from '../components/Modal';
 import UploadTicketModal from '../components/UploadTicketModal';
+import ApostaForm, { ApostaFormData, ApostaFormErrors } from '../components/ApostaForm';
 import FilterPopover from '../components/FilterPopover';
 import DateInput from '../components/DateInput';
 import { CASAS_APOSTAS } from '../constants/casasApostas';
@@ -1788,209 +1789,17 @@ ${limitReachedMessage}`);
             {formNotice}
           </div>
         )}
-        <form onSubmit={handleSubmit} className={cn(formGridClass, 'mt-6')}>
-          {bancas.length > 0 && (
-            <div className={cn(formFieldClass, 'md:col-span-2')}>
-              <label className={labelClass}>Banca *</label>
-              <select
-                className={inputClass}
-                value={formData.bancaId}
-                onChange={(e) => handleFormChange('bancaId', e.target.value)}
-              >
-                <option value="" disabled hidden>Selecione uma banca</option>
-                {bancas.map((banca) => (
-                  <option key={banca.id} value={banca.id}>
-                    {banca.nome} {banca.padrao ? '(Padrão)' : ''}
-                  </option>
-                ))}
-              </select>
-              {formErrors.bancaId && <span className={errorTextClass}>{formErrors.bancaId}</span>}
-            </div>
-          )}
-          <div className={formFieldClass}>
-            <label className={labelClass}>Esporte *</label>
-            <select
-              className={inputClass}
-              value={formData.esporte}
-              onChange={(e) => handleFormChange('esporte', e.target.value)}
-            >
-              <option value="" disabled hidden>Selecione uma opção…</option>
-              {ESPORTES.map((esporte) => (
-                <option key={esporte} value={esporte}>
-                  {esporte}
-                </option>
-              ))}
-            </select>
-            {formErrors.esporte && <span className={errorTextClass}>{formErrors.esporte}</span>}
-          </div>
-          <div className={formFieldClass}>
-            <label className={labelClass}>Jogo *</label>
-            <input
-              className={inputClass}
-              type="text"
-              value={formData.jogo}
-              onChange={(e) => handleFormChange('jogo', e.target.value)}
-              placeholder="Digite o jogo"
-            />
-            {formErrors.jogo && <span className={errorTextClass}>{formErrors.jogo}</span>}
-          </div>
-          {/* ...campos removidos: torneio e país... */}
-          <div className={formFieldClass}>
-            <label className={labelClass}>Mercado *</label>
-            <input
-              className={inputClass}
-              type="text"
-              value={formData.mercado}
-              onChange={(e) => handleFormChange('mercado', e.target.value)}
-              placeholder="Mercado"
-            />
-            {formErrors.mercado && <span className={errorTextClass}>{formErrors.mercado}</span>}
-          </div>
-          <div className={formFieldClass}>
-            <label className={labelClass}>Tipo de Aposta *</label>
-            <select
-              className={inputClass}
-              value={formData.tipoAposta}
-              onChange={(e) => handleFormChange('tipoAposta', e.target.value)}
-            >
-              <option value="" disabled hidden>Selecione o tipo</option>
-              {TIPOS_APOSTA.map((tipo) => (
-                <option key={tipo} value={tipo}>
-                  {tipo}
-                </option>
-              ))}
-            </select>
-            {formErrors.tipoAposta && <span className={errorTextClass}>{formErrors.tipoAposta}</span>}
-          </div>
-          <div className={formFieldClass}>
-            <label className={labelClass}>Valor Apostado *</label>
-            <input
-              className={inputClass}
-              type="number"
-              value={formData.valorApostado}
-              onChange={(e) => handleFormChange('valorApostado', e.target.value)}
-              placeholder="0"
-              step="0.01"
-              min="0.01"
-            />
-            {formErrors.valorApostado && <span className={errorTextClass}>{formErrors.valorApostado}</span>}
-          </div>
-          <div className={formFieldClass}>
-            <label className={labelClass}>Odd *</label>
-            <input
-              className={inputClass}
-              type="number"
-              value={formData.odd}
-              onChange={(e) => handleFormChange('odd', e.target.value)}
-              placeholder="0"
-              step="0.01"
-              min="1.01"
-            />
-            {formErrors.odd && <span className={errorTextClass}>{formErrors.odd}</span>}
-          </div>
-          <div className={formFieldClass}>
-            <label className={labelClass}>Bônus</label>
-            <input
-              className={inputClass}
-              type="number"
-              value={formData.bonus}
-              onChange={(e) => handleFormChange('bonus', e.target.value)}
-              placeholder="0"
-              step="0.01"
-              min="0"
-            />
-          </div>
-          <div className={formFieldClass}>
-            <label className={labelClass}>Data do Jogo *</label>
-            <DateInput
-              value={formData.dataJogo}
-              onChange={(value) => handleFormChange('dataJogo', value)}
-              placeholder="dd/mm/aaaa"
-              className={inputClass}
-            />
-            {formErrors.dataJogo && <span className={errorTextClass}>{formErrors.dataJogo}</span>}
-          </div>
-          <div className={formFieldClass}>
-            <label className={labelClass}>Tipster</label>
-            <select
-              className={inputClass}
-              value={formData.tipster}
-              onChange={(e) => handleFormChange('tipster', e.target.value)}
-            >
-              <option value="" disabled hidden>Selecione…</option>
-              {tipsters.filter(t => t.ativo).map((tipster) => (
-                <option key={tipster.id} value={tipster.nome}>
-                  {tipster.nome}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className={formFieldClass}>
-            <label className={labelClass}>Status *</label>
-            <select
-              className={inputClass}
-              value={formData.status}
-              onChange={(e) => {
-                const value = e.target.value;
-                handleFormChange('status', value);
-                setRetornoManual(false);
-                if (!STATUS_WITH_RETURNS.includes(value)) {
-                  setFormData(prev => (
-                    prev.retornoObtido === '' ? prev : { ...prev, retornoObtido: '' }
-                  ));
-                }
-              }}
-            >
-              {STATUS_APOSTAS.filter((status) => status !== 'Tudo').map((status) => (
-                <option key={status} value={status}>
-                  {status}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className={formFieldClass}>
-            <label className={labelClass}>Casa de Aposta *</label>
-            <select
-              className={inputClass}
-              value={formData.casaDeAposta}
-              onChange={(e) => handleFormChange('casaDeAposta', e.target.value)}
-            >
-              <option value="" disabled hidden>Selecione uma opção…</option>
-              {CASAS_APOSTAS.map((casa) => (
-                <option key={casa} value={casa}>
-                  {casa}
-                </option>
-              ))}
-            </select>
-            {formErrors.casaDeAposta && <span className={errorTextClass}>{formErrors.casaDeAposta}</span>}
-          </div>
-          {STATUS_WITH_RETURNS.includes(formData.status) && (
-            <div className={formFieldClass}>
-              <label className={labelClass}>Retorno Obtido *</label>
-              <input
-                className={inputClass}
-                type="number"
-                value={formData.retornoObtido}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  setRetornoManual(value !== '');
-                  handleFormChange('retornoObtido', value);
-                }}
-                placeholder="0"
-                step="0.01"
-                min="0.01"
-              />
-              {formErrors.retornoObtido && <span className={errorTextClass}>{formErrors.retornoObtido}</span>}
-            </div>
-          )}
-          <button
-            type="submit"
-            className={cn(buttonVariants.primary, 'md:col-span-2 justify-center')}
-            disabled={saving}
-          >
-            {saving ? 'Salvando...' : editingAposta ? 'Salvar Alterações' : 'Criar Aposta'}
-          </button>
-        </form>
+        <ApostaForm
+          formData={formData as unknown as ApostaFormData}
+          onChange={handleFormChange as any}
+          onSubmit={handleSubmit}
+          bancas={bancas}
+          tipsters={tipsters}
+          errors={formErrors as unknown as ApostaFormErrors}
+          isEditing={!!editingAposta}
+          saving={saving}
+          notice={formNotice}
+        />
       </Modal>
 
       {/* Modal de Upload */}
