@@ -6,6 +6,7 @@ import { ESPORTES, normalizarEsporteParaOpcao } from '../constants/esportes';
 import { CASAS_APOSTAS } from '../constants/casasApostas';
 import { STATUS_APOSTAS } from '../constants/statusApostas';
 import { TIPOS_APOSTA } from '../constants/tiposAposta';
+import { signalTelegramUpdate } from '../utils/telegramSync';
 
 // Declaração do tipo Telegram WebApp
 declare global {
@@ -370,8 +371,8 @@ export default function TelegramEdit() {
         });
       }
 
-      // Disparar evento para atualizar a página principal que mostra as apostas
-      window.dispatchEvent(new Event('apostas-updated'));
+      // Disparar sincronização para atualizar a página principal
+      signalTelegramUpdate();
 
       // Fechar a janela sem enviar dados para evitar mensagem do Telegram
       if (window.Telegram?.WebApp) {

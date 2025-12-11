@@ -4,6 +4,7 @@ import { authService, apostaService, telegramService } from '../services/api';
 import { type ApiBetWithBank, type ApiError } from '../types/api';
 import { STATUS_APOSTAS } from '../constants/statusApostas';
 import { normalizarEsporteParaOpcao } from '../constants/esportes';
+import { signalTelegramUpdate } from '../utils/telegramSync';
 
 const toRetornoString = (value: number) => (Number.isFinite(value) ? value.toString() : '');
 
@@ -134,8 +135,8 @@ export default function TelegramStatus() {
         });
       }
 
-      // Disparar evento para atualizar a página principal que mostra as apostas
-      window.dispatchEvent(new Event('apostas-updated'));
+      // Disparar sincronização para atualizar a página principal
+      signalTelegramUpdate();
 
       // Fechar a janela sem enviar dados para evitar mensagem do Telegram
       if (isTelegram) {

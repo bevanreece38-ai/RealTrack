@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import { MessageCircle } from 'lucide-react';
 import { usePerfil } from '../contexts/PerfilContext';
 import Sidebar from './Sidebar';
+import { subscribeToTelegramUpdate } from '../utils/telegramSync';
 
 const SUPPORT_BOT_USERNAME = typeof import.meta.env.VITE_TELEGRAM_SUPPORT_BOT_USERNAME === 'string' && import.meta.env.VITE_TELEGRAM_SUPPORT_BOT_USERNAME.trim().length > 0
   ? import.meta.env.VITE_TELEGRAM_SUPPORT_BOT_USERNAME.trim()
@@ -11,6 +12,16 @@ const SUPPORT_BOT_USERNAME = typeof import.meta.env.VITE_TELEGRAM_SUPPORT_BOT_US
 const Layout = () => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const { perfil } = usePerfil();
+
+  useEffect(() => {
+    const unsubscribe = subscribeToTelegramUpdate(() => {
+      window.location.reload();
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
 
   const handleToggleSidebar = () => {
     setIsSidebarCollapsed((prev) => !prev);
