@@ -223,17 +223,17 @@ export default function ApostaForm({
           {errors.valorApostado && <span className="text-sm text-danger">{errors.valorApostado}</span>}
         </div>
 
-        {/* Jogo */}
+        {/* Evento */}
         <div className="flex flex-col gap-2">
-          <label className="text-sm font-semibold text-foreground">Jogo *</label>
+          <label className="text-sm font-semibold text-foreground">Evento *</label>
           <input 
             type="text" 
-            value={formData.jogo}
-            onChange={(e) => onChange('jogo', e.target.value)}
-            placeholder="Digite o jogo"
+            value={formData.evento}
+            onChange={(e) => onChange('evento', e.target.value)}
+            placeholder="Digite o evento"
             className={inputClass}
           />
-          {errors.jogo && <span className="text-sm text-danger">{errors.jogo}</span>}
+          {errors.evento && <span className="text-sm text-danger">{errors.evento}</span>}
         </div>
 
 
