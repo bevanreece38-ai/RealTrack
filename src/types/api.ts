@@ -20,9 +20,9 @@ export interface ApiBet {
   id: string;
   bancaId: string;
   esporte: string;
-  jogo: string;
-  aposta: string; // novo campo
-  mercados?: string[]; // novo campo array
+  evento: string;
+  aposta: string;
+  mercados?: string[];
   torneio?: string | null;
   pais?: string | null;
   mercado: string;
@@ -30,7 +30,7 @@ export interface ApiBet {
   valorApostado: number;
   odd: number;
   bonus: number;
-  dataJogo: string;
+  dataEvento: string;
   tipster?: string | null;
   status: string;
   casaDeAposta: string;
@@ -139,7 +139,7 @@ export interface ApiUploadTicketResponse {
     casaDeAposta?: string;
     tipster?: string;
     esporte?: string;
-    jogo?: string;
+    evento?: string;
     aposta?: string;
     mercados?: string[];
     torneio?: string;
@@ -148,7 +148,7 @@ export interface ApiUploadTicketResponse {
     tipoAposta?: string;
     valorApostado?: number;
     odd?: number;
-    dataJogo?: string;
+    dataEvento?: string;
     status?: string;
   };
   error?: string;

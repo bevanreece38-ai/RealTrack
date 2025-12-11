@@ -106,8 +106,8 @@ function StatusFormContent({ aposta, onClose, onConfirm, loading }: StatusFormCo
       <div className="rounded-2xl border border-border/40 bg-background px-4 py-3 text-sm text-foreground">
         <div className="space-y-2">
           <p className="flex items-center justify-between gap-4">
-            <span className="text-foreground-muted">Jogo</span>
-            <span className="font-semibold">{aposta.jogo}</span>
+            <span className="text-foreground-muted">Evento</span>
+            <span className="font-semibold">{aposta.evento}</span>
           </p>
           <p className="flex items-center justify-between gap-4">
             <span className="text-foreground-muted">Mercado</span>

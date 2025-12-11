@@ -36,7 +36,8 @@ export interface ApostasStats {
 export interface ApostaFormState {
   bancaId: string;
   esporte: string;
-  jogo: string;
+  evento: string;
+  aposta: string;
   torneio: string;
   pais: string;
   mercado: string;
@@ -44,7 +45,7 @@ export interface ApostaFormState {
   valorApostado: string;
   odd: string;
   bonus: string;
-  dataJogo: string;
+  dataEvento: string;
   tipster: string;
   status: string;
   casaDeAposta: string;
@@ -80,7 +81,8 @@ const todayISO = new Date().toISOString().split('T')[0];
 export const createInitialFormState = (bancaId = ''): ApostaFormState => ({
   bancaId,
   esporte: '',
-  jogo: '',
+  evento: '',
+  aposta: '',
   torneio: '',
   pais: 'Mundo',
   mercado: '',
@@ -88,7 +90,7 @@ export const createInitialFormState = (bancaId = ''): ApostaFormState => ({
   valorApostado: '',
   odd: '',
   bonus: '0',
-  dataJogo: todayISO,
+  dataEvento: todayISO,
   tipster: '',
   status: 'Pendente',
   casaDeAposta: '',
@@ -195,11 +197,12 @@ export function useApostasManager(options: UseApostasManagerOptions = {}) {
 
   // Criar aposta
   const createAposta = useCallback(async (formData: ApostaFormState) => {
-    const dataJogoDate = new Date(formData.dataJogo);
+    const dataEventoDate = new Date(formData.dataEvento);
     const payload = {
       bancaId: formData.bancaId,
       esporte: formData.esporte.trim(),
-      jogo: formData.jogo.trim(),
+      evento: formData.evento.trim(),
+      aposta: formData.aposta.trim(),
       torneio: normalizeOptionalString(formData.torneio),
       pais: normalizeOptionalString(formData.pais),
       mercado: formData.mercado.trim(),
@@ -207,7 +210,7 @@ export function useApostasManager(options: UseApostasManagerOptions = {}) {
       valorApostado: Number.parseFloat(formData.valorApostado),
       odd: Number.parseFloat(formData.odd),
       bonus: parseNumberOrFallback(formData.bonus),
-      dataJogo: dataJogoDate.toISOString(),
+      dataEvento: dataEventoDate.toISOString(),
       tipster: normalizeOptionalString(formData.tipster),
       status: formData.status as ApostaStatus,
       casaDeAposta: formData.casaDeAposta,
@@ -219,11 +222,12 @@ export function useApostasManager(options: UseApostasManagerOptions = {}) {
 
   // Atualizar aposta
   const updateAposta = useCallback(async (id: string, formData: ApostaFormState) => {
-    const dataJogoDate = new Date(formData.dataJogo);
+    const dataEventoDate = new Date(formData.dataEvento);
     const payload = {
       bancaId: formData.bancaId,
       esporte: formData.esporte.trim(),
-      jogo: formData.jogo.trim(),
+      evento: formData.evento.trim(),
+      aposta: formData.aposta.trim(),
       torneio: normalizeOptionalString(formData.torneio),
       pais: normalizeOptionalString(formData.pais),
       mercado: formData.mercado.trim(),
@@ -231,7 +235,7 @@ export function useApostasManager(options: UseApostasManagerOptions = {}) {
       valorApostado: Number.parseFloat(formData.valorApostado),
       odd: Number.parseFloat(formData.odd),
       bonus: parseNumberOrFallback(formData.bonus),
-      dataJogo: dataJogoDate.toISOString(),
+      dataEvento: dataEventoDate.toISOString(),
       tipster: normalizeOptionalString(formData.tipster),
       status: formData.status as ApostaStatus,
       casaDeAposta: formData.casaDeAposta,
@@ -289,12 +293,12 @@ export function useApostasManager(options: UseApostasManagerOptions = {}) {
       if (filters.casaDeAposta && aposta.casaDeAposta !== filters.casaDeAposta) return false;
 
       if (filters.dataDe) {
-        const dataAposta = new Date(aposta.dataJogo).getTime();
+        const dataAposta = new Date(aposta.dataEvento).getTime();
         const deTime = new Date(filters.dataDe).getTime();
         if (Number.isFinite(deTime) && dataAposta < deTime) return false;
       }
       if (filters.dataAte) {
-        const dataAposta = new Date(aposta.dataJogo).getTime();
+        const dataAposta = new Date(aposta.dataEvento).getTime();
         const ateDate = new Date(filters.dataAte);
         ateDate.setHours(23, 59, 59, 999);
         const ateTime = ateDate.getTime();
@@ -303,7 +307,7 @@ export function useApostasManager(options: UseApostasManagerOptions = {}) {
 
       if (filters.searchText) {
         const text = filters.searchText.toLowerCase();
-        const combined = `${aposta.jogo} ${aposta.mercado} ${aposta.esporte}`.toLowerCase();
+        const combined = `${aposta.evento} ${aposta.mercado} ${aposta.esporte}`.toLowerCase();
         if (!combined.includes(text)) return false;
       }
 

@@ -139,12 +139,12 @@ const EMOJI_MAP_DATA: Array<[string, string]> = [
   ['Vôlei de Praia', '🏐']
 ];
 
-const ESPORTE_EMOJI_MAP = EMOJI_MAP_DATA.reduce((acc, [nome, emoji]) => {
+const ESPORTE_EMOJI_MAP = EMOJI_MAP_DATA.reduce<Record<string, string>>((acc, [nome, emoji]) => {
   acc[normalizeEsporteKey(nome)] = emoji;
   return acc;
-}, {} as Record<string, string>);
+}, {});
 
-const ALIAS_MAP_DATA: Array<[string, string]> = [
+const ALIAS_MAP_DATA: [string, string][] = [
   ['soccer', 'Futebol'],
   ['futebol', 'Futebol'],
   ['football', 'Futebol Americano'],
@@ -163,10 +163,10 @@ const ALIAS_MAP_DATA: Array<[string, string]> = [
   ['outros esportes', 'Outros Esportes']
 ];
 
-const ESPORTE_ALIAS_MAP = ALIAS_MAP_DATA.reduce((acc, [alias, destino]) => {
+const ESPORTE_ALIAS_MAP = ALIAS_MAP_DATA.reduce<Record<string, string>>((acc, [alias, destino]) => {
   acc[normalizeEsporteKey(alias)] = destino;
   return acc;
-}, {} as Record<string, string>);
+}, {});
 
 const decorateWithEmoji = (value: string): string => {
   const emoji = ESPORTE_EMOJI_MAP[normalizeEsporteKey(value)];

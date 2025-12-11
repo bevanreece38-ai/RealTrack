@@ -29,7 +29,7 @@ export interface ApostaFormData {
   valorApostado: string;
   odd: string;
   bonus: string;
-  dataJogo: string;
+  dataEvento: string;
   tipster: string;
   status: string;
   casaDeAposta: string;
@@ -45,7 +45,7 @@ export interface ApostaFormErrors {
   tipoAposta?: string;
   valorApostado?: string;
   odd?: string;
-  dataJogo?: string;
+  dataEvento?: string;
   casaDeAposta?: string;
   retornoObtido?: string;
 }
@@ -211,11 +211,11 @@ export default function ApostaForm({
         {/* Valor Apostado */}
         <div className="flex flex-col gap-2">
           <label className="text-sm font-semibold text-foreground">Valor Apostado *</label>
-          <input 
-            type="number" 
+          <input
+            type="number"
             value={formData.valorApostado}
             onChange={(e) => onChange('valorApostado', e.target.value)}
-            placeholder="0" 
+            placeholder="0"
             step="0.01"
             min="0.01"
             className={inputClass}
@@ -223,45 +223,45 @@ export default function ApostaForm({
           {errors.valorApostado && <span className="text-sm text-danger">{errors.valorApostado}</span>}
         </div>
 
-        {/* Evento */}
+        {/* Odd */}
         <div className="flex flex-col gap-2">
-          <label className="text-sm font-semibold text-foreground">Evento *</label>
-          <input 
-            type="text" 
-            value={formData.evento}
-            onChange={(e) => onChange('evento', e.target.value)}
-            placeholder="Digite o evento"
+          <label className="text-sm font-semibold text-foreground">Odd *</label>
+          <input
+            type="number"
+            value={formData.odd}
+            onChange={(e) => onChange('odd', e.target.value)}
+            placeholder="0"
+            step="0.01"
+            min="0.01"
             className={inputClass}
           />
-          {errors.evento && <span className="text-sm text-danger">{errors.evento}</span>}
+          {errors.odd && <span className="text-sm text-danger">{errors.odd}</span>}
         </div>
-
-
 
         {/* Bônus */}
         <div className="flex flex-col gap-2">
           <label className="text-sm font-semibold text-foreground">Bônus</label>
-          <input 
-            type="number" 
+          <input
+            type="number"
             value={formData.bonus}
             onChange={(e) => onChange('bonus', e.target.value)}
-            placeholder="0" 
+            placeholder="0"
             step="0.01"
             min="0"
             className={inputClass}
           />
         </div>
 
-        {/* Data do Jogo */}
+        {/* Data do Evento */}
         <div className="flex flex-col gap-2">
-          <label className="text-sm font-semibold text-foreground">Data do Jogo *</label>
+          <label className="text-sm font-semibold text-foreground">Data do Evento *</label>
           <DateInput
-            value={formData.dataJogo}
-            onChange={(value) => onChange('dataJogo', value)}
+            value={formData.dataEvento}
+            onChange={(value) => onChange('dataEvento', value)}
             placeholder="dd/mm/aaaa"
             className="w-full"
           />
-          {errors.dataJogo && <span className="text-sm text-danger">{errors.dataJogo}</span>}
+          {errors.dataEvento && <span className="text-sm text-danger">{errors.dataEvento}</span>}
         </div>
 
         {/* Tipster */}

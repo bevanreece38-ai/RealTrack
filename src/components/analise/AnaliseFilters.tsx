@@ -182,7 +182,7 @@ export function AnaliseFilters({ value, onChange }: AnaliseFiltersProps) {
             />
           </div>
           <div className={fieldClass}>
-            <label className={labelClass}>Data do Jogo (De)</label>
+            <label className={labelClass}>Data do Evento (De)</label>
             <DateInput
               value={pendingFilters.dataInicio}
               onChange={(dateValue) => handleFilterChange('dataInicio', dateValue)}
@@ -191,7 +191,7 @@ export function AnaliseFilters({ value, onChange }: AnaliseFiltersProps) {
             />
           </div>
           <div className={fieldClass}>
-            <label className={labelClass}>Data do Jogo (Até)</label>
+            <label className={labelClass}>Data do Evento (Até)</label>
             <DateInput
               value={pendingFilters.dataFim}
               onChange={(dateValue) => handleFilterChange('dataFim', dateValue)}

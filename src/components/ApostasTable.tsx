@@ -152,9 +152,9 @@ function ApostaRow({ aposta, onOpenStatusModal, onEdit, onDelete }: ApostaRowPro
     <tr className="text-sm text-white">
       <td className="px-4 py-4 font-medium text-white">{formatOptionalText(aposta.casaDeAposta)}</td>
       <td className="px-4 py-4 text-white/80">{formatOptionalText(aposta.tipster)}</td>
-      <td className="px-4 py-4 text-white/60">{formatDate(aposta.dataJogo)}</td>
+      <td className="px-4 py-4 text-white/60">{formatDate(aposta.dataEvento)}</td>
       <td className="px-4 py-4 text-white/80">{normalizarEsporteParaOpcao(aposta.esporte)}</td>
-      <td className="px-4 py-4 text-white/80">{aposta.jogo}</td> {/* Evento */}
+      <td className="px-4 py-4 text-white/80">{aposta.evento}</td>
       <td className="px-4 py-4 text-white/80">{aposta.aposta}</td>
       <td className="px-4 py-4 text-white/80">{aposta.mercado}</td>
       <td className="px-4 py-4">

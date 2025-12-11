@@ -23,7 +23,7 @@ interface ConfirmDeleteState {
 
 interface BetApi {
   createdAt?: string | null;
-  dataJogo?: string | null;
+  dataEvento?: string | null;
   data?: string | null;
 }
 
@@ -702,7 +702,7 @@ const computeViewsFromBets = (bets?: BetApi[]): BancaStats['views'] => {
   startOfWeek.setDate(startOfWeek.getDate() - 6);
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-  const getDate = (bet: BetApi) => new Date(bet.createdAt ?? bet.dataJogo ?? bet.data ?? Date.now());
+  const getDate = (bet: BetApi) => new Date(bet.createdAt ?? bet.dataEvento ?? bet.data ?? Date.now());
 
   let hoje = 0;
   let semana = 0;

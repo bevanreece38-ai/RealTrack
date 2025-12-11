@@ -75,7 +75,7 @@ export interface ApostaRecente {
   odd?: string | number | null;
   status?: string | null;
   lucro?: number | null;
-  dataJogo?: string | Date | null;
+  dataEvento?: string | Date | null;
   esporte?: string | null;
   casaDeAposta?: string | null;
 }
@@ -235,7 +235,7 @@ const prepareChartData = (
   }
 
   const filledData: EvolucaoBancaChartItem[] = [];
-  let cursor = new Date(startDate);
+  const cursor = new Date(startDate);
   let lastAcumulado = baselineAcumulado;
 
   while (cursor <= endDate) {

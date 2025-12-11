@@ -21,9 +21,9 @@ export interface Aposta {
   id: string;
   bancaId: string;
   esporte: string;
-  jogo: string;
-  aposta: string; // novo campo
-  mercados?: string[]; // novo campo array
+  evento: string;
+  aposta: string;
+  mercados?: string[];
   torneio: string;
   pais: string;
   mercado: string;
@@ -31,7 +31,7 @@ export interface Aposta {
   valorApostado: number;
   odd: number;
   bonus: number;
-  dataJogo: string;
+  dataEvento: string;
   tipster: string;
   status: ApostaStatus;
   casaDeAposta: string;
@@ -58,8 +58,8 @@ export type ApostaStatus =
 export interface CreateApostaPayload {
   bancaId: string;
   esporte: string;
-  jogo: string;
-  aposta: string; // novo campo
+  evento: string;
+  aposta: string;
   mercados?: string[];
   torneio?: string;
   pais?: string;
@@ -68,7 +68,7 @@ export interface CreateApostaPayload {
   valorApostado: number;
   odd: number;
   bonus?: number;
-  dataJogo: string;
+  dataEvento: string;
   tipster?: string;
   status?: ApostaStatus;
   casaDeAposta: string;
@@ -128,7 +128,7 @@ const mapApostaFromApi = (item: ApiBet | ApiBetWithBank): Aposta => ({
   id: item.id,
   bancaId: item.bancaId,
   esporte: item.esporte,
-  jogo: item.jogo,
+  evento: (item as any).evento ?? (item as any).jogo ?? '',
   aposta: (item as any).aposta ?? '',
   mercados: (item as any).mercados ?? [],
   torneio: item.torneio ?? '',
@@ -138,7 +138,7 @@ const mapApostaFromApi = (item: ApiBet | ApiBetWithBank): Aposta => ({
   valorApostado: item.valorApostado,
   odd: item.odd,
   bonus: item.bonus,
-  dataJogo: item.dataJogo,
+  dataEvento: (item as any).dataEvento ?? (item as any).dataJogo ?? '',
   tipster: item.tipster ?? '',
   status: item.status as ApostaStatus,
   casaDeAposta: item.casaDeAposta,

@@ -71,7 +71,7 @@ const SPORT_NAME_MAP: Record<string, string> = {
 };
 const extractEmoji = (value?: string) => {
   if (!value) return null;
-  const match = value.match(ESPORTE_EMOJI_REGEX);
+  const match = ESPORTE_EMOJI_REGEX.exec(value);
   return match ? match[0] : null;
 };
 const getSportIcon = (name?: string) => {
@@ -649,7 +649,7 @@ export default function Dashboard() {
                     ? 'border border-red-500/30 bg-red-500/15 text-red-500'
                     : 'border border-white/10 bg-white/5 text-white/70';
                 const valueClass = positive ? 'text-emerald-400' : negative ? 'text-rose-400' : 'text-foreground';
-                const rawDate = aposta.dataJogo ? new Date(aposta.dataJogo) : null;
+                const rawDate = aposta.dataEvento ? new Date(aposta.dataEvento) : null;
                 const formattedDate = rawDate && !Number.isNaN(rawDate.getTime())
                   ? rawDate.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })
                   : '—';

@@ -181,7 +181,8 @@ interface StatusUpdatePayload {
 interface ApostaFormState {
   bancaId: string;
   esporte: string;
-  jogo: string;
+  evento: string;
+  aposta: string;
   torneio: string;
   pais: string;
   mercado: string;
@@ -189,7 +190,7 @@ interface ApostaFormState {
   valorApostado: string;
   odd: string;
   bonus: string;
-  dataJogo: string;
+  dataEvento: string;
   tipster: string;
   status: string;
   casaDeAposta: string;
@@ -291,7 +292,8 @@ export default function Atualizar() {
   const [formData, setFormData] = useState<ApostaFormState>({
     bancaId: '',
     esporte: '',
-    jogo: '',
+    evento: '',
+    aposta: '',
     torneio: '',
     pais: 'Mundo',
     mercado: '',
@@ -299,7 +301,7 @@ export default function Atualizar() {
     valorApostado: '',
     odd: '',
     bonus: '0',
-    dataJogo: todayISO,
+    dataEvento: todayISO,
     tipster: '',
     status: 'Pendente',
     casaDeAposta: '',
@@ -434,7 +436,7 @@ export default function Atualizar() {
           .replace(/R\$\s*[\d.,]+/gi, '')
           .replace(/\s{2,}/g, ' ')
           .replace(/^[^a-zA-ZÀ-ÿ0-9]+/, '')
-          .replace(/^[\d\s.,:;()\-]+/, '')
+          .replace(/^[\d\s.,:;()-]+/, '')
             .replace(MARKET_CONNECTOR_PATTERN, '')
           .trim()
       )
@@ -504,7 +506,8 @@ export default function Atualizar() {
     setFormData({
       bancaId: preferredBancaId || '',
       esporte: '',
-      jogo: '',
+      evento: '',
+      aposta: '',
       torneio: '',
       pais: 'Mundo',
       mercado: '',
@@ -512,7 +515,7 @@ export default function Atualizar() {
       valorApostado: '',
       odd: '',
       bonus: '0',
-      dataJogo: todayISO,
+      dataEvento: todayISO,
       tipster: '',
       status: 'Pendente',
       casaDeAposta: '',
@@ -523,6 +526,11 @@ export default function Atualizar() {
 
   // Função para normalizar o esporte do banco para o formato da lista do frontend
   const normalizeEsporte = (esporteFromDb: string): string => normalizarEsporteParaOpcao(esporteFromDb);
+
+  const resolveEventoFromBet = (bet: ApiBetWithBank): string => {
+    const legacyEvento = (bet as unknown as { jogo?: string }).jogo;
+    return bet.evento ?? legacyEvento ?? '';
+  };
 
   const fetchApostas = useCallback(async () => {
     try {
@@ -599,12 +607,13 @@ export default function Atualizar() {
 
         const date = new Date(today);
         date.setDate(today.getDate() - (i % 30));
-        const dataJogoISO = date.toISOString();
+        const dataEventoISO = date.toISOString();
 
         const payload: Record<string, unknown> = {
           bancaId: preferredBancaId,
           esporte,
-          jogo: `Jogo de teste #${i + 1}`,
+          evento: `Evento de teste #${i + 1}`,
+          aposta: 'Resultado Final',
           torneio: 'Liga de Teste',
           pais: 'Mundo',
           mercado: 'Resultado Final',
@@ -612,7 +621,7 @@ export default function Atualizar() {
           valorApostado,
           odd,
           bonus: 0,
-          dataJogo: dataJogoISO,
+          dataEvento: dataEventoISO,
           tipster: undefined,
           status,
           casaDeAposta
@@ -752,13 +761,16 @@ ${limitReachedMessage}`);
       const aposta = apostas.find(a => a.id === editParam);
       if (aposta) {
         // Preencher formulário com os dados da aposta (mesma lógica de handleEditAposta)
-        const dataJogo = new Date(aposta.dataJogo).toISOString().split('T')[0];
+        const dataEvento = aposta.dataEvento
+          ? new Date(aposta.dataEvento).toISOString().split('T')[0]
+          : '';
         // Normalizar o esporte para corresponder ao formato da lista
         const esporteNormalizado = normalizeEsporte(aposta.esporte);
         setFormData({
           bancaId: aposta.bancaId,
           esporte: esporteNormalizado,
-          jogo: aposta.jogo,
+          evento: resolveEventoFromBet(aposta),
+          aposta: aposta.aposta ?? '',
           torneio: aposta.torneio ?? '',
           pais: aposta.pais ?? 'Mundo',
           mercado: aposta.mercado,
@@ -766,7 +778,7 @@ ${limitReachedMessage}`);
           valorApostado: aposta.valorApostado.toString(),
           odd: aposta.odd.toString(),
           bonus: aposta.bonus.toString(),
-          dataJogo,
+          dataEvento,
           tipster: aposta.tipster ?? '',
           status: aposta.status,
           casaDeAposta: aposta.casaDeAposta,
@@ -887,7 +899,7 @@ ${limitReachedMessage}`);
   }, [modalOpen, retornoManual, formData.status, formData.valorApostado, formData.odd]);
 
   const handleDeleteAposta = async (aposta: ApiBetWithBank) => {
-    if (!window.confirm(`Tem certeza que deseja deletar a aposta "${aposta.jogo}"? Esta ação não pode ser desfeita.`)) {
+    if (!window.confirm(`Tem certeza que deseja deletar a aposta "${aposta.evento}"? Esta ação não pode ser desfeita.`)) {
       return;
     }
 
@@ -907,14 +919,17 @@ ${limitReachedMessage}`);
 
   const handleEditAposta = (aposta: ApiBetWithBank) => {
     // Converter data para formato do input (YYYY-MM-DD)
-    const dataJogo = new Date(aposta.dataJogo).toISOString().split('T')[0];
+    const dataEvento = aposta.dataEvento
+      ? new Date(aposta.dataEvento).toISOString().split('T')[0]
+      : '';
     // Normalizar o esporte para corresponder ao formato da lista
     const esporteNormalizado = normalizeEsporte(aposta.esporte);
 
     setFormData({
       bancaId: aposta.bancaId,
       esporte: esporteNormalizado,
-      jogo: aposta.jogo,
+      evento: resolveEventoFromBet(aposta),
+      aposta: aposta.aposta ?? '',
       torneio: aposta.torneio ?? '',
       pais: aposta.pais ?? 'Mundo',
       mercado: aposta.mercado,
@@ -922,7 +937,7 @@ ${limitReachedMessage}`);
       valorApostado: aposta.valorApostado.toString(),
       odd: aposta.odd.toString(),
       bonus: aposta.bonus.toString(),
-      dataJogo,
+      dataEvento,
       tipster: aposta.tipster ?? '',
       status: aposta.status,
       casaDeAposta: aposta.casaDeAposta,
@@ -952,8 +967,11 @@ ${limitReachedMessage}`);
     if (!formData.esporte) {
       errors.esporte = 'Selecione um esporte';
     }
-    if (!formData.jogo.trim()) {
-      errors.jogo = 'Digite o jogo';
+    if (!formData.evento.trim()) {
+      errors.evento = 'Digite o evento';
+    }
+    if (!formData.aposta.trim()) {
+      errors.aposta = 'Digite a aposta';
     }
     if (!formData.mercado.trim()) {
       errors.mercado = 'Digite o mercado';
@@ -967,8 +985,8 @@ ${limitReachedMessage}`);
     if (!formData.odd || parseFloat(formData.odd) <= 0) {
       errors.odd = 'Digite uma odd válida';
     }
-    if (!formData.dataJogo) {
-      errors.dataJogo = 'Selecione a data do jogo';
+    if (!formData.dataEvento) {
+      errors.dataEvento = 'Selecione a data do evento';
     }
     if (!formData.casaDeAposta) {
       errors.casaDeAposta = 'Selecione a casa de aposta';
@@ -997,15 +1015,15 @@ ${limitReachedMessage}`);
       setSaving(true);
 
       // Validar e converter data
-      if (!formData.dataJogo) {
-        setFormErrors({ dataJogo: 'Selecione a data do jogo' });
+      if (!formData.dataEvento) {
+        setFormErrors({ dataEvento: 'Selecione a data do evento' });
         setSaving(false);
         return;
       }
 
-      const dataJogoDate = new Date(formData.dataJogo);
-      if (isNaN(dataJogoDate.getTime())) {
-        setFormErrors({ dataJogo: 'Data inválida' });
+      const dataEventoDate = new Date(formData.dataEvento);
+      if (isNaN(dataEventoDate.getTime())) {
+        setFormErrors({ dataEvento: 'Data inválida' });
         setSaving(false);
         return;
       }
@@ -1013,12 +1031,13 @@ ${limitReachedMessage}`);
       // Converter para ISO string (apenas data, sem hora)
       // O input type="date" retorna no formato YYYY-MM-DD, então ao converter para Date
       // a hora será 00:00:00 automaticamente
-      const dataJogoISO = dataJogoDate.toISOString();
+      const dataEventoISO = dataEventoDate.toISOString();
 
       const payload = {
         bancaId: formData.bancaId,
         esporte: formData.esporte.trim(),
-        jogo: formData.jogo.trim(),
+        evento: formData.evento.trim(),
+        aposta: formData.aposta.trim(),
         torneio: normalizeOptionalString(formData.torneio),
         pais: normalizeOptionalString(formData.pais),
         mercado: formData.mercado.trim(),
@@ -1026,7 +1045,7 @@ ${limitReachedMessage}`);
         valorApostado: Number.parseFloat(formData.valorApostado),
         odd: Number.parseFloat(formData.odd),
         bonus: parseNumberOrFallback(formData.bonus),
-        dataJogo: dataJogoISO,
+        dataEvento: dataEventoISO,
         tipster: normalizeOptionalString(formData.tipster),
         status: formData.status,
         casaDeAposta: formData.casaDeAposta,
@@ -1112,11 +1131,16 @@ ${limitReachedMessage}`);
 
         // Preencher formulário com dados extraídos
         const defaultBancaId = preferredBancaId || '';
-        const normalizedDate = extractedData.dataJogo ? extractedData.dataJogo.split('T')[0] : todayISO;
+        const rawDate = extractedData.dataEvento ?? (extractedData as Record<string, unknown>).dataJogo;
+        const normalizedDate = typeof rawDate === 'string'
+          ? rawDate.split('T')[0]
+          : todayISO;
+        const eventoExtraido = extractedData.evento ?? (extractedData as Record<string, unknown>).jogo;
         setFormData({
           bancaId: defaultBancaId,
           esporte: extractedData.esporte ?? '',
-          jogo: extractedData.jogo ?? '',
+          evento: typeof eventoExtraido === 'string' ? eventoExtraido : '',
+          aposta: extractedData.aposta ?? '',
           torneio: extractedData.torneio ?? '',
           pais: extractedData.pais ?? 'Mundo',
           mercado: extractedData.mercado ?? '',
@@ -1124,7 +1148,7 @@ ${limitReachedMessage}`);
           valorApostado: extractedData.valorApostado !== undefined ? extractedData.valorApostado.toString() : '',
           odd: extractedData.odd !== undefined ? extractedData.odd.toString() : '',
           bonus: '0',
-          dataJogo: normalizedDate,
+          dataEvento: normalizedDate,
           tipster: extractedData.tipster ?? '',
           status: extractedData.status ?? 'Pendente',
           casaDeAposta: extractedData.casaDeAposta ?? '',
@@ -1384,12 +1408,12 @@ ${limitReachedMessage}`);
       if (filters.casaDeAposta && aposta.casaDeAposta !== filters.casaDeAposta) return false;
 
       if (filters.dataDe) {
-        const dataAposta = new Date(aposta.dataJogo).getTime();
+        const dataAposta = new Date(aposta.dataEvento).getTime();
         const deTime = new Date(filters.dataDe).getTime();
         if (Number.isFinite(deTime) && dataAposta < deTime) return false;
       }
       if (filters.dataAte) {
-        const dataAposta = new Date(aposta.dataJogo).getTime();
+        const dataAposta = new Date(aposta.dataEvento).getTime();
         const ateDate = new Date(filters.dataAte);
         // incluir o dia inteiro no "até"
         ateDate.setHours(23, 59, 59, 999);
@@ -1399,7 +1423,7 @@ ${limitReachedMessage}`);
 
       if (filters.searchText) {
         const text = filters.searchText.toLowerCase();
-        const combined = `${aposta.jogo} ${aposta.mercado} ${aposta.esporte}`.toLowerCase();
+        const combined = `${aposta.evento} ${aposta.mercado} ${aposta.esporte} ${aposta.aposta ?? ''}`.toLowerCase();
         if (!combined.includes(text)) return false;
       }
 
@@ -1595,7 +1619,7 @@ ${limitReachedMessage}`);
                     </div>
 
                     <div className={formFieldClass}>
-                      <label className={labelClass}>Data do Jogo (De)</label>
+                      <label className={labelClass}>Data do Evento (De)</label>
                       <DateInput
                         value={filters.dataDe}
                         onChange={(value) => setFilters((prev) => ({ ...prev, dataDe: value }))}
@@ -1605,7 +1629,7 @@ ${limitReachedMessage}`);
                     </div>
 
                     <div className={formFieldClass}>
-                      <label className={labelClass}>Data do Jogo (Até)</label>
+                      <label className={labelClass}>Data do Evento (Até)</label>
                       <DateInput
                         value={filters.dataAte}
                         onChange={(value) => setFilters((prev) => ({ ...prev, dataAte: value }))}
@@ -1694,7 +1718,7 @@ ${limitReachedMessage}`);
             <table className="w-full table-auto border-collapse text-left text-sm text-white">
               <thead className="bg-white/5">
                 <tr>
-                  {['Casa de Aposta', 'Tipster', 'Data', 'Esporte', 'Partida', 'Mercado', 'Stake', 'Status', 'Retorno Obtido', 'Ações'].map((column) => (
+                  {['Casa de Aposta', 'Tipster', 'Data', 'Esporte', 'Evento', 'Aposta', 'Mercado', 'Stake', 'Status', 'Retorno Obtido', 'Ações'].map((column) => (
                     <th key={column} className="px-4 py-3 text-[0.7rem] uppercase tracking-[0.18em] text-white/60">
                       {column}
                     </th>
@@ -1709,9 +1733,10 @@ ${limitReachedMessage}`);
                     <tr key={aposta.id} className="text-white">
                     <td className="px-4 py-3 align-middle text-sm font-medium text-white">{formatOptionalCellText(aposta.casaDeAposta)}</td>
                     <td className="px-4 py-3 align-middle text-sm text-white/80">{formatOptionalCellText(aposta.tipster)}</td>
-                    <td className="px-4 py-3 align-middle text-sm text-white/80">{formatDate(aposta.dataJogo)}</td>
+                    <td className="px-4 py-3 align-middle text-sm text-white/80">{formatDate(aposta.dataEvento)}</td>
                     <td className="px-4 py-3 align-middle text-sm text-white/80">{normalizeEsporte(aposta.esporte)}</td>
-                    <td className="px-4 py-3 align-middle text-sm text-white">{aposta.jogo}</td>
+                    <td className="px-4 py-3 align-middle text-sm text-white">{aposta.evento}</td>
+                    <td className="px-4 py-3 align-middle text-sm text-white/80">{formatOptionalCellText(aposta.aposta)}</td>
                     <td className="px-4 py-3 align-middle text-sm text-white/80">
                       {marketSelections.length > 0 ? (
                         <ul className="space-y-1">
@@ -1813,7 +1838,7 @@ ${limitReachedMessage}`);
       <Modal isOpen={statusModalOpen} onClose={handleCloseStatusModal} title="Atualizar Status" size="sm">
         <div className="space-y-6 py-2">
           <p className="text-sm text-foreground/60">
-            {selectedApostaForStatus?.jogo ?? 'Aposta'}
+            {selectedApostaForStatus?.evento ?? 'Aposta'}
           </p>
 
           <div className="space-y-4">

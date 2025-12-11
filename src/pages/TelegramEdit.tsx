@@ -93,7 +93,8 @@ export default function TelegramEdit() {
   const [formData, setFormData] = useState({
     bancaId: '',
     esporte: '',
-    jogo: '',
+    evento: '',
+    aposta: '',
     torneio: '',
     pais: 'Mundo',
     mercado: '',
@@ -101,7 +102,7 @@ export default function TelegramEdit() {
     valorApostado: '',
     odd: '',
     bonus: '0',
-    dataJogo: '',
+    dataEvento: '',
     tipster: '',
     status: 'Pendente',
     casaDeAposta: '',
@@ -209,7 +210,9 @@ export default function TelegramEdit() {
       const apostaEncontrada = apostasArray.find(a => a.id === betId);
       if (apostaEncontrada) {
         setAposta(apostaEncontrada);
-        const dataJogo = new Date(apostaEncontrada.dataJogo).toISOString().split('T')[0];
+        const dataEvento = apostaEncontrada.dataEvento
+          ? new Date(apostaEncontrada.dataEvento).toISOString().split('T')[0]
+          : '';
         const esporteNormalizado = normalizeEsporte(apostaEncontrada.esporte);
         const paisNormalizado = getTextWithFallback(apostaEncontrada.pais, 'Mundo');
         const torneioNormalizado = getTextWithFallback(apostaEncontrada.torneio);
@@ -220,7 +223,8 @@ export default function TelegramEdit() {
         setFormData({
           bancaId: apostaEncontrada.bancaId,
           esporte: esporteNormalizado,
-          jogo: apostaEncontrada.jogo,
+          evento: getTextWithFallback(apostaEncontrada.evento),
+          aposta: getTextWithFallback(apostaEncontrada.aposta),
           torneio: torneioNormalizado,
           pais: paisNormalizado,
           mercado: apostaEncontrada.mercado,
@@ -228,7 +232,7 @@ export default function TelegramEdit() {
           valorApostado: apostaEncontrada.valorApostado.toString(),
           odd: apostaEncontrada.odd.toString(),
           bonus: apostaEncontrada.bonus.toString(),
-          dataJogo,
+          dataEvento,
           tipster: tipsterNormalizado,
           status: apostaEncontrada.status,
           casaDeAposta: casaNormalizada,
@@ -267,7 +271,8 @@ export default function TelegramEdit() {
 
       // Validar campos obrigatórios
       const esporte = formData.esporte.trim();
-      const jogo = formData.jogo.trim();
+      const evento = formData.evento.trim();
+      const descricaoAposta = formData.aposta.trim();
       const mercado = formData.mercado.trim();
       const tipoAposta = formData.tipoAposta.trim();
       const casaDeAposta = formData.casaDeAposta.trim();
@@ -275,7 +280,7 @@ export default function TelegramEdit() {
       const odd = parseFloat(formData.odd);
       const bonus = parseFloat(formData.bonus) || 0;
 
-      if (!esporte || !jogo || !mercado || !tipoAposta || !casaDeAposta) {
+      if (!esporte || !evento || !descricaoAposta || !mercado || !tipoAposta || !casaDeAposta) {
         setError('Preencha todos os campos obrigatórios');
         setSaving(false);
         return;
@@ -293,12 +298,12 @@ export default function TelegramEdit() {
         return;
       }
 
-      // Formatar dataJogo corretamente (ISO 8601 com timezone)
-      let dataJogoISO: string | undefined;
-      if (formData.dataJogo) {
-        const dataJogoDate = new Date(`${formData.dataJogo}T00:00:00`);
-        if (!isNaN(dataJogoDate.getTime())) {
-          dataJogoISO = dataJogoDate.toISOString();
+      // Formatar dataEvento corretamente (ISO 8601 com timezone)
+      let dataEventoISO: string | undefined;
+      if (formData.dataEvento) {
+        const dataEventoDate = new Date(`${formData.dataEvento}T00:00:00`);
+        if (!isNaN(dataEventoDate.getTime())) {
+          dataEventoISO = dataEventoDate.toISOString();
         }
       }
 
@@ -308,7 +313,8 @@ export default function TelegramEdit() {
       const payload: Record<string, unknown> = {
         bancaId: formData.bancaId,
         esporte,
-        jogo,
+        evento,
+        aposta: descricaoAposta,
         mercado,
         tipoAposta,
         valorApostado,
@@ -330,8 +336,8 @@ export default function TelegramEdit() {
         payload.pais = null;
       }
 
-      if (dataJogoISO) {
-        payload.dataJogo = dataJogoISO;
+      if (dataEventoISO) {
+        payload.dataEvento = dataEventoISO;
       }
 
       const tipster = formData.tipster.trim();
@@ -466,8 +472,8 @@ export default function TelegramEdit() {
           <label className="mb-2 block text-sm font-medium">Evento *</label>
           <input
             type="text"
-            value={formData.jogo}
-            onChange={(e) => setFormData({ ...formData, jogo: e.target.value })}
+            value={formData.evento}
+            onChange={(e) => setFormData({ ...formData, evento: e.target.value })}
             className={inputClasses}
           />
         </div>
@@ -552,11 +558,11 @@ export default function TelegramEdit() {
         </div>
 
         <div>
-          <label className="mb-2 block text-sm font-medium">Data do Jogo *</label>
+          <label className="mb-2 block text-sm font-medium">Data do Evento *</label>
           <input
             type="date"
-            value={formData.dataJogo}
-            onChange={(e) => setFormData({ ...formData, dataJogo: e.target.value })}
+            value={formData.dataEvento}
+            onChange={(e) => setFormData({ ...formData, dataEvento: e.target.value })}
             className={inputClasses}
           />
         </div>

@@ -189,7 +189,7 @@ export default function TelegramStatus() {
 
       {aposta && (
         <div className="mb-6 rounded-xl border border-border/60 bg-background/70 p-4 shadow-sm">
-          <p className="mb-2 font-medium">Jogo: {aposta.jogo}</p>
+          <p className="mb-2 font-medium">Evento: {aposta.evento}</p>
           <p className="mb-2 text-sm text-foreground-muted">Esporte: {normalizarEsporteParaOpcao(aposta.esporte)}</p>
           <p className="text-sm text-foreground-muted">
             Valor: R$ {aposta.valorApostado.toFixed(2)} | Odd: {aposta.odd}

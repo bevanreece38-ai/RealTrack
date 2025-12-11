@@ -107,7 +107,7 @@ export default function ImportCSVModal({
 
         if (!row.Date?.trim()) errors.push(`Linha ${rowNumber}: Data é obrigatória`);
         if (!row.Sport?.trim()) errors.push(`Linha ${rowNumber}: Esporte é obrigatório`);
-        if (!row.Label?.trim()) errors.push(`Linha ${rowNumber}: Label/Jogo é obrigatório`);
+        if (!row.Label?.trim()) errors.push(`Linha ${rowNumber}: Label/Evento é obrigatório`);
         if (!row.Odds?.trim()) errors.push(`Linha ${rowNumber}: Odd é obrigatória`);
         if (!row.Stake?.trim()) errors.push(`Linha ${rowNumber}: Stake é obrigatório`);
         if (!row.State?.trim()) errors.push(`Linha ${rowNumber}: State é obrigatório`);
@@ -164,7 +164,8 @@ export default function ImportCSVModal({
         const payload: CreateApostaPayload = {
             bancaId,
             esporte: Sport.trim(),
-            jogo: Label.trim(),
+            evento: Label.trim(),
+            aposta: Label.trim(),
             torneio: '',
             pais: '',
             mercado: Label.trim(), // Usar label como mercado por padrão
@@ -172,7 +173,7 @@ export default function ImportCSVModal({
             valorApostado: stake,
             odd,
             bonus: 0,
-            dataJogo: isoDate,
+            dataEvento: isoDate,
             tipster: row.Tipster?.trim() ?? '',
             status,
             casaDeAposta: Bookmaker.trim(),
