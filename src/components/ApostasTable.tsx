@@ -106,12 +106,13 @@ export default function ApostasTable({
                   <th className="px-4 py-3">Tipster</th>
                   <th className="px-4 py-3">Data</th>
                   <th className="px-4 py-3">Esporte</th>
-                  <th className="px-4 py-3">Partida</th>
+                  <th className="px-4 py-3">Evento</th>
                   <th className="px-4 py-3">Aposta</th>
                   <th className="px-4 py-3">Mercado</th>
                   <th className="px-4 py-3">Stake</th>
                   <th className="px-4 py-3">Status</th>
                   <th className="px-4 py-3">Retorno Obtido</th>
+                  <th className="px-4 py-3">Aposta</th>
                   <th className="px-4 py-3 text-right">Ações</th>
                 </tr>
               </thead>
@@ -154,7 +155,7 @@ function ApostaRow({ aposta, onOpenStatusModal, onEdit, onDelete }: ApostaRowPro
       <td className="px-4 py-4 text-white/80">{formatOptionalText(aposta.tipster)}</td>
       <td className="px-4 py-4 text-white/60">{formatDate(aposta.dataJogo)}</td>
       <td className="px-4 py-4 text-white/80">{normalizarEsporteParaOpcao(aposta.esporte)}</td>
-      <td className="px-4 py-4 text-white/80">{aposta.jogo}</td>
+      <td className="px-4 py-4 text-white/80">{aposta.jogo}</td> {/* Evento */}
       <td className="px-4 py-4 text-white/80">{aposta.aposta}</td>
       <td className="px-4 py-4 text-white/80">{aposta.mercado}</td>
       <td className="px-4 py-4">
@@ -178,6 +179,7 @@ function ApostaRow({ aposta, onOpenStatusModal, onEdit, onDelete }: ApostaRowPro
       <td className="px-4 py-4 font-semibold text-white">
         {aposta.retornoObtido != null ? formatCurrency(aposta.retornoObtido) : '-'}
       </td>
+      <td className="px-4 py-4 text-white/80">{aposta.aposta}</td> {/* Coluna aposta à direita */}
       <td className="px-4 py-4">
         <div className="flex justify-end gap-2">
           <button
